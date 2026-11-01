@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Git worktrees checked out inside the repo are separate projects.
+    ".worktrees/**",
   ]),
 ]);
 
