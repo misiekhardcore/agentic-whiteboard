@@ -3,9 +3,9 @@ import { Geist, Geist_Mono, Noto_Sans, Playfair_Display } from "next/font/google
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const playfairDisplayHeading = Playfair_Display({subsets:['latin'],variable:'--font-heading'});
+const playfairDisplayHeading = Playfair_Display({subsets:['latin'],variable:'--font-playfair'});
 
-const notoSans = Noto_Sans({subsets:['latin'],variable:'--font-sans'});
+const notoSans = Noto_Sans({subsets:['latin'],variable:'--font-lato'});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
