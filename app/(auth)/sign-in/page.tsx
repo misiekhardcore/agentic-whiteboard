@@ -9,13 +9,22 @@ import {
   CardTitle,
 } from "@konopskidev/ui/components/card";
 
+import { safeRedirectTo } from "@/lib/auth-redirect";
+
 import { SignInForm } from "./sign-in-form";
 
 export const metadata = {
   title: "Sign in",
 };
 
-export default function SignInPage() {
+// The page reads ?redirectTo, so it renders per request instead of prerendering.
+export const instant = false;
+
+export default async function SignInPage({
+  searchParams,
+}: PageProps<"/sign-in">) {
+  const redirectTo = safeRedirectTo((await searchParams).redirectTo);
+
   return (
     <Card>
       <CardHeader>
@@ -25,12 +34,16 @@ export default function SignInPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <SignInForm />
+        <SignInForm redirectTo={redirectTo} />
       </CardContent>
       <CardFooter className="justify-center gap-1 text-sm text-muted-foreground">
         <span>No account yet?</span>
         <Link
-          href="/sign-up"
+          href={
+            redirectTo
+              ? `/sign-up?redirectTo=${encodeURIComponent(redirectTo)}`
+              : "/sign-up"
+          }
           className="font-medium text-primary underline underline-offset-4 hover:no-underline"
         >
           Create one

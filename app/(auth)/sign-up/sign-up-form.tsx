@@ -16,7 +16,7 @@ import { Spinner } from "@konopskidev/ui/components/spinner";
 import { signUpAction } from "@/lib/auth-actions";
 import { initialAuthState } from "@/lib/auth-form";
 
-export function SignUpForm() {
+export function SignUpForm({ redirectTo }: { redirectTo?: string }) {
   const [state, formAction, isPending] = useActionState(
     signUpAction,
     initialAuthState,
@@ -24,6 +24,9 @@ export function SignUpForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
+      {redirectTo ? (
+        <input type="hidden" name="redirectTo" value={redirectTo} />
+      ) : null}
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="name">Name</FieldLabel>

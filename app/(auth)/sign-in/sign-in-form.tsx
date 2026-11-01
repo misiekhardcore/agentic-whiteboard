@@ -15,7 +15,7 @@ import { Spinner } from "@konopskidev/ui/components/spinner";
 import { signInAction } from "@/lib/auth-actions";
 import { initialAuthState } from "@/lib/auth-form";
 
-export function SignInForm() {
+export function SignInForm({ redirectTo }: { redirectTo?: string }) {
   const [state, formAction, isPending] = useActionState(
     signInAction,
     initialAuthState,
@@ -23,6 +23,9 @@ export function SignInForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
+      {redirectTo ? (
+        <input type="hidden" name="redirectTo" value={redirectTo} />
+      ) : null}
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>

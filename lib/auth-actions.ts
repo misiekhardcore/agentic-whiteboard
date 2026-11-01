@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import type { AuthFormState } from "@/lib/auth-form";
+import { DEFAULT_REDIRECT, safeRedirectTo } from "@/lib/auth-redirect";
 
 const MESSAGES: Record<string, string> = {
   INVALID_EMAIL: "Enter a valid email address.",
@@ -36,6 +37,7 @@ export async function signInAction(
 ): Promise<AuthFormState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const redirectTo = safeRedirectTo(formData.get("redirectTo"));
 
   if (!email || !password) {
     return { error: "Enter your email and password.", values: { email } };
@@ -53,7 +55,7 @@ export async function signInAction(
     };
   }
 
-  redirect("/dashboard");
+  redirect(redirectTo ?? DEFAULT_REDIRECT);
 }
 
 export async function signUpAction(
@@ -63,6 +65,7 @@ export async function signUpAction(
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const redirectTo = safeRedirectTo(formData.get("redirectTo"));
 
   if (!name || !email || !password) {
     return {
@@ -83,5 +86,5 @@ export async function signUpAction(
     };
   }
 
-  redirect("/dashboard");
+  redirect(redirectTo ?? DEFAULT_REDIRECT);
 }
