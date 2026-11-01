@@ -1,12 +1,5 @@
 export default function DashboardLayout({
   children,
 }: LayoutProps<"/dashboard">) {
-  return (
-    <div>
-      <header>
-        <h1>Dashboard</h1>
-      </header>
-      <main>{children}</main>
-    </div>
-  );
+  return <main className="mx-auto w-full max-w-5xl px-6 py-8">{children}</main>;
 }
