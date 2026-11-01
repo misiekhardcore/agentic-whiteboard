@@ -1,5 +1,15 @@
+import {
+  DashboardSidebar,
+} from "@/components/Sidebar/Sidebar";
+import { SidebarProvider } from "@konopskidev/ui/components/sidebar";
+
 export default function DashboardLayout({
   children,
 }: LayoutProps<"/dashboard">) {
-  return <main className="mx-auto w-full max-w-5xl px-6 py-8">{children}</main>;
+  return (
+    <SidebarProvider>
+      <DashboardSidebar />
+      <div className="w-full p-4">{children}</div>
+    </SidebarProvider>
+  );
 }

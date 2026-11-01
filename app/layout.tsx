@@ -1,23 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-import { SiteHeader } from "./site-header";
-
-const playfairDisplayHeading = Playfair_Display({subsets:['latin'],variable:'--font-playfair'});
-
-const notoSans = Noto_Sans({subsets:['latin'],variable:'--font-lato'});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { SiteHeader } from "./_components/site-header";
+import { FONT_CLASSNAMES } from "./constants";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -28,9 +14,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", notoSans.variable, playfairDisplayHeading.variable)}
+      className={cn("h-full", "antialiased", FONT_CLASSNAMES)}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="h-svh flex flex-col overflow-hidden">
         <SiteHeader />
         {children}
       </body>
