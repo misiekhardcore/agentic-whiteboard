@@ -5,32 +5,23 @@ import { auth } from "@/lib/auth";
 
 const AUTH_PAGES = ["/sign-in", "/sign-up"];
 
-function isAuthPage(pathname: string) {
-  return AUTH_PAGES.includes(pathname);
-}
-
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const onAuthPage = isAuthPage(pathname);
+  // Without a cookie there is no session to validate, so skip the database.
+  const authed =
+    Boolean(getSessionCookie(request)) &&
+    Boolean(await auth.api.getSession({ headers: request.headers }));
 
-  // No cookie means no session to validate, so the redirect is free.
-  if (!getSessionCookie(request)) {
-    return onAuthPage
-      ? NextResponse.next()
-      : NextResponse.redirect(new URL("/sign-in", request.url));
+  const onAuthPage = AUTH_PAGES.includes(request.nextUrl.pathname);
+
+  if (authed && onAuthPage) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  const session = await auth.api.getSession({ headers: request.headers });
-
-  if (onAuthPage) {
-    return session
-      ? NextResponse.redirect(new URL("/dashboard", request.url))
-      : NextResponse.next();
+  if (!authed && !onAuthPage) {
+    return NextResponse.redirect(new URL("/sign-in", request.url));
   }
 
-  return session
-    ? NextResponse.next()
-    : NextResponse.redirect(new URL("/sign-in", request.url));
+  return NextResponse.next();
 }
 
 export const config = {

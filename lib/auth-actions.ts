@@ -15,7 +15,6 @@ const MESSAGES: Record<string, string> = {
     "An account with this email already exists.",
   PASSWORD_TOO_SHORT: "Password must be at least 8 characters.",
   PASSWORD_TOO_LONG: "That password is too long.",
-  EMAIL_PASSWORD_DISABLED: "Password sign-in is not enabled.",
 };
 
 /**
@@ -72,13 +71,6 @@ export async function signUpAction(
     };
   }
 
-  if (password.length < 8) {
-    return {
-      error: "Password must be at least 8 characters.",
-      values: { name, email },
-    };
-  }
-
   try {
     await auth.api.signUpEmail({
       body: { name, email, password },
@@ -92,9 +84,4 @@ export async function signUpAction(
   }
 
   redirect("/dashboard");
-}
-
-export async function signOutAction(): Promise<void> {
-  await auth.api.signOut({ headers: await headers() });
-  redirect("/sign-in");
 }
