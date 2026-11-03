@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { organization } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 
@@ -18,5 +19,5 @@ export const auth = betterAuth({
     minPasswordLength: 8,
   },
   // Must stay last: it writes the session cookie from Server Actions.
-  plugins: [nextCookies()],
+  plugins: [nextCookies(), organization()],
 });

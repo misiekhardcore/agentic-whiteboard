@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict BiRSpQtw9a4NChhgKXv9x9ni7zb23YXoSHnKzwwBW79rJEnBfeYwl8xnWDl8o5A
+\restrict qI4JOkIXzrNnfzVKdLISXNuKhmU9kNmrSz3uGIctKcWVrHJTOlIL2mUylWBvyfx
 
 -- Dumped from database version 18.6 (Debian 18.6-1.pgdg13+2)
 -- Dumped by pg_dump version 18.6 (Ubuntu 18.6-0ubuntu0.26.04.1)
@@ -34,6 +34,7 @@ COPY drizzle.__drizzle_migrations (id, hash, created_at) FROM stdin;
 --
 
 COPY public."user" (id, name, email, email_verified, image, created_at, updated_at) FROM stdin;
+fE1ovo2y0oLhETOOTh0czZeyOK7abcdp	test	test@test.com	f	\N	2026-11-03 21:27:40.884	2026-11-03 21:27:40.884
 \.
 
 
@@ -58,6 +59,7 @@ COPY public."AgentPrompt" (id, "ownerId", "userId", "workspaceId", "createdAt") 
 --
 
 COPY public.account (id, account_id, provider_id, user_id, access_token, refresh_token, id_token, access_token_expires_at, refresh_token_expires_at, scope, password, created_at, updated_at) FROM stdin;
+Zf2F7jR5mDBao9g4k0jU0w00OXHHLsDP	fE1ovo2y0oLhETOOTh0czZeyOK7abcdp	credential	fE1ovo2y0oLhETOOTh0czZeyOK7abcdp	\N	\N	\N	\N	\N	\N	aca73ac4cf9814f5caa0ed5f2da99e2b:e8263ccc67fcf427dd19ab4ddcf46b70ac7a9a002f74ae15f82ad27dc9355906ab449dfdae523ee8b2659d0c566823697c20b749a61159f069bc7b6389cc255d	2026-11-03 21:27:40.892	2026-11-03 21:27:40.892
 \.
 
 
@@ -82,6 +84,7 @@ COPY public.doc (id, "workspaceId", content, "yjsState", "createdAt", "updatedAt
 --
 
 COPY public.session (id, expires_at, token, created_at, updated_at, ip_address, user_agent, user_id) FROM stdin;
+4C3AkDUyztVyCvi5tX75pdCOCfvvBoG8	2026-11-10 21:27:40.898	xsbxbQbIlUfR1uPwYcGuT1obd1jocApW	2026-11-03 21:27:40.899	2026-11-03 21:27:40.899	0000:0000:0000:0000:0000:0000:0000:0000	Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36	fE1ovo2y0oLhETOOTh0czZeyOK7abcdp
 \.
 
 
@@ -104,5 +107,5 @@ SELECT pg_catalog.setval('drizzle.__drizzle_migrations_id_seq', 2, true);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict BiRSpQtw9a4NChhgKXv9x9ni7zb23YXoSHnKzwwBW79rJEnBfeYwl8xnWDl8o5A
+\unrestrict qI4JOkIXzrNnfzVKdLISXNuKhmU9kNmrSz3uGIctKcWVrHJTOlIL2mUylWBvyfx
 

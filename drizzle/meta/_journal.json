@@ -15,6 +15,13 @@
       "when": 1793738145607,
       "tag": "0001_long_mephistopheles",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793741759421,
+      "tag": "0002_past_eternals",
+      "breakpoints": true
     }
   ]
 }
