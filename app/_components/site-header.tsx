@@ -1,3 +1,4 @@
+import { Avatar } from "@/components/Avatar/Avatar";
 import { SignButton } from "@/components/SignButton/SignButton";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -8,9 +9,12 @@ export function SiteHeader() {
       <Link href="/" className="font-medium">
         Agentic whiteboard
       </Link>
-      <Suspense fallback={null}>
-        <SignButton />
-      </Suspense>
+      <nav className="flex items-center gap-4">
+        <Avatar />
+        <Suspense fallback={null}>
+          <SignButton />
+        </Suspense>
+      </nav>
     </header>
   );
 }

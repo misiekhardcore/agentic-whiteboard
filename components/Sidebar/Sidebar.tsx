@@ -1,4 +1,4 @@
-import { LayoutGrid, Users } from "lucide-react";
+import { Archive, LayoutGrid, Settings, Sparkles, Users } from "lucide-react";
 import { Button } from "@konopskidev/ui/components/button";
 import {
   Sidebar,
@@ -14,7 +14,7 @@ import {
 
 export function DashboardSidebar() {
   return (
-    <Sidebar className="top-[58px] min-h-0" variant="sidebar">
+    <Sidebar className="top-14.5 min-h-0" variant="sidebar">
       <SidebarHeader>Dashboard</SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -31,20 +31,39 @@ export function DashboardSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton>
                   <LayoutGrid />
-                  <span className="ml-2">All boards</span>
+                  All boards
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton>
                   <Users />
-                  <span className="ml-2">Shared</span>
+                  Shared
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton>Item 3</SidebarMenuButton>
+                <SidebarMenuButton>
+                  <Archive />
+                  Archived
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Others</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton>
+                  <Sparkles />
+                  AI Helper
+                </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton>Item 4</SidebarMenuButton>
+                <SidebarMenuButton>
+                  <Settings />
+                  Settings
+                </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>

@@ -1,7 +1,11 @@
+import { ProjectsList } from "./_components/ProjectsList";
+import { WelcomeBanner } from "./_components/WelcomeBanner";
+
 export default function DashboardPage() {
   return (
-    <div>
-      <p>Welcome to the dashboard page!</p>
+    <div className="stack">
+      <WelcomeBanner />
+      <ProjectsList />
     </div>
   );
 }
