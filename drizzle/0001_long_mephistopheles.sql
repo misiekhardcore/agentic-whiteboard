@@ -31,7 +31,7 @@ CREATE TABLE "workspace" (
 	"name" text NOT NULL,
 	"description" text,
 	"creatorId" text NOT NULL,
-	"clerkOrgId" text,
+	"orgId" text,
 	"status" "WorkspaceStatus" DEFAULT 'PLANNING' NOT NULL,
 	"position" double precision DEFAULT 0 NOT NULL,
 	"shareToken" text,
@@ -46,4 +46,4 @@ ALTER TABLE "canvas" ADD CONSTRAINT "canvas_workspaceId_workspace_id_fk" FOREIGN
 ALTER TABLE "doc" ADD CONSTRAINT "doc_workspaceId_workspace_id_fk" FOREIGN KEY ("workspaceId") REFERENCES "public"."workspace"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "AgentPrompt_ownerId_createdAt_idx" ON "AgentPrompt" USING btree ("ownerId","createdAt");--> statement-breakpoint
 CREATE INDEX "Workspace_creatorId_idx" ON "workspace" USING btree ("creatorId");--> statement-breakpoint
-CREATE INDEX "Workspace_clerkOrgId_idx" ON "workspace" USING btree ("clerkOrgId");
+CREATE INDEX "Workspace_orgId_idx" ON "workspace" USING btree ("orgId");

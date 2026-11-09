@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 import { SiteHeader } from "./_components/site-header";
 import { FONT_CLASSNAMES } from "./constants";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -17,8 +18,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={cn("h-full", "antialiased", FONT_CLASSNAMES)}
     >
       <body className="h-svh flex flex-col overflow-hidden">
-        <SiteHeader />
-        {children}
+        <Providers>
+          <SiteHeader />
+          {children}
+        </Providers>
       </body>
     </html>
   );

@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "db:up": "docker compose -f supabase-project/docker-compose.yml up -d --wait",
+    "db:down": "docker compose -f supabase-project/docker-compose.yml down",
+    "db:mail": "docker compose -f supabase-project/docker-compose.yml --profile mail up -d --wait mail",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"
@@ -16,6 +19,7 @@
     "@better-auth/drizzle-adapter": "^1.7.15",
     "@konopskidev/ui": "~0.3.0",
     "@paralleldrive/cuid2": "^3.3.0",
+    "@supabase/supabase-js": "^2.119.0",
     "better-auth": "^1.7.15",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
@@ -23,6 +27,7 @@
     "drizzle-orm": "^0.45.4",
     "lucide-react": "^1.66.0",
     "next": "16.4.3",
+    "nodemailer": "^10.4.0",
     "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -33,6 +38,7 @@
   "devDependencies": {
     "@tailwindcss/turbopack": "^4.3.3",
     "@types/node": "^20.19.43",
+    "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

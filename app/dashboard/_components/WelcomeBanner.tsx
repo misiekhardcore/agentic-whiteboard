@@ -11,6 +11,7 @@ import {
 import { Sparkles } from "lucide-react";
 import { headers } from "next/headers";
 import { Suspense } from "react";
+import { CreateNewBoardDialog } from "./CreateNewBoardDialog";
 
 export function WelcomeBanner() {
   return (
@@ -41,9 +42,7 @@ async function WelcomeBannerInner() {
         </CardDescription>
       </CardHeader>
       <CardFooter className="flex gap-4">
-        <Button variant="outline" className="shadow">
-          + Create new board
-        </Button>
+        <CreateNewBoardDialog variant="secondary" className="shadow" />
         <Button variant="primary" className="shadow">
           <Sparkles />
           Create with AI

@@ -30,7 +30,7 @@ export const workspaces = pgTable(
     name: text("name").notNull(),
     description: text("description"),
     creatorId: text("creatorId").notNull(),
-    clerkOrgId: text("clerkOrgId"),
+    orgId: text("orgId"),
 
     status: workspaceStatusEnum("status").default("PLANNING").notNull(),
 
@@ -49,7 +49,7 @@ export const workspaces = pgTable(
   },
   (table) => [
     index("Workspace_creatorId_idx").on(table.creatorId),
-    index("Workspace_clerkOrgId_idx").on(table.clerkOrgId),
+    index("Workspace_orgId_idx").on(table.orgId),
   ],
 );
 

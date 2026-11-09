@@ -620,8 +620,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "clerkOrgId": {
-          "name": "clerkOrgId",
+        "orgId": {
+          "name": "orgId",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -678,11 +678,11 @@
           "method": "btree",
           "with": {}
         },
-        "Workspace_clerkOrgId_idx": {
-          "name": "Workspace_clerkOrgId_idx",
+        "Workspace_orgId_idx": {
+          "name": "Workspace_orgId_idx",
           "columns": [
             {
-              "expression": "clerkOrgId",
+              "expression": "orgId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

@@ -42,7 +42,7 @@ fE1ovo2y0oLhETOOTh0czZeyOK7abcdp	test	test@test.com	f	\N	2026-11-03 21:27:40.884
 -- Data for Name: workspace; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY public.workspace (id, name, description, "creatorId", "clerkOrgId", status, "position", "shareToken", "createdAt", "updatedAt") FROM stdin;
+COPY public.workspace (id, name, description, "creatorId", "orgId", status, "position", "shareToken", "createdAt", "updatedAt") FROM stdin;
 \.
 
 

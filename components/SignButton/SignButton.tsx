@@ -11,9 +11,14 @@ export async function SignButton() {
 
   if (!session) {
     return (
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/sign-in">Sign in</Link>
-      </Button>
+      <>
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/sign-in">Sign in</Link>
+        </Button>
+        <Button asChild variant="primary" size="sm">
+          <Link href="/sign-up">Get started</Link>
+        </Button>
+      </>
     );
   }
 
