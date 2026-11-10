@@ -9,7 +9,7 @@ import { Pricing } from "./_components/landing/pricing";
 import { SiteFooter } from "./_components/site-footer";
 import { landing } from "./_data/landing";
 
-export default function Home() {
+export default function Home({ searchParams }: PageProps<"/">) {
   const { hero } = landing;
 
   return (
@@ -64,7 +64,7 @@ export default function Home() {
       <AudienceStrip />
       <HowItWorks />
       <FeatureShowcase />
-      <Pricing />
+      <Pricing searchParams={searchParams} />
       <ClosingCta />
       <SiteFooter />
     </main>
