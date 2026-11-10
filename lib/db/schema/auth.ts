@@ -14,8 +14,6 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
-  // Billing identity, managed by lib/billing rather than better-auth.
-  stripeCustomerId: text("stripe_customer_id").unique(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -90,8 +88,6 @@ export const organization = pgTable("organization", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   logo: text("logo"),
-  // Billing identity, managed by lib/billing rather than better-auth.
-  stripeCustomerId: text("stripe_customer_id").unique(),
   createdAt: timestamp("created_at").notNull(),
   metadata: text("metadata"),
 });

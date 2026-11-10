@@ -22,13 +22,6 @@
       "when": 1793741759421,
       "tag": "0002_past_eternals",
       "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1794263734333,
-      "tag": "0003_worthless_hardball",
-      "breakpoints": true
     }
   ]
 }

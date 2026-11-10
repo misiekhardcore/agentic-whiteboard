@@ -5,11 +5,7 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import {
-  sendOrganizationInvitationEmail,
-  sendPasswordResetEmail,
-  sendVerificationEmail,
-} from "@/lib/email";
+import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/email";
 
 /**
  * Each provider is registered only when both of its credentials are present,
@@ -62,20 +58,6 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     sendVerificationEmail: ({ user, url }) => sendVerificationEmail({ user, url }),
   },
-  plugins: [
-    organization({
-      // Team invitations are sent by us so the link can land on our own
-      // accept page, which handles sign-in before accepting.
-      sendInvitationEmail: ({ id, email, role, organization, inviter }) =>
-        sendOrganizationInvitationEmail({
-          to: email,
-          organizationName: organization.name,
-          inviterName: inviter.user.name || inviter.user.email,
-          role: role || "member",
-          url: `${(process.env.BETTER_AUTH_URL ?? "http://localhost:3000").replace(/\/$/, "")}/invite/${id}`,
-        }),
-    }),
-    // Must stay last: it writes the session cookie from Server Actions.
-    nextCookies(),
-  ],
+  // Must stay last: it writes the session cookie from Server Actions.
+  plugins: [nextCookies(), organization()],
 });

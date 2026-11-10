@@ -120,19 +120,49 @@ export const landing = {
     eyebrow: "Pricing",
     title: "Plans that grow the way your board does",
     lead:
-      "Start free on your own canvas. Move up when you need more prompts, public share links, or a whole team around the board — every plan includes the same agent, canvas, docs and board.",
-    tabs: {
-      personal: "Personal",
-      team: "Team",
-    },
-    // Plan content lives in lib/billing/plans.ts; this only says which cards
-    // each tab shows.
-    planIds: {
-      personal: ["free", "pro"],
-      team: ["free", "team", "enterprise"],
-    },
-    featuredId: "pro",
-    note: "Monthly billing in USD. Change or cancel your plan any time from the billing portal.",
+      "Early-access pricing is still taking shape. The three tiers below show the structure it will land in — every plan includes the same agent, canvas, docs and board.",
+    note: "Placeholder plans — final prices and limits land before early access opens.",
+    plans: [
+      {
+        id: "starter",
+        name: "Starter",
+        summary: "For one person mapping their next idea.",
+        price: "$—",
+        period: "/ month",
+        features: [
+          "One workspace on the infinite canvas",
+          "Docs and the team board included",
+          "Agent credits to get started",
+        ],
+        cta: { label: "Start for free", href: "/sign-up" },
+      },
+      {
+        id: "studio",
+        name: "Studio",
+        summary: "For teams who think on the same canvas.",
+        price: "$—",
+        period: "/ month",
+        features: [
+          "Unlimited workspaces and docs",
+          "Shared team board with live cursors",
+          "One agent context across every surface",
+        ],
+        cta: { label: "Start for free", href: "/sign-up" },
+      },
+      {
+        id: "scale",
+        name: "Scale",
+        summary: "For orgs running many workspaces at once.",
+        price: "$—",
+        period: "/ month",
+        features: [
+          "Org-wide boards and presence",
+          "Member management and SSO",
+          "Priority support from the team",
+        ],
+        cta: { label: "Start for free", href: "/sign-up" },
+      },
+    ],
   },
 
   closing: {
