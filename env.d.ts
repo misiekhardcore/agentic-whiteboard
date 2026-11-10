@@ -7,8 +7,5 @@ declare namespace NodeJS {
     STRIPE_SECRET_KEY: string;
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: string;
     STRIPE_WEBHOOK_SECRET: string;
-    STRIPE_PRICE_PRO_MONTHLY: string;
-    STRIPE_PRICE_TEAM_MONTHLY: string;
-    STRIPE_PRICE_ENTERPRISE_MONTHLY: string;
   }
 }

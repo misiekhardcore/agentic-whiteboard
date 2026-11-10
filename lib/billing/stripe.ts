@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 
-import { plans, type Plan } from "./plans";
+import { isPaidPlan, type Plan } from "./plans";
 
 /**
  * Stripe is configured through the environment, and the landing page is public,
@@ -53,30 +53,27 @@ export function appUrl(): string {
   return url.replace(/\/$/, "");
 }
 
-export function priceIdForPlan(plan: Plan): string {
-  if (!plan.priceEnvVar) {
+/**
+ * The checkout line item for a plan, built from the catalog: monthly, in USD,
+ * with the plan amount as the unit price. Stripe records the plan in the
+ * subscription metadata, which is what the webhook reads back, so no Price
+ * objects have to be kept in sync between the dashboard and the code.
+ */
+export function lineItemForPlan(
+  plan: Plan,
+  quantity = 1,
+): Stripe.Checkout.SessionCreateParams.LineItem {
+  if (!isPaidPlan(plan)) {
     throw new BillingConfigurationError(`${plan.name} is a free plan.`);
   }
-  const priceId = process.env[plan.priceEnvVar];
-  if (!priceId) {
-    throw new BillingConfigurationError(`${plan.priceEnvVar} is not set.`);
-  }
-  return priceId;
-}
 
-/**
- * The plan a Stripe price belongs to. Plans are resolved from the configured
- * price ids rather than from metadata, so a tampered session cannot grant a
- * plan that was not paid for.
- */
-export function planForPriceId(priceId: string): Plan | undefined {
-  return Object.values(plans).find(
-    (plan) => plan.priceEnvVar && process.env[plan.priceEnvVar] === priceId,
-  );
-}
-
-export function isBillingConfigurationError(
-  error: unknown,
-): error is BillingConfigurationError {
-  return error instanceof BillingConfigurationError;
+  return {
+    quantity,
+    price_data: {
+      currency: "usd",
+      unit_amount: plan.priceUsd * 100,
+      recurring: { interval: "month" },
+      product_data: { name: `Agentic Whiteboard ${plan.name}` },
+    },
+  };
 }

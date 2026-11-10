@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       return Response.json(
         {
           error:
-            "Payments are not configured yet. Add the Stripe keys and price ids, then try again.",
+            "Payments are not configured yet. Add the Stripe keys, then try again.",
         },
         { status: 503 },
       );

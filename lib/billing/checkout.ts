@@ -10,7 +10,7 @@ import {
   appUrl,
   BillingRequestError,
   getStripe,
-  priceIdForPlan,
+  lineItemForPlan,
 } from "./stripe";
 import { getActiveSubscription } from "./subscriptions";
 
@@ -201,9 +201,9 @@ export async function startCheckout({
     ui_mode: "embedded_page",
     mode: "subscription",
     customer: customerId,
-    line_items: [{ price: priceIdForPlan(plan), quantity }],
+    line_items: [lineItemForPlan(plan, quantity)],
     // Metadata is how the webhook finds the local owner even if the customer
-    // lookup fails, and how a price id change cannot grant a different plan.
+    // lookup fails, and the only thing that decides which plan was paid for.
     subscription_data: {
       metadata: { ownerType, ownerId, plan: plan.id },
     },

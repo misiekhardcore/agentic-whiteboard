@@ -4,8 +4,8 @@ import type Stripe from "stripe";
 import { db } from "@/lib/db";
 import { member, organization, subscriptions, user } from "@/lib/db/schema";
 
-import { getPlan, type BillingOwnerType } from "./plans";
-import { getStripe, planForPriceId } from "./stripe";
+import { getPlan, type BillingOwnerType, type Plan } from "./plans";
+import { getStripe } from "./stripe";
 
 /**
  * Statuses that still grant plan access. `past_due` is included because Stripe
@@ -41,6 +41,21 @@ export async function getOrganizationSubscription(
   organizationId: string,
 ): Promise<SubscriptionRow | null> {
   return getActiveSubscription("ORGANIZATION", organizationId);
+}
+
+/**
+ * The plan already stored for a Stripe subscription. Used when an event arrives
+ * without metadata, which only happens for subscriptions not created by our
+ * checkout: an existing row is kept on its plan instead of being guessed at.
+ */
+async function storedPlan(subscriptionId: string): Promise<Plan | undefined> {
+  const [row] = await db
+    .select({ plan: subscriptions.plan })
+    .from(subscriptions)
+    .where(eq(subscriptions.stripeSubscriptionId, subscriptionId))
+    .limit(1);
+
+  return getPlan(row?.plan);
 }
 
 function customerIdOf(subscription: Stripe.Subscription): string {
@@ -112,14 +127,25 @@ export async function applyStripeSubscription(
 
   const item = stripeSubscription.items.data[0];
   const priceId = item?.price.id ?? "";
-  const metadataPlan = stripeSubscription.metadata?.plan;
-  const plan = planForPriceId(priceId) ?? getPlan(metadataPlan);
+  const plan =
+    getPlan(stripeSubscription.metadata?.plan) ??
+    (await storedPlan(stripeSubscription.id));
+
+  if (!plan) {
+    // Checkout stamps the plan onto the subscription, so a subscription
+    // without one was made elsewhere and cannot be mapped to a plan.
+    console.warn(
+      `[billing] Stripe subscription ${stripeSubscription.id} has no plan metadata; not mirrored`,
+    );
+    return;
+  }
+
   const seats = Math.max(1, item?.quantity ?? 1);
 
   const values = {
     ownerType: owner.ownerType,
     ownerId: owner.ownerId,
-    plan: plan?.id ?? metadataPlan ?? "pro",
+    plan: plan.id,
     status: stripeSubscription.status,
     seats,
     stripeCustomerId: customerIdOf(stripeSubscription),
@@ -186,7 +212,7 @@ export async function syncOrganizationSeats(
   const subscription = await getOrganizationSubscription(organizationId);
   if (!subscription) return;
 
-  const plan = planForPriceId(subscription.stripePriceId);
+  const plan = getPlan(subscription.plan);
   if (!plan?.perSeat) return;
 
   const [row] = await db

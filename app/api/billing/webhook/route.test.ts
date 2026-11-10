@@ -46,6 +46,21 @@ function webhookRequest(signature = "t=1,v1=abc"): Request {
   });
 }
 
+/** A body shaped like a Stripe event, with no signature header. */
+function unsignedRequest(
+  event: unknown = {
+    id: "evt_1",
+    type: "customer.subscription.created",
+    data: { object: { id: "sub_1" } },
+  },
+): Request {
+  return new Request("http://localhost:3000/api/billing/webhook", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(event),
+  });
+}
+
 beforeEach(() => {
   vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
   vi.stubEnv("STRIPE_SECRET_KEY", "sk_test");
@@ -67,13 +82,52 @@ afterEach(() => {
 });
 
 describe("Stripe webhook", () => {
-  it("reports a configuration error before checking the signature", async () => {
+  it("needs a signing secret in production", async () => {
     vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
+    vi.stubEnv("NODE_ENV", "production");
 
     const response = await POST(webhookRequest());
 
     expect(response.status).toBe(503);
     expect(mocks.constructEvent).not.toHaveBeenCalled();
+  });
+
+  it("needs an API key to handle events", async () => {
+    vi.stubEnv("STRIPE_SECRET_KEY", "");
+
+    const response = await POST(webhookRequest());
+
+    expect(response.status).toBe(503);
+    expect(mocks.constructEvent).not.toHaveBeenCalled();
+  });
+
+  it("accepts an unsigned event outside production, for the Stripe CLI", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
+    vi.stubEnv("NODE_ENV", "development");
+
+    const response = await POST(unsignedRequest());
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ received: true });
+    expect(mocks.constructEvent).not.toHaveBeenCalled();
+    expect(mocks.applySubscription).toHaveBeenCalledWith({ id: "sub_1" });
+  });
+
+  it("rejects an unsigned body that is not an event", async () => {
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
+    vi.stubEnv("NODE_ENV", "development");
+
+    const notAnEvent = await POST(unsignedRequest({ hello: "world" }));
+    expect(notAnEvent.status).toBe(400);
+
+    const notJson = await POST(
+      new Request("http://localhost:3000/api/billing/webhook", {
+        method: "POST",
+        body: "not json",
+      }),
+    );
+    expect(notJson.status).toBe(400);
+    expect(mocks.applySubscription).not.toHaveBeenCalled();
   });
 
   it("rejects a request with no signature", async () => {

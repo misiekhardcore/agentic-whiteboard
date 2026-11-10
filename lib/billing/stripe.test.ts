@@ -1,45 +1,41 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { plans } from "./plans";
-import {
-  appUrl,
-  BillingConfigurationError,
-  planForPriceId,
-  priceIdForPlan,
-} from "./stripe";
+import { appUrl, BillingConfigurationError, lineItemForPlan } from "./stripe";
 
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("price ids", () => {
-  it("reads the price id from the plan's environment variable", () => {
-    vi.stubEnv("STRIPE_PRICE_PRO_MONTHLY", "price_pro");
-    expect(priceIdForPlan(plans.pro)).toBe("price_pro");
+describe("checkout line items", () => {
+  it("charges the catalog amount monthly in USD", () => {
+    expect(lineItemForPlan(plans.pro)).toEqual({
+      quantity: 1,
+      price_data: {
+        currency: "usd",
+        unit_amount: 1200,
+        recurring: { interval: "month" },
+        product_data: { name: "Agentic Whiteboard Pro" },
+      },
+    });
   });
 
-  it("explains which variable is missing", () => {
-    vi.stubEnv("STRIPE_PRICE_TEAM_MONTHLY", "");
-    expect(() => priceIdForPlan(plans.team)).toThrow(
+  it("uses the updated Enterprise price", () => {
+    const item = lineItemForPlan(plans.enterprise, 3);
+
+    expect(item.price_data?.unit_amount).toBe(2000);
+    expect(item.quantity).toBe(3);
+  });
+
+  it("bills one seat per member on per-seat plans", () => {
+    expect(lineItemForPlan(plans.team, 7).quantity).toBe(7);
+  });
+
+  it("refuses to build a line item for a free plan", () => {
+    expect(() => lineItemForPlan(plans.free)).toThrow(
       BillingConfigurationError,
     );
-    expect(() => priceIdForPlan(plans.team)).toThrow(
-      "STRIPE_PRICE_TEAM_MONTHLY",
-    );
-  });
-
-  it("refuses to look up a price for a free plan", () => {
-    expect(() => priceIdForPlan(plans.free)).toThrow(/free plan/);
-  });
-
-  it("maps a configured price back to its plan", () => {
-    vi.stubEnv("STRIPE_PRICE_TEAM_MONTHLY", "price_team");
-    expect(planForPriceId("price_team")?.id).toBe("team");
-  });
-
-  it("does not invent a plan for an unknown price", () => {
-    vi.stubEnv("STRIPE_PRICE_TEAM_MONTHLY", "price_team");
-    expect(planForPriceId("price_other")).toBeUndefined();
+    expect(() => lineItemForPlan(plans.free)).toThrow(/free plan/);
   });
 });
 

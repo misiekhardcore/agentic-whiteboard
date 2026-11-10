@@ -33,7 +33,11 @@ export type Plan = {
   id: PlanId;
   name: string;
   summary: string;
-  /** Monthly price in whole US dollars. */
+  /**
+   * Monthly price in whole US dollars, billed monthly in USD. Prices live here
+   * rather than in environment variables so the landing page, the checkout and
+   * the invoice all read the same number.
+   */
   priceUsd: number;
   /** Billed per member: the subscription quantity is the seat count. */
   perSeat: boolean;
@@ -41,8 +45,6 @@ export type Plan = {
   features: readonly string[];
   limits: PlanLimits;
   capabilities: PlanCapabilities;
-  /** Env var holding the monthly Stripe Price ID; `null` for free plans. */
-  priceEnvVar: string | null;
 };
 
 /**
@@ -70,7 +72,6 @@ export const plans = {
       shareLinks: false,
       pdfExport: false,
     },
-    priceEnvVar: null,
   },
   pro: {
     id: "pro",
@@ -92,7 +93,6 @@ export const plans = {
       shareLinks: true,
       pdfExport: true,
     },
-    priceEnvVar: "STRIPE_PRICE_PRO_MONTHLY",
   },
   team: {
     id: "team",
@@ -115,13 +115,12 @@ export const plans = {
       shareLinks: true,
       pdfExport: true,
     },
-    priceEnvVar: "STRIPE_PRICE_TEAM_MONTHLY",
   },
   enterprise: {
     id: "enterprise",
     name: "Enterprise",
     summary: "For orgs running many workspaces at once.",
-    priceUsd: 25,
+    priceUsd: 20,
     perSeat: true,
     audience: ["team"],
     features: [
@@ -138,7 +137,6 @@ export const plans = {
       shareLinks: true,
       pdfExport: true,
     },
-    priceEnvVar: "STRIPE_PRICE_ENTERPRISE_MONTHLY",
   },
 } as const satisfies Record<PlanId, Plan>;
 

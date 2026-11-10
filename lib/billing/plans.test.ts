@@ -22,7 +22,7 @@ describe("plan catalog", () => {
     expect(plans.free.priceUsd).toBe(0);
     expect(plans.pro.priceUsd).toBe(12);
     expect(plans.team.priceUsd).toBe(12);
-    expect(plans.enterprise.priceUsd).toBe(25);
+    expect(plans.enterprise.priceUsd).toBe(20);
   });
 
   it("bills team plans per member and Pro flat", () => {
@@ -54,12 +54,13 @@ describe("plan catalog", () => {
     expect(plans.enterprise.capabilities.pdfExport).toBe(true);
   });
 
-  it("only gives paid plans a Stripe price variable", () => {
+  it("prices every paid plan in whole dollars, with none for free", () => {
     for (const plan of Object.values(plans)) {
-      if (plan.priceUsd > 0) {
-        expect(plan.priceEnvVar).toMatch(/^STRIPE_PRICE_/);
+      expect(Number.isInteger(plan.priceUsd)).toBe(true);
+      if (plan.id === "free") {
+        expect(plan.priceUsd).toBe(0);
       } else {
-        expect(plan.priceEnvVar).toBeNull();
+        expect(plan.priceUsd).toBeGreaterThan(0);
       }
     }
   });
