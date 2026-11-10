@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@konopskidev/ui/components/card";
 
+import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
 import { auth } from "@/lib/auth";
 import { getOrganizationEntitlements } from "@/lib/billing/entitlements";
 import { formatPlanPeriod, formatPlanPrice, isPaidPlan } from "@/lib/billing/plans";
@@ -218,13 +219,16 @@ export default async function TeamPage() {
                     </Badge>
                   )}
                   {canManage && member.userId !== session.user.id ? (
-                    <form action={removeMemberAction}>
-                      <input type="hidden" name="memberId" value={member.id} />
-                      <input type="hidden" name="organizationId" value={team.id} />
-                      <Button type="submit" variant="ghost" size="sm">
-                        Remove
-                      </Button>
-                    </form>
+                    <ConfirmAction
+                      action={removeMemberAction}
+                      fields={{ memberId: member.id, organizationId: team.id }}
+                      title={`Remove ${member.name}?`}
+                      description={`${member.email} loses access to this team right away. On a paid plan the seat is dropped and Stripe prorates the difference.`}
+                      confirmLabel="Remove member"
+                      pendingLabel="Removing…"
+                      triggerLabel="Remove"
+                      triggerVariant="destructive"
+                    />
                   ) : null}
                 </div>
               </li>
@@ -256,16 +260,16 @@ export default async function TeamPage() {
                             {formatDate(pending.expiresAt)}
                           </p>
                         </div>
-                        <form action={cancelInvitationAction}>
-                          <input
-                            type="hidden"
-                            name="invitationId"
-                            value={pending.id}
-                          />
-                          <Button type="submit" variant="ghost" size="sm">
-                            Cancel invitation
-                          </Button>
-                        </form>
+                        <ConfirmAction
+                          action={cancelInvitationAction}
+                          fields={{ invitationId: pending.id }}
+                          title={`Cancel the invitation to ${pending.email}?`}
+                          description="The link in that invitation stops working. You can send a new one at any time."
+                          confirmLabel="Cancel invitation"
+                          pendingLabel="Canceling…"
+                          cancelLabel="Keep invitation"
+                          triggerLabel="Cancel"
+                        />
                       </li>
                     ))}
                   </ul>
