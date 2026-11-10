@@ -13,9 +13,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
+    // next-themes (behind the library's ThemeProvider) renders an inline script
+    // that sets the `dark` class before paint, so React must accept the DOM it
+    // finds rather than the className it rendered.
     <html
       lang="en"
       className={cn("h-full", "antialiased", FONT_CLASSNAMES)}
+      suppressHydrationWarning
     >
       <body className="h-svh flex flex-col overflow-hidden">
         <Providers>
