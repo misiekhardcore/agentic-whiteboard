@@ -31,6 +31,7 @@ import {
   CreateTeamForm,
   InviteMemberForm,
   ManageBillingButton,
+  MemberRoleForm,
   SwitchTeamForm,
 } from "./_components/team-forms";
 
@@ -120,29 +121,40 @@ export default async function TeamPage() {
       <Card>
         <CardHeader>
           <CardTitle>Plan</CardTitle>
-          <CardDescription>{plan.summary}</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-end justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <p className="font-display text-h3 font-semibold">
-              {plan.name}{" "}
-              <span className="text-sm font-normal text-muted-foreground">
+        <CardContent className="flex flex-wrap items-start justify-between gap-6">
+          <div className="flex min-w-0 flex-col gap-2">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <span className="font-display text-h3 font-semibold">
+                {plan.name}
+              </span>
+              <span className="text-sm text-muted-foreground">
                 {isPaidPlan(plan)
                   ? `${formatPlanPrice(plan)} ${formatPlanPeriod(plan)}`
                   : "$0 forever"}
               </span>
-            </p>
+            </div>
+            <p className="text-sm text-muted-foreground">{plan.summary}</p>
             {subscription ? (
-              <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant={subscription.status === "active" ? "default" : "secondary"}>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <Badge
+                  variant={
+                    subscription.status === "active" ? "default" : "secondary"
+                  }
+                >
                   {subscription.status.replace(/_/g, " ")}
                 </Badge>
-                {subscription.seats} {subscription.seats === 1 ? "seat" : "seats"}
-                {subscription.currentPeriodEnd
-                  ? ` · renews ${formatDate(subscription.currentPeriodEnd)}`
-                  : null}
-                {subscription.cancelAtPeriodEnd ? " · cancels at period end" : null}
-              </p>
+                <span>
+                  {subscription.seats}{" "}
+                  {subscription.seats === 1 ? "seat" : "seats"}
+                </span>
+                {subscription.currentPeriodEnd ? (
+                  <span>· renews {formatDate(subscription.currentPeriodEnd)}</span>
+                ) : null}
+                {subscription.cancelAtPeriodEnd ? (
+                  <span>· cancels at period end</span>
+                ) : null}
+              </div>
             ) : (
               <p className="text-xs text-muted-foreground">
                 Free plan. Upgrade when the team needs more prompts and share
@@ -161,7 +173,7 @@ export default async function TeamPage() {
               <ManageBillingButton organizationId={team.id} />
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">
+            <p className="max-w-44 text-xs text-muted-foreground">
               Only owners and admins can change billing.
             </p>
           )}
@@ -192,9 +204,19 @@ export default async function TeamPage() {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <Badge variant="outline" className="capitalize">
-                    {member.role}
-                  </Badge>
+                  {canManage &&
+                  member.userId !== session.user.id &&
+                  member.role !== "owner" ? (
+                    <MemberRoleForm
+                      memberId={member.id}
+                      organizationId={team.id}
+                      role={member.role}
+                    />
+                  ) : (
+                    <Badge variant="outline" className="capitalize">
+                      {member.role}
+                    </Badge>
+                  )}
                   {canManage && member.userId !== session.user.id ? (
                     <form action={removeMemberAction}>
                       <input type="hidden" name="memberId" value={member.id} />
@@ -210,51 +232,49 @@ export default async function TeamPage() {
           </ul>
 
           {canManage ? (
-            <div className="border-t pt-5">
+            <div className="flex flex-col gap-6 border-t pt-5">
               <InviteMemberForm organizationId={team.id} />
+
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium">Pending invitations</p>
+                {pendingInvitations.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    None right now. Invitations expire 48 hours after they are
+                    sent, and can be canceled here until they are accepted.
+                  </p>
+                ) : (
+                  <ul className="flex flex-col divide-y">
+                    {pendingInvitations.map((pending) => (
+                      <li
+                        key={pending.id}
+                        className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm">{pending.email}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {pending.role ?? "member"} · expires{" "}
+                            {formatDate(pending.expiresAt)}
+                          </p>
+                        </div>
+                        <form action={cancelInvitationAction}>
+                          <input
+                            type="hidden"
+                            name="invitationId"
+                            value={pending.id}
+                          />
+                          <Button type="submit" variant="ghost" size="sm">
+                            Cancel invitation
+                          </Button>
+                        </form>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           ) : null}
         </CardContent>
       </Card>
-
-      {canManage && pendingInvitations.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Pending invitations</CardTitle>
-            <CardDescription>
-              Invitations expire 48 hours after they are sent.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="flex flex-col divide-y">
-              {pendingInvitations.map((pending) => (
-                <li
-                  key={pending.id}
-                  className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm">{pending.email}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {pending.role ?? "member"} · expires{" "}
-                      {formatDate(pending.expiresAt)}
-                    </p>
-                  </div>
-                  <form action={cancelInvitationAction}>
-                    <input
-                      type="hidden"
-                      name="invitationId"
-                      value={pending.id}
-                    />
-                    <Button type="submit" variant="ghost" size="sm">
-                      Cancel
-                    </Button>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      ) : null}
 
       <Card>
         <CardHeader>

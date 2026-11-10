@@ -1,7 +1,7 @@
 "use server";
 
 import { APIError } from "better-auth/api";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -9,7 +9,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { syncOrganizationSeats } from "@/lib/billing/subscriptions";
 import { db } from "@/lib/db";
-import { invitation } from "@/lib/db/schema";
+import { invitation, member } from "@/lib/db/schema";
 import { canManageTeam, getMemberRole } from "@/lib/organizations";
 import type { TeamFormState } from "@/lib/organization-form";
 
@@ -134,6 +134,56 @@ export async function inviteMemberAction(
 
   revalidatePath("/dashboard/team");
   return { error: null, notice: `Invitation sent to ${email}.` };
+}
+
+/**
+ * Owners and admins can move people between member and admin. The owner's own
+ * role is deliberately not editable here: demoting or transferring ownership is
+ * a separate decision that better-auth guards behind the last-owner rule.
+ */
+export async function updateMemberRoleAction(
+  formData: FormData,
+): Promise<{ error: string | null }> {
+  const session = await requireSession();
+  const memberId = String(formData.get("memberId") ?? "");
+  const organizationId = String(formData.get("organizationId") ?? "");
+  const role = formData.get("role") === "admin" ? "admin" : "member";
+
+  if (!memberId || !organizationId) {
+    return { error: "That member could not be found." };
+  }
+
+  const callerRole = await getMemberRole(organizationId, session.user.id);
+  if (!callerRole || !canManageTeam(callerRole)) {
+    return { error: "Only team owners and admins can change roles." };
+  }
+
+  const [target] = await db
+    .select({ role: member.role })
+    .from(member)
+    .where(
+      and(eq(member.id, memberId), eq(member.organizationId, organizationId)),
+    )
+    .limit(1);
+
+  if (!target) return { error: "That person is no longer on the team." };
+  if (target.role === "owner") {
+    return { error: "The team owner's role cannot be changed." };
+  }
+
+  try {
+    await auth.api.updateMemberRole({
+      body: { memberId, role, organizationId },
+      headers: await headers(),
+    });
+  } catch (error) {
+    return {
+      error: toMessage(error, "Could not change that role. Try again."),
+    };
+  }
+
+  revalidatePath("/dashboard/team");
+  return { error: null };
 }
 
 export async function cancelInvitationAction(formData: FormData): Promise<void> {
