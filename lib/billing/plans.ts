@@ -29,14 +29,29 @@ export type PlanCapabilities = {
   pdfExport: boolean;
 };
 
+/**
+ * The currency every catalog price is quoted in. Checkout builds its line item
+ * with inline `price_data`, and Stripe requires an explicit currency there: the
+ * account's default currency is not applied, so the amount and its currency
+ * have to be named together. They live here, next to each other, instead of in
+ * the request that happens to build them.
+ *
+ * Supporting a second currency later means quoting prices per currency and
+ * passing the buyer's choice here; nothing downstream assumes the code, because
+ * the subscription row keeps the currency Stripe reports back.
+ */
+export const BILLING_CURRENCY = "usd" as const;
+
+export type BillingCurrency = typeof BILLING_CURRENCY;
+
 export type Plan = {
   id: PlanId;
   name: string;
   summary: string;
   /**
-   * Monthly price in whole US dollars, billed monthly in USD. Prices live here
-   * rather than in environment variables so the landing page, the checkout and
-   * the invoice all read the same number.
+   * Monthly price in whole units of {@link BILLING_CURRENCY}, billed monthly.
+   * Prices live here rather than in environment variables so the landing page,
+   * the checkout and the invoice all read the same number.
    */
   priceUsd: number;
   /** Billed per member: the subscription quantity is the seat count. */

@@ -4,7 +4,7 @@ import type Stripe from "stripe";
 import { db } from "@/lib/db";
 import { member, organization, subscriptions, user } from "@/lib/db/schema";
 
-import { getPlan, type BillingOwnerType, type Plan } from "./plans";
+import { BILLING_CURRENCY, getPlan, type BillingOwnerType, type Plan } from "./plans";
 import { getStripe } from "./stripe";
 
 /**
@@ -127,6 +127,10 @@ export async function applyStripeSubscription(
 
   const item = stripeSubscription.items.data[0];
   const priceId = item?.price.id ?? "";
+  // The currency belongs to the price Stripe actually billed, so it comes from
+  // the event and not from the catalog. The catalog value only fills in for a
+  // subscription without items.
+  const currency = (item?.price.currency ?? BILLING_CURRENCY).toLowerCase();
   const plan =
     getPlan(stripeSubscription.metadata?.plan) ??
     (await storedPlan(stripeSubscription.id));
@@ -151,6 +155,7 @@ export async function applyStripeSubscription(
     stripeCustomerId: customerIdOf(stripeSubscription),
     stripeSubscriptionId: stripeSubscription.id,
     stripePriceId: priceId,
+    currency,
     currentPeriodStart: item?.current_period_start
       ? new Date(item.current_period_start * 1000)
       : null,

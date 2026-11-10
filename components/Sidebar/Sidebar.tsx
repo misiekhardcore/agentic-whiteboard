@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Archive,
   Building2,
@@ -19,6 +21,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@konopskidev/ui/components/sidebar";
+import { usePathname } from "next/navigation";
+import { ReactNode } from "react";
 
 export function DashboardSidebar() {
   return (
@@ -61,30 +65,40 @@ export function DashboardSidebar() {
           <SidebarGroupLabel>Others</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard/team">
-                    <Building2 />
-                    Team &amp; billing
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton>
-                  <Sparkles />
-                  AI Helper
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton>
-                  <Settings />
-                  Settings
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              <SidebarMenuLink href="/dashboard/team">
+                <Building2 />
+                Team &amp; billing
+              </SidebarMenuLink>
+              <SidebarMenuLink href={"/dashboard/ai-helper"}>
+                <Sparkles />
+                AI Helper
+              </SidebarMenuLink>
+              <SidebarMenuLink href="/dashboard/settings">
+                <Settings />
+                Settings
+              </SidebarMenuLink>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
+  );
+}
+
+function SidebarMenuLink({
+  children,
+  href,
+}: {
+  href: string;
+  children: ReactNode;
+}) {
+  const pathname = usePathname();
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={pathname.startsWith(href)}>
+        <Link href={href}>{children}</Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   );
 }

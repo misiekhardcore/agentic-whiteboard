@@ -42,6 +42,13 @@ export const subscriptions = pgTable(
     stripeCustomerId: text("stripeCustomerId").notNull(),
     stripeSubscriptionId: text("stripeSubscriptionId").notNull().unique(),
     stripePriceId: text("stripePriceId").notNull(),
+    /**
+     * ISO code of the price Stripe billed, lowercase as Stripe reports it. The
+     * code is mirrored from Stripe rather than assumed from the catalog, so a
+     * subscription bought in another currency keeps its own once the catalog
+     * offers more than one.
+     */
+    currency: text("currency").default("usd").notNull(),
 
     currentPeriodStart: timestamp("currentPeriodStart", {
       precision: 3,

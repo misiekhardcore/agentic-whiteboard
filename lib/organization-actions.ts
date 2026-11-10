@@ -80,19 +80,23 @@ export async function createTeamAction(
     return { error: toMessage(error, "Could not create the team. Try again.") };
   }
 
-  revalidatePath("/dashboard/team");
-  revalidatePath("/");
+  // Creating a team makes it the active organization, so the header menu and
+  // every account-aware page need to render again.
+  revalidatePath("/", "layout");
   redirect("/dashboard/team");
 }
 
 /**
  * Switching only changes the session's active organization; every page that
- * shows team context reads it from there.
+ * shows team context reads it from there. An empty organization id means the
+ * personal account, which better-auth stores as a null active organization.
  */
-export async function switchTeamAction(formData: FormData): Promise<void> {
+export async function switchAccountAction(
+  formData: FormData,
+): Promise<{ error: string | null }> {
   await requireSession();
-  const organizationId = String(formData.get("organizationId") ?? "");
-  if (!organizationId) return;
+  const raw = String(formData.get("organizationId") ?? "").trim();
+  const organizationId = raw && raw !== "personal" ? raw : null;
 
   try {
     await auth.api.setActiveOrganization({
@@ -100,11 +104,19 @@ export async function switchTeamAction(formData: FormData): Promise<void> {
       headers: await headers(),
     });
   } catch (error) {
-    console.error("[organization] could not switch team:", error);
+    console.error("[organization] could not switch account:", error);
+    return { error: "Could not switch accounts. Try again." };
   }
 
-  revalidatePath("/dashboard/team");
-  revalidatePath("/");
+  // The header, sidebar, and every dashboard page read the active account, so
+  // refresh the whole layout rather than one route.
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
+/** The team page's select keeps its fire-and-forget form contract. */
+export async function switchTeamAction(formData: FormData): Promise<void> {
+  await switchAccountAction(formData);
 }
 
 export async function inviteMemberAction(
@@ -219,7 +231,8 @@ export async function removeMemberAction(formData: FormData): Promise<void> {
     console.error("[organization] could not remove member:", error);
   }
 
-  revalidatePath("/dashboard/team");
+  // The account menu shows the member count for each team.
+  revalidatePath("/", "layout");
 }
 
 export async function acceptInvitationAction(
@@ -249,6 +262,7 @@ export async function acceptInvitationAction(
 
   if (row) await syncOrganizationSeats(row.organizationId);
 
-  revalidatePath("/dashboard/team");
+  // A new organization joins the account menu.
+  revalidatePath("/", "layout");
   redirect("/dashboard/team");
 }

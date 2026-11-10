@@ -29,6 +29,13 @@
       "when": 1794263734333,
       "tag": "0003_worthless_hardball",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794328053526,
+      "tag": "0004_subscription_currency",
+      "breakpoints": true
     }
   ]
 }

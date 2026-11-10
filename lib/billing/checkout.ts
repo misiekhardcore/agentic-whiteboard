@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -47,8 +47,9 @@ function uniqueSlug(name: string): string {
 /**
  * Picks the organization a team plan bills. An explicit id must belong to the
  * caller with a billing role; a name creates a new organization (the pricing
- * sheet offers this when someone has no team yet); otherwise the first
- * organization they can bill is used.
+ * sheet offers this when someone has no team yet). Without either, checkout is
+ * refused: the personal account is a valid selection, so the server must not
+ * guess an organization on the caller's behalf.
  */
 async function resolveTeamOrganization({
   userId,
@@ -106,25 +107,10 @@ async function resolveTeamOrganization({
     return created.id;
   }
 
-  const [existing] = await db
-    .select({ organizationId: member.organizationId })
-    .from(member)
-    .where(
-      and(
-        eq(member.userId, userId),
-        inArray(member.role, [...BILLING_ROLES]),
-      ),
-    )
-    .limit(1);
-
-  if (!existing) {
-    throw new BillingRequestError(
-      "Create a team before starting a team plan.",
-      400,
-    );
-  }
-
-  return existing.organizationId;
+  throw new BillingRequestError(
+    "Choose a team before starting a team plan.",
+    400,
+  );
 }
 
 /**

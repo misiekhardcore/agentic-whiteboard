@@ -40,7 +40,8 @@ jobs:
         run: pnpm build
 
   # Secrets are not available to a job-level `if`, so this preflight reports
-  # whether they exist and the e2e job skips (instead of failing) without them.
+  # whether the Stripe checkout spec can run. The rest of the E2E suite always
+  # runs; the billing spec skips its checkout test when the keys are absent.
   stripe-secrets:
     name: Check Stripe test secrets
     runs-on: ubuntu-latest
@@ -56,13 +57,12 @@ jobs:
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::E2E skipped: add STRIPE_SECRET_KEY (sk_test_…) and STRIPE_PUBLISHABLE_KEY (pk_test_…) repository secrets to run the checkout test."
+            echo "::warning::Stripe checkout E2E will be skipped: add STRIPE_SECRET_KEY (sk_test_…) and STRIPE_PUBLISHABLE_KEY (pk_test_…) repository secrets. The account and dashboard E2E tests still run."
           fi
 
   e2e:
-    name: E2E (Stripe checkout)
+    name: E2E
     needs: stripe-secrets
-    if: needs.stripe-secrets.outputs.available == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -110,6 +110,7 @@ jobs:
         run: pnpm db:migrate
 
       - name: Install the Stripe CLI
+        if: needs.stripe-secrets.outputs.available == 'true'
         run: |
           curl -fsSL https://github.com/stripe/stripe-cli/releases/download/v1.55.9/stripe_1.55.9_linux_x86_64.tar.gz -o /tmp/stripe.tar.gz
           tar -xzf /tmp/stripe.tar.gz -C /tmp stripe
@@ -117,6 +118,7 @@ jobs:
           stripe --version
 
       - name: Forward Stripe events to the app
+        if: needs.stripe-secrets.outputs.available == 'true'
         run: |
           stripe listen \
             --api-key "$STRIPE_SECRET_KEY" \

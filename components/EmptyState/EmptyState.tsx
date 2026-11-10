@@ -3,7 +3,6 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardImage,
   CardTitle,
 } from "@konopskidev/ui/components/card";
 import { ReactNode } from "react";

@@ -3,10 +3,12 @@ import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invitation, member, organization, user } from "@/lib/db/schema";
 
-/** The metadata billing needs. */
+/** The metadata the account menu, billing, and settings need. */
 export type TeamOption = {
   id: string;
   name: string;
+  slug: string;
+  logo: string | null;
   role: string;
   memberCount: number;
 };
@@ -23,6 +25,8 @@ export async function listTeams(userId: string): Promise<TeamOption[]> {
     .select({
       id: organization.id,
       name: organization.name,
+      slug: organization.slug,
+      logo: organization.logo,
       role: member.role,
     })
     .from(member)
@@ -57,36 +61,44 @@ export async function listTeams(userId: string): Promise<TeamOption[]> {
 }
 
 /**
- * The organization the dashboard should show: the session's active one when the
- * person is still a member, otherwise the first team they belong to.
+ * The active account is exactly what the session says. A missing id means the
+ * personal account, and an id the person is no longer a member of is treated
+ * as personal rather than silently falling back to another organization.
  */
-export async function resolveActiveTeamId(
-  userId: string,
+export function resolveActiveTeam(
+  teams: TeamOption[],
   sessionOrganizationId?: string | null,
-): Promise<string | null> {
-  if (sessionOrganizationId) {
-    const [row] = await db
-      .select({ id: member.organizationId })
-      .from(member)
-      .where(
-        and(
-          eq(member.userId, userId),
-          eq(member.organizationId, sessionOrganizationId),
-        ),
-      )
-      .limit(1);
+): TeamOption | null {
+  if (!sessionOrganizationId) return null;
+  return teams.find((team) => team.id === sessionOrganizationId) ?? null;
+}
 
-    if (row) return row.id;
-  }
+export type AccountContext = {
+  teams: TeamOption[];
+  activeTeam: TeamOption | null;
+  /** The active organization id, or null when the personal account is active. */
+  activeOrganizationId: string | null;
+};
 
-  const [fallback] = await db
-    .select({ id: member.organizationId })
-    .from(member)
-    .where(eq(member.userId, userId))
-    .orderBy(desc(member.createdAt))
-    .limit(1);
+export type SessionAccount = {
+  user: { id: string };
+  session: { activeOrganizationId?: string | null };
+};
 
-  return fallback?.id ?? null;
+export async function getAccountContext(
+  session: SessionAccount,
+): Promise<AccountContext> {
+  const teams = await listTeams(session.user.id);
+  const activeTeam = resolveActiveTeam(
+    teams,
+    session.session.activeOrganizationId,
+  );
+
+  return {
+    teams,
+    activeTeam,
+    activeOrganizationId: activeTeam?.id ?? null,
+  };
 }
 
 export type TeamMember = {

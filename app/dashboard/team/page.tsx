@@ -18,14 +18,14 @@ import { getOrganizationEntitlements } from "@/lib/billing/entitlements";
 import { formatPlanPeriod, formatPlanPrice, isPaidPlan } from "@/lib/billing/plans";
 import {
   canManageTeam,
+  getAccountContext,
   listOrganizationMembers,
   listPendingInvitations,
-  listTeams,
-  resolveActiveTeamId,
 } from "@/lib/organizations";
 import {
   cancelInvitationAction,
   removeMemberAction,
+  switchTeamAction,
 } from "@/lib/organization-actions";
 
 import {
@@ -56,7 +56,7 @@ export default async function TeamPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in?redirectTo=/dashboard/team");
 
-  const teams = await listTeams(session.user.id);
+  const { teams, activeTeam } = await getAccountContext(session);
 
   if (teams.length === 0) {
     return (
@@ -84,13 +84,76 @@ export default async function TeamPage() {
     );
   }
 
-  const sessionOrganizationId =
-    (session.session as { activeOrganizationId?: string | null })
-      .activeOrganizationId ?? null;
-  const activeOrganizationId =
-    (await resolveActiveTeamId(session.user.id, sessionOrganizationId)) ??
-    teams[0].id;
-  const team = teams.find((option) => option.id === activeOrganizationId) ?? teams[0];
+  // No active organization means the personal account is selected. Do not
+  // substitute the first team: that would make the header and this page
+  // disagree about which account the dashboard is using.
+  if (!activeTeam) {
+    return (
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        <header className="flex flex-col gap-1">
+          <h1 className="font-display text-h2 font-semibold">Team</h1>
+          <p className="text-sm text-muted-foreground">
+            You&rsquo;re using your personal account. Choose an organization to
+            manage its members and billing, or create a new one.
+          </p>
+        </header>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Your organizations</CardTitle>
+            <CardDescription>
+              Opening one switches the active account. You can switch back to
+              personal from the avatar menu in the header.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col divide-y">
+              {teams.map((option) => (
+                <li
+                  key={option.id}
+                  className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {option.name}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground capitalize">
+                      {option.role} · {option.memberCount}{" "}
+                      {option.memberCount === 1 ? "member" : "members"}
+                    </p>
+                  </div>
+                  <form action={switchTeamAction}>
+                    <input
+                      type="hidden"
+                      name="organizationId"
+                      value={option.id}
+                    />
+                    <Button type="submit" variant="outline" size="sm">
+                      Manage
+                    </Button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>New team</CardTitle>
+            <CardDescription>
+              Start another organization and become its owner.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CreateTeamForm />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const team = activeTeam;
 
   const [members, pendingInvitations, entitlements] = await Promise.all([
     listOrganizationMembers(team.id),
@@ -284,13 +347,11 @@ export default async function TeamPage() {
         <CardHeader>
           <CardTitle>Teams</CardTitle>
           <CardDescription>
-            Switch the team the dashboard shows, or start another one.
+            Switch the account the dashboard shows, or start another one.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
-          {teams.length > 1 ? (
-            <SwitchTeamForm teams={teams} activeOrganizationId={team.id} />
-          ) : null}
+          <SwitchTeamForm teams={teams} activeOrganizationId={team.id} />
           <div className="flex flex-col gap-3 border-t pt-6">
             <p className="text-sm font-medium">New team</p>
             <CreateTeamForm />

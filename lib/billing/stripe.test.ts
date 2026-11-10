@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { plans } from "./plans";
+import { plans, BILLING_CURRENCY } from "./plans";
 import { appUrl, BillingConfigurationError, lineItemForPlan } from "./stripe";
 
 afterEach(() => {
@@ -8,16 +8,23 @@ afterEach(() => {
 });
 
 describe("checkout line items", () => {
-  it("charges the catalog amount monthly in USD", () => {
+  it("charges the catalog amount monthly in the catalog currency", () => {
     expect(lineItemForPlan(plans.pro)).toEqual({
       quantity: 1,
       price_data: {
-        currency: "usd",
+        currency: BILLING_CURRENCY,
         unit_amount: 1200,
         recurring: { interval: "month" },
         product_data: { name: "Agentic Whiteboard Pro" },
       },
     });
+  });
+
+  it("enforces the catalog currency on the Stripe request", () => {
+    expect(lineItemForPlan(plans.team).price_data?.currency).toBe(
+      BILLING_CURRENCY,
+    );
+    expect(BILLING_CURRENCY).toMatch(/^[a-z]{3}$/);
   });
 
   it("uses the updated Enterprise price", () => {

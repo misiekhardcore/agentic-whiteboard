@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 
-import { isPaidPlan, type Plan } from "./plans";
+import { BILLING_CURRENCY, isPaidPlan, type Plan } from "./plans";
 
 /**
  * Stripe is configured through the environment, and the landing page is public,
@@ -54,10 +54,14 @@ export function appUrl(): string {
 }
 
 /**
- * The checkout line item for a plan, built from the catalog: monthly, in USD,
- * with the plan amount as the unit price. Stripe records the plan in the
- * subscription metadata, which is what the webhook reads back, so no Price
- * objects have to be kept in sync between the dashboard and the code.
+ * The checkout line item for a plan, built from the catalog: monthly, in the
+ * catalog currency, with the plan amount as the unit price. Stripe records the
+ * plan in the subscription metadata, which is what the webhook reads back, so no
+ * Price objects have to be kept in sync between the dashboard and the code.
+ *
+ * Inline `price_data` needs the currency spelled out (Stripe does not apply the
+ * account default), so the request is where the catalog currency is enforced.
+ * What Stripe returns is then mirrored onto the subscription row as-is.
  */
 export function lineItemForPlan(
   plan: Plan,
@@ -70,7 +74,7 @@ export function lineItemForPlan(
   return {
     quantity,
     price_data: {
-      currency: "usd",
+      currency: BILLING_CURRENCY,
       unit_amount: plan.priceUsd * 100,
       recurring: { interval: "month" },
       product_data: { name: `Agentic Whiteboard ${plan.name}` },

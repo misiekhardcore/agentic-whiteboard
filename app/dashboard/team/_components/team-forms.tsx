@@ -58,7 +58,7 @@ export function SwitchTeamForm({
   activeOrganizationId,
 }: {
   teams: TeamOption[];
-  activeOrganizationId: string;
+  activeOrganizationId: string | null;
 }) {
   return (
     <form
@@ -66,12 +66,16 @@ export function SwitchTeamForm({
       className="flex flex-col gap-3 sm:flex-row sm:items-end"
     >
       <div className="flex flex-1 flex-col gap-2">
-        <Label htmlFor="active-team">Active team</Label>
-        <Select name="organizationId" defaultValue={activeOrganizationId}>
+        <Label htmlFor="active-team">Active account</Label>
+        <Select
+          name="organizationId"
+          defaultValue={activeOrganizationId ?? "personal"}
+        >
           <SelectTrigger id="active-team" className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="personal">Personal account</SelectItem>
             {teams.map((team) => (
               <SelectItem key={team.id} value={team.id}>
                 {team.name}

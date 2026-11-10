@@ -62,7 +62,9 @@ export function CheckoutSheet({
   const isTeamPlan = plan.audience.includes("team");
   const hasTeams = teams.length > 0;
 
-  const initialTeamId = defaultOrganizationId ?? teams[0]?.id ?? "";
+  // Personal account means no default team. The sheet then asks which team to
+  // bill rather than guessing the first organization in the list.
+  const initialTeamId = defaultOrganizationId ?? "";
   const [organizationId, setOrganizationId] = useState(initialTeamId);
   const [organizationName, setOrganizationName] = useState("");
   const [seats, setSeats] = useState(() =>
@@ -80,6 +82,11 @@ export function CheckoutSheet({
 
   async function startCheckout() {
     setError(null);
+
+    if (isTeamPlan && hasTeams && !organizationId) {
+      setError("Choose a team to continue.");
+      return;
+    }
 
     if (isTeamPlan && !hasTeams && !organizationName.trim()) {
       setError("Name your team to continue.");
@@ -200,7 +207,13 @@ export function CheckoutSheet({
                     <Label htmlFor="checkout-team">Team</Label>
                     <Select
                       value={organizationId || undefined}
-                      onValueChange={setOrganizationId}
+                      onValueChange={(value) => {
+                        setOrganizationId(value);
+                        const selected = teams.find(
+                          (team) => team.id === value,
+                        );
+                        if (selected) setSeats(String(selected.memberCount));
+                      }}
                     >
                       <SelectTrigger id="checkout-team" className="w-full">
                         <SelectValue placeholder="Choose a team" />

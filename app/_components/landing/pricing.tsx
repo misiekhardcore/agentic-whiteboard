@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { landing } from "@/app/_data/landing";
 import { auth } from "@/lib/auth";
 import { getPlan, isPaidPlan } from "@/lib/billing/plans";
-import { listTeams, resolveActiveTeamId } from "@/lib/organizations";
+import { getAccountContext } from "@/lib/organizations";
 
 import { PricingTabs } from "./pricing-tabs";
 
@@ -86,20 +86,15 @@ async function PricingForSession({
     );
   }
 
-  const teams = await listTeams(session.user.id);
-  const activeOrganizationId =
-    (session.session as { activeOrganizationId?: string | null })
-      .activeOrganizationId ?? null;
-  const defaultOrganizationId = await resolveActiveTeamId(
-    session.user.id,
-    activeOrganizationId,
-  );
+  const { teams, activeOrganizationId } = await getAccountContext(session);
 
   return (
     <PricingTabs
       signedIn
       teams={teams}
-      defaultOrganizationId={defaultOrganizationId}
+      // Personal account leaves this null, so a team checkout asks which team
+      // to bill instead of silently picking the first one.
+      defaultOrganizationId={activeOrganizationId}
       requestedPlanId={requestedPlanId}
     />
   );

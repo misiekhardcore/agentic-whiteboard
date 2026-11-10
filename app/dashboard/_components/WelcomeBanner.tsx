@@ -1,5 +1,6 @@
 import { Loading } from "@/components/Loading/Loading";
 import { auth } from "@/lib/auth";
+import { getAccountContext } from "@/lib/organizations";
 import { Button } from "@konopskidev/ui/components/button";
 import {
   Card,
@@ -28,6 +29,8 @@ async function WelcomeBannerInner() {
 
   if (!session) return null;
 
+  const { activeTeam } = await getAccountContext(session);
+
   return (
     <Card className="p-4 bg-radial-[at_25%_25%] from-blue-200 to-purple-200 border-border shadow">
       <CardHeader>
@@ -38,6 +41,9 @@ async function WelcomeBannerInner() {
           </span>
         </CardTitle>
         <CardDescription>
+          {activeTeam
+            ? `Working in ${activeTeam.name}. `
+            : "Personal account. "}
           Bring your ideas to life on an infinite canvas.
         </CardDescription>
       </CardHeader>
