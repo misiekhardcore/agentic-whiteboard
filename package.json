@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:smtp": "node scripts/smtp-sink.mjs",
     "db:up": "docker compose -f supabase-project/docker-compose.yml up -d --wait",
     "db:down": "docker compose -f supabase-project/docker-compose.yml down",
     "db:mail": "docker compose -f supabase-project/docker-compose.yml --profile mail up -d --wait mail",
@@ -40,6 +42,7 @@
     "tw-animate-css": "^1.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@tailwindcss/turbopack": "^4.3.3",
     "@types/node": "^20.19.43",
     "@types/nodemailer": "^8.0.2",
