@@ -1,5 +1,4 @@
 import { auth } from "@/lib/auth";
-import { signOutAction } from "@/lib/auth-actions";
 import { Button } from "@konopskidev/ui/components/button";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -22,11 +21,6 @@ export async function SignButton() {
     );
   }
 
-  return (
-    <form action={signOutAction}>
-      <Button type="submit" variant="outline" size="sm">
-        Sign out
-      </Button>
-    </form>
-  );
+  // Signed-in people sign out from the account menu on the avatar.
+  return null;
 }

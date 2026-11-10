@@ -1,0 +1,1 @@
+ALTER TABLE "subscription" ADD COLUMN "currency" text DEFAULT 'usd' NOT NULL;
