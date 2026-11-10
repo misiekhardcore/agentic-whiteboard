@@ -1,4 +1,12 @@
-import { Archive, LayoutGrid, Settings, Sparkles, Users } from "lucide-react";
+import {
+  Archive,
+  Building2,
+  LayoutGrid,
+  Settings,
+  Sparkles,
+  Users,
+} from "lucide-react";
+import Link from "next/link";
 import { Button } from "@konopskidev/ui/components/button";
 import {
   Sidebar,
@@ -53,6 +61,14 @@ export function DashboardSidebar() {
           <SidebarGroupLabel>Others</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/dashboard/team">
+                    <Building2 />
+                    Team &amp; billing
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton>
                   <Sparkles />

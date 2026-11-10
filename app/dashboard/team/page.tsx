@@ -1,0 +1,278 @@
+import Link from "next/link";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+
+import { Badge } from "@konopskidev/ui/components/badge";
+import { Button } from "@konopskidev/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@konopskidev/ui/components/card";
+
+import { auth } from "@/lib/auth";
+import { getOrganizationEntitlements } from "@/lib/billing/entitlements";
+import { formatPlanPeriod, formatPlanPrice, isPaidPlan } from "@/lib/billing/plans";
+import {
+  canManageTeam,
+  listOrganizationMembers,
+  listPendingInvitations,
+  listTeams,
+  resolveActiveTeamId,
+} from "@/lib/organizations";
+import {
+  cancelInvitationAction,
+  removeMemberAction,
+} from "@/lib/organization-actions";
+
+import {
+  CreateTeamForm,
+  InviteMemberForm,
+  ManageBillingButton,
+  SwitchTeamForm,
+} from "./_components/team-forms";
+
+export const metadata = {
+  title: "Team",
+};
+
+// Everything on this page depends on the signed-in session, so it renders per
+// request rather than prerendering.
+export const instant = false;
+
+function formatDate(value: Date) {
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export default async function TeamPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect("/sign-in?redirectTo=/dashboard/team");
+
+  const teams = await listTeams(session.user.id);
+
+  if (teams.length === 0) {
+    return (
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        <header className="flex flex-col gap-1">
+          <h1 className="font-display text-h2 font-semibold">Team</h1>
+          <p className="text-sm text-muted-foreground">
+            Team and Enterprise plans bill an organization, so create one to
+            invite people and manage billing.
+          </p>
+        </header>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Create your team</CardTitle>
+            <CardDescription>
+              You become the owner. You can invite teammates right after.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CreateTeamForm />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const sessionOrganizationId =
+    (session.session as { activeOrganizationId?: string | null })
+      .activeOrganizationId ?? null;
+  const activeOrganizationId =
+    (await resolveActiveTeamId(session.user.id, sessionOrganizationId)) ??
+    teams[0].id;
+  const team = teams.find((option) => option.id === activeOrganizationId) ?? teams[0];
+
+  const [members, pendingInvitations, entitlements] = await Promise.all([
+    listOrganizationMembers(team.id),
+    listPendingInvitations(team.id),
+    getOrganizationEntitlements(team.id),
+  ]);
+
+  const canManage = canManageTeam(team.role);
+  const { plan, subscription, limits } = entitlements;
+  const promptLimit = limits.agentPromptsPerMonth
+    ? `${limits.agentPromptsPerMonth.toLocaleString("en-US")} agent prompts / month`
+    : "Unlimited agent prompts";
+
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+      <header className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="font-display text-h2 font-semibold">{team.name}</h1>
+          <Badge variant="outline" className="capitalize">
+            {team.role}
+          </Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {members.length} {members.length === 1 ? "person" : "people"} ·{" "}
+          {promptLimit}
+        </p>
+      </header>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Plan</CardTitle>
+          <CardDescription>{plan.summary}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <p className="font-display text-h3 font-semibold">
+              {plan.name}{" "}
+              <span className="text-sm font-normal text-muted-foreground">
+                {isPaidPlan(plan)
+                  ? `${formatPlanPrice(plan)} ${formatPlanPeriod(plan)}`
+                  : "$0 forever"}
+              </span>
+            </p>
+            {subscription ? (
+              <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant={subscription.status === "active" ? "default" : "secondary"}>
+                  {subscription.status.replace(/_/g, " ")}
+                </Badge>
+                {subscription.seats} {subscription.seats === 1 ? "seat" : "seats"}
+                {subscription.currentPeriodEnd
+                  ? ` · renews ${formatDate(subscription.currentPeriodEnd)}`
+                  : null}
+                {subscription.cancelAtPeriodEnd ? " · cancels at period end" : null}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Free plan. Upgrade when the team needs more prompts and share
+                links.
+              </p>
+            )}
+          </div>
+
+          {canManage ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {!isPaidPlan(plan) ? (
+                <Button asChild variant="primary" size="sm">
+                  <Link href="/?billing=team#pricing">Upgrade</Link>
+                </Button>
+              ) : null}
+              <ManageBillingButton organizationId={team.id} />
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Only owners and admins can change billing.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Members</CardTitle>
+          <CardDescription>
+            Seats on a paid plan follow the member count automatically.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-5">
+          <ul className="flex flex-col divide-y">
+            {members.map((member) => (
+              <li
+                key={member.id}
+                className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">
+                    {member.name}
+                    {member.userId === session.user.id ? " (you)" : ""}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {member.email}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Badge variant="outline" className="capitalize">
+                    {member.role}
+                  </Badge>
+                  {canManage && member.userId !== session.user.id ? (
+                    <form action={removeMemberAction}>
+                      <input type="hidden" name="memberId" value={member.id} />
+                      <input type="hidden" name="organizationId" value={team.id} />
+                      <Button type="submit" variant="ghost" size="sm">
+                        Remove
+                      </Button>
+                    </form>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          {canManage ? (
+            <div className="border-t pt-5">
+              <InviteMemberForm organizationId={team.id} />
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {canManage && pendingInvitations.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending invitations</CardTitle>
+            <CardDescription>
+              Invitations expire 48 hours after they are sent.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col divide-y">
+              {pendingInvitations.map((pending) => (
+                <li
+                  key={pending.id}
+                  className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm">{pending.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {pending.role ?? "member"} · expires{" "}
+                      {formatDate(pending.expiresAt)}
+                    </p>
+                  </div>
+                  <form action={cancelInvitationAction}>
+                    <input
+                      type="hidden"
+                      name="invitationId"
+                      value={pending.id}
+                    />
+                    <Button type="submit" variant="ghost" size="sm">
+                      Cancel
+                    </Button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Teams</CardTitle>
+          <CardDescription>
+            Switch the team the dashboard shows, or start another one.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6">
+          {teams.length > 1 ? (
+            <SwitchTeamForm teams={teams} activeOrganizationId={team.id} />
+          ) : null}
+          <div className="flex flex-col gap-3 border-t pt-6">
+            <p className="text-sm font-medium">New team</p>
+            <CreateTeamForm />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
