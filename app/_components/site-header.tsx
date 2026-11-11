@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { AccountMenu } from "@/components/AccountMenu/AccountMenu";
 import { SignButton } from "@/components/SignButton/SignButton";
 
+import { HeaderBilling } from "./billing/header-billing";
 import { BrandLockup } from "./brand";
 import { HeaderThemeSwitcher } from "./header-theme-switcher";
 
@@ -14,6 +15,9 @@ export function SiteHeader() {
         <HeaderThemeSwitcher />
         <Suspense fallback={null}>
           <SignButton />
+        </Suspense>
+        <Suspense fallback={null}>
+          <HeaderBilling />
         </Suspense>
         <AccountMenu />
       </nav>

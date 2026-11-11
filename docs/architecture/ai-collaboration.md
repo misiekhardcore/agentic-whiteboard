@@ -105,8 +105,11 @@ and timestamps. A partial unique index enforces one `QUEUED`/`RUNNING` run per
 workspace. `agentMessage` stores the shared workspace chat thread as AI SDK
 message parts; messages are persisted before they are broadcast.
 
-The existing `AgentPrompt` table is untouched. `agentRun` is the intended source
-for `agentPromptsPerMonth` once quota enforcement lands.
+`AgentPrompt` is the per-user prompt ledger used by the plan quotas: one row per
+prompt, `ownerId` for the paying account (organization or personal user),
+`userId` for the member whose allowance it consumes, and `createdAt` for the
+billing-period count. A prompt is recorded even when no run starts (queued or
+rejected), so `agentRun` is the execution record, not the quota source.
 
 ## Flows
 

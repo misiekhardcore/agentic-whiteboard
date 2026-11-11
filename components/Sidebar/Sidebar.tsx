@@ -13,6 +13,7 @@ import { Button } from "@konopskidev/ui/components/button";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -24,7 +25,7 @@ import {
 import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
 
-export function DashboardSidebar() {
+export function DashboardSidebar({ footer }: { footer?: ReactNode }) {
   return (
     <Sidebar className="top-14.5 min-h-0" variant="sidebar">
       <SidebarHeader>Dashboard</SidebarHeader>
@@ -81,6 +82,9 @@ export function DashboardSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      {footer ? (
+        <SidebarFooter className="border-t p-0">{footer}</SidebarFooter>
+      ) : null}
     </Sidebar>
   );
 }

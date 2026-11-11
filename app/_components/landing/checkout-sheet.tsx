@@ -18,6 +18,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@konopskidev/ui/components/sheet";
+import { toast } from "@konopskidev/ui/components/sonner";
 import {
   EmbeddedCheckout,
   EmbeddedCheckoutProvider,
@@ -25,6 +26,7 @@ import {
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Check, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import type { Plan } from "@/lib/billing/plans";
@@ -52,15 +54,24 @@ export function CheckoutSheet({
   onOpenChange,
   teams,
   defaultOrganizationId,
+  mode = "checkout",
 }: {
   plan: Plan;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   teams: TeamOption[];
   defaultOrganizationId: string | null;
+  /**
+   * `change` reprices the selected account's existing subscription instead of
+   * opening Stripe Checkout. Seats and the team are then fixed: the seat count
+   * follows the member list, so the sheet must not offer to edit it.
+   */
+  mode?: "checkout" | "change";
 }) {
   const isTeamPlan = plan.audience.includes("team");
   const hasTeams = teams.length > 0;
+  const changeMode = mode === "change";
+  const router = useRouter();
 
   // Personal account means no default team. The sheet then asks which team to
   // bill rather than guessing the first organization in the list.
@@ -109,11 +120,27 @@ export function CheckoutSheet({
 
       const data = (await response.json()) as {
         clientSecret?: string;
+        changed?: boolean;
         error?: string;
       };
 
-      if (!response.ok || !data.clientSecret) {
+      if (!response.ok) {
         setError(data.error ?? "Could not start checkout. Try again.");
+        return;
+      }
+
+      // The account already had a subscription and Stripe repriced it; there is
+      // no payment form to show. Refresh so the server sees the new plan before
+      // the header's upgrade button unmounts.
+      if (data.changed) {
+        toast.success(`You’re on ${plan.name} now.`, { closeButton: true });
+        onOpenChange(false);
+        router.refresh();
+        return;
+      }
+
+      if (!data.clientSecret) {
+        setError("Could not start checkout. Try again.");
         return;
       }
 
@@ -138,9 +165,11 @@ export function CheckoutSheet({
           <SheetDescription>
             {complete
               ? "Your subscription is active. Manage seats, invoices and cancellation from your dashboard."
-              : isTeamPlan
-                ? "Billed per member, every month. Seats follow your team size."
-                : "Billed every month. Cancel any time from the billing portal."}
+              : changeMode
+                ? "Your plan changes immediately and the difference is prorated on your next invoice. Seats stay in sync with your team."
+                : isTeamPlan
+                  ? "Billed per member, every month. Seats follow your team size."
+                  : "Billed every month. Cancel any time from the billing portal."}
           </SheetDescription>
         </SheetHeader>
 
@@ -201,7 +230,7 @@ export function CheckoutSheet({
                 </span>
               </div>
 
-              {isTeamPlan ? (
+              {isTeamPlan && !changeMode ? (
                 hasTeams ? (
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="checkout-team">Team</Label>
@@ -254,7 +283,7 @@ export function CheckoutSheet({
                 )
               ) : null}
 
-              {plan.perSeat ? (
+              {plan.perSeat && !changeMode ? (
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="checkout-seats">Seats</Label>
                   <Input
@@ -289,14 +318,18 @@ export function CheckoutSheet({
                     <Loader2 className="animate-spin" aria-hidden="true" />
                     Starting secure checkout…
                   </>
+                ) : changeMode ? (
+                  `Switch to ${plan.name}`
                 ) : (
                   "Continue to secure checkout"
                 )}
               </Button>
 
-              <p className="text-center font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
-                Payments handled by Stripe
-              </p>
+              {changeMode ? null : (
+                <p className="text-center font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                  Payments handled by Stripe
+                </p>
+              )}
             </div>
           )}
         </div>

@@ -164,7 +164,9 @@ export default async function TeamPage() {
   const canManage = canManageTeam(team.role);
   const { plan, subscription, limits } = entitlements;
   const promptLimit = limits.agentPromptsPerMonth
-    ? `${limits.agentPromptsPerMonth.toLocaleString("en-US")} agent prompts / month`
+    ? `${limits.agentPromptsPerMonth.toLocaleString("en-US")} agent prompts ${
+        plan.perSeat ? "/ member " : ""
+      }/ month`
     : "Unlimited agent prompts";
 
   return (
