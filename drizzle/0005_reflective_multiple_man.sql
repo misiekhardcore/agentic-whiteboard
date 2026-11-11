@@ -1,5 +1,5 @@
 CREATE TYPE "public"."AgentActorType" AS ENUM('USER', 'AGENT');--> statement-breakpoint
-CREATE TYPE "public"."AgentMessageRole" AS ENUM('USER', 'ASSISTANT', 'SYSTEM', 'TOOL');--> statement-breakpoint
+CREATE TYPE "public"."AgentMessageRole" AS ENUM('SYSTEM', 'USER', 'ASSISTANT');--> statement-breakpoint
 CREATE TYPE "public"."AgentRunStatus" AS ENUM('QUEUED', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED');--> statement-breakpoint
 CREATE TABLE "agentMessage" (
 	"id" text PRIMARY KEY NOT NULL,

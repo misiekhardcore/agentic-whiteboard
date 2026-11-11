@@ -27,12 +27,12 @@ export const AGENT_RUN_STATUSES = [
 ] as const;
 export type AgentRunStatus = (typeof AGENT_RUN_STATUSES)[number];
 
-export const AGENT_MESSAGE_ROLES = [
-  "USER",
-  "ASSISTANT",
-  "SYSTEM",
-  "TOOL",
-] as const;
+/**
+ * Mirrors the AI SDK's `UIMessage["role"]`, upper-cased to match the Postgres
+ * enum convention. Tool calls and results are `tool-*` parts on an assistant
+ * message, so they are content, not a role of their own.
+ */
+export const AGENT_MESSAGE_ROLES = ["SYSTEM", "USER", "ASSISTANT"] as const;
 export type AgentMessageRole = (typeof AGENT_MESSAGE_ROLES)[number];
 
 export const AGENT_ACTOR_TYPES = ["USER", "AGENT"] as const;

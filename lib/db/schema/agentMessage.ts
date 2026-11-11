@@ -47,7 +47,11 @@ export const agentMessages = pgTable(
 
     role: agentMessageRoleEnum("role").notNull(),
 
-    /** AI SDK message parts, stored verbatim so the UI can replay them. */
+    /**
+     * AI SDK `UIMessage` parts, stored verbatim so the UI can replay them.
+     * Tool calls and results are parts on an assistant message, so no message
+     * uses a TOOL role.
+     */
     content: jsonb("content").notNull(),
 
     actorType: agentActorTypeEnum("actorType").notNull(),

@@ -1555,10 +1555,9 @@
       "name": "AgentMessageRole",
       "schema": "public",
       "values": [
-        "USER",
-        "ASSISTANT",
         "SYSTEM",
-        "TOOL"
+        "USER",
+        "ASSISTANT"
       ]
     },
     "public.AgentRunStatus": {
