@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:ai": "AI_LIVE=1 vitest run lib/ai/live.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:smtp": "node scripts/smtp-sink.mjs",
     "db:up": "docker compose -f supabase-project/docker-compose.yml up -d --wait",
