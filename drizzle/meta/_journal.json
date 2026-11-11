@@ -36,6 +36,13 @@
       "when": 1794328053526,
       "tag": "0004_subscription_currency",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794402407272,
+      "tag": "0005_reflective_multiple_man",
+      "breakpoints": true
     }
   ]
 }

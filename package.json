@@ -2,12 +2,16 @@
   "name": "agentic-whiteboard",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:ai": "AI_LIVE=1 vitest run lib/ai/live.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:smtp": "node scripts/smtp-sink.mjs",
     "db:up": "docker compose -f supabase-project/docker-compose.yml up -d --wait",
@@ -18,6 +22,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.87",
     "@base-ui/react": "^1.9.0",
     "@better-auth/drizzle-adapter": "^1.7.15",
     "@konopskidev/ui": "~0.5.1",
@@ -25,6 +30,7 @@
     "@stripe/react-stripe-js": "^7.0.1",
     "@stripe/stripe-js": "^10.2.1",
     "@supabase/supabase-js": "^2.119.0",
+    "ai": "^7.0.166",
     "better-auth": "^1.7.15",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
