@@ -11,15 +11,20 @@ import {
 import { user } from "./auth";
 import { workspaces } from "./workspace";
 import { agentRuns } from "./agentRun";
+import {
+  AGENT_ACTOR_TYPES,
+  AGENT_MESSAGE_ROLES,
+} from "../../collab/contracts";
 
-export const agentMessageRoleEnum = pgEnum("AgentMessageRole", [
-  "USER",
-  "ASSISTANT",
-  "SYSTEM",
-  "TOOL",
-]);
+export const agentMessageRoleEnum = pgEnum(
+  "AgentMessageRole",
+  AGENT_MESSAGE_ROLES,
+);
 
-export const agentActorTypeEnum = pgEnum("AgentActorType", ["USER", "AGENT"]);
+export const agentActorTypeEnum = pgEnum(
+  "AgentActorType",
+  AGENT_ACTOR_TYPES,
+);
 
 /**
  * The shared chat thread for a workspace. Messages are persisted before they

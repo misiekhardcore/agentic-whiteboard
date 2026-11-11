@@ -12,14 +12,12 @@ import {
 import { user } from "./auth";
 import { workspaces } from "./workspace";
 import { agentMessages } from "./agentMessage";
+import { AGENT_RUN_STATUSES } from "../../collab/contracts";
 
-export const agentRunStatusEnum = pgEnum("AgentRunStatus", [
-  "QUEUED",
-  "RUNNING",
-  "COMPLETED",
-  "FAILED",
-  "CANCELLED",
-]);
+export const agentRunStatusEnum = pgEnum(
+  "AgentRunStatus",
+  AGENT_RUN_STATUSES,
+);
 
 export const agentRuns = pgTable(
   "agentRun",

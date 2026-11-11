@@ -1,12 +1,18 @@
-import {
-  createOpenAICompatible,
-  type OpenAICompatibleProvider,
-} from "@ai-sdk/openai-compatible";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { LanguageModel } from "ai";
 
 import { getAiConfig, type AiConfig, type AiProviderId } from "./config";
 
-type ProviderFactory = (config: AiConfig) => OpenAICompatibleProvider;
+/**
+ * The only provider capability this app relies on. Native AI SDK providers
+ * expose `languageModel(modelId)`, so they satisfy this contract without an
+ * adapter; the compatible provider already does.
+ */
+type LanguageModelProvider = {
+  languageModel(modelId: string): LanguageModel;
+};
+
+type ProviderFactory = (config: AiConfig) => LanguageModelProvider;
 
 /**
  * Both current providers speak the OpenAI Chat Completions protocol. Adding a
@@ -37,7 +43,7 @@ const providerFactories = {
  * per distinct connection keeps repeated agent calls from rebuilding them on
  * every request without pinning stale settings across an env change.
  */
-const providerCache = new Map<string, OpenAICompatibleProvider>();
+const providerCache = new Map<string, LanguageModelProvider>();
 
 function providerKey(config: AiConfig): string {
   return JSON.stringify([config.provider, config.baseURL, config.apiKey]);
@@ -45,7 +51,7 @@ function providerKey(config: AiConfig): string {
 
 export function getProvider(
   config: AiConfig = getAiConfig(),
-): OpenAICompatibleProvider {
+): LanguageModelProvider {
   const key = providerKey(config);
   const cached = providerCache.get(key);
   if (cached) return cached;
@@ -63,5 +69,5 @@ export function getProvider(
 export function getLanguageModel(
   config: AiConfig = getAiConfig(),
 ): LanguageModel {
-  return getProvider(config)(config.model);
+  return getProvider(config).languageModel(config.model);
 }

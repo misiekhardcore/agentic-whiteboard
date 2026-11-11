@@ -1,3 +1,4 @@
+import { MockLanguageModelV4 } from "ai/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -89,5 +90,39 @@ describe("createAgent", () => {
       role: "system",
       content: DEFAULT_AGENT_INSTRUCTIONS,
     });
+  });
+
+  it("runs with an explicit model when no provider env is configured", async () => {
+    // Invalid values prove createAgent does not resolve env config at all on
+    // the explicit-model path.
+    vi.stubEnv("AI_MODEL", "");
+    vi.stubEnv("AI_PROVIDER", "");
+    vi.stubEnv("AI_BASE_URL", "");
+    vi.stubEnv("AI_API_KEY", "");
+    vi.stubEnv("AI_MAX_STEPS", "not-a-number");
+    vi.stubEnv("AI_MAX_RETRIES", "not-a-number");
+
+    const model = new MockLanguageModelV4({
+      doGenerate: async () => ({
+        content: [{ type: "text", text: "mock reply" }],
+        finishReason: { unified: "stop", raw: "stop" },
+        usage: {
+          inputTokens: {
+            total: 3,
+            noCache: 3,
+            cacheRead: 0,
+            cacheWrite: 0,
+          },
+          outputTokens: { total: 2, text: 2, reasoning: 0 },
+        },
+        warnings: [],
+      }),
+    });
+
+    const result = await createAgent({ model, maxRetries: 0 }).generate({
+      prompt: "Hello",
+    });
+
+    expect(result.text).toBe("mock reply");
   });
 });
