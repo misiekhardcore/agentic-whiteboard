@@ -50,6 +50,13 @@
       "when": 1794510707358,
       "tag": "0006_perfect_scream",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794518166945,
+      "tag": "0007_lean_pretty_boy",
+      "breakpoints": true
     }
   ]
 }

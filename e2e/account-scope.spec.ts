@@ -5,8 +5,8 @@ import { Client } from "pg";
 
 /**
  * The account switcher is the source of truth for the dashboard, team page and
- * billing. These tests use the real database for workspace rows because board
- * creation is not wired into the UI yet.
+ * billing. Workspace rows are seeded directly because these tests only care
+ * about scoping, not about the creation flow (covered by workspace-crud).
  */
 
 async function signUp(

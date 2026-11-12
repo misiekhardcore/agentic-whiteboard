@@ -6,7 +6,6 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
-import { Button } from "@konopskidev/ui/components/button";
 import {
   Sidebar,
   SidebarContent,
@@ -17,6 +16,7 @@ import {
   SidebarMenu,
 } from "@konopskidev/ui/components/sidebar";
 import { Suspense } from "react";
+import { CreateNewBoardDialog } from "@/app/dashboard/_components/CreateNewBoardDialog";
 import { WorkspaceUsage } from "./WorkspaceUsage";
 import { SidebarMenuLink } from "./SidebarMenuLink";
 import { Loading } from "../Loading/Loading";
@@ -33,9 +33,7 @@ export function DashboardSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <Button size="sm" className="w-full">
-              + Create new board
-            </Button>
+            <CreateNewBoardDialog size="sm" className="w-full" />
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>

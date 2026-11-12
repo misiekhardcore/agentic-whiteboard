@@ -1,11 +1,16 @@
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Loading } from "@/components/Loading/Loading";
+import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
 import { getSessionAccount } from "@/lib/account";
+import { archiveWorkspaceAction } from "@/lib/workspace-actions";
+import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace-status";
 import { listAccountWorkspaces } from "@/lib/workspaces";
-import { Button } from "@konopskidev/ui/components/button";
 import { Folder } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+
+import { CreateNewBoardDialog } from "./CreateNewBoardDialog";
+import { EditBoardDialog } from "./EditBoardDialog";
 
 export function ProjectsList() {
   return (
@@ -39,7 +44,9 @@ async function ProjectsListInner() {
             ? `Boards shared with ${activeTeam.name} will appear here.`
             : "You haven't created any personal boards yet."
         }
-        action={<Button size="sm">+ Create new board</Button>}
+        action={
+          <CreateNewBoardDialog size="sm" variant="outline" />
+        }
       />
     );
   }
@@ -56,10 +63,13 @@ async function ProjectsListInner() {
 
       <ul className="grid gap-3 sm:grid-cols-2">
         {boards.map((board) => (
-          <li key={board.id}>
+          <li
+            key={board.id}
+            className="card flex h-full flex-col gap-3 p-4 transition-colors hover:border-primary/40"
+          >
             <Link
               href={`/workspace/${board.id}`}
-              className="card flex h-full flex-col gap-2 p-4 transition-colors hover:border-primary/40"
+              className="flex flex-col gap-2"
             >
               <span className="font-medium">{board.name}</span>
               {board.description && (
@@ -67,10 +77,32 @@ async function ProjectsListInner() {
                   {board.description}
                 </span>
               )}
-              <span className="mt-auto font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
-                {board.status.replace(/_/g, " ")}
-              </span>
             </Link>
+
+            <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
+              <span className="font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                {WORKSPACE_STATUS_LABELS[board.status]}
+              </span>
+
+              <div className="flex items-center gap-2">
+                <EditBoardDialog
+                  id={board.id}
+                  name={board.name}
+                  description={board.description}
+                  status={board.status}
+                />
+                <ConfirmAction
+                  action={archiveWorkspaceAction}
+                  fields={{ id: board.id }}
+                  title={`Archive ${board.name}?`}
+                  description="The board leaves the dashboard and stops counting against your plan. Its documents, canvas and agent history are kept, and you can restore it at any time."
+                  confirmLabel="Archive board"
+                  pendingLabel="Archiving…"
+                  triggerLabel="Archive"
+                  triggerVariant="ghost"
+                />
+              </div>
+            </div>
           </li>
         ))}
       </ul>
