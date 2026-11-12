@@ -128,7 +128,12 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
     });
 
     await test.step("the upgrade dialog explains both limits and offers the team plans", async () => {
-      await page.getByRole("button", { name: "Upgrade plan" }).click();
+      // The header and the sidebar footer both offer the upgrade once a limit
+      // is reached, and both open the same dialog.
+      const upgradeButtons = page.getByRole("button", { name: "Upgrade plan" });
+      await expect(upgradeButtons).toHaveCount(2);
+
+      await upgradeButtons.first().click();
 
       const dialog = page.getByRole("dialog", { name: "Upgrade your plan" });
       await expect(dialog).toBeVisible();
@@ -165,6 +170,27 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
       await expect(page.getByText("20 / 20")).toBeVisible();
     });
 
+    await test.step("the sidebar's upgrade CTA opens the same dialog", async () => {
+      // The footer sits at the bottom of a fixed sidebar, so it has to stay
+      // inside the viewport rather than being pushed past the bottom edge.
+      const sidebarCta = page
+        .getByRole("button", { name: "Upgrade plan" })
+        .last();
+      await expect(sidebarCta).toBeInViewport();
+      await expect(page.getByText("3 / 3")).toBeInViewport();
+
+      await sidebarCta.click();
+
+      const dialog = page.getByRole("dialog", { name: "Upgrade your plan" });
+      await expect(dialog).toBeVisible();
+      await expect(
+        dialog.getByText(/has used all 3 workspaces on the Free plan/),
+      ).toBeVisible();
+
+      await page.keyboard.press("Escape");
+      await expect(dialog).toHaveCount(0);
+    });
+
     await test.step("the personal account stayed at zero throughout", async () => {
       await page.goto("/dashboard/settings");
       await page
@@ -176,6 +202,9 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
 
       await expect(page.getByText("0 / 20")).toBeVisible();
       await expect(page.getByText("0 / 3")).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Upgrade plan" }),
+      ).toHaveCount(0);
     });
   } finally {
     if (organizationId) {

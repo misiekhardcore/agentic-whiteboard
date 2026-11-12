@@ -12,6 +12,7 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarFooter,
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
@@ -84,12 +85,17 @@ export function DashboardSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarGroup>
-          <Suspense fallback={<Spinner />}>
-            <WorkspaceUsage />
-          </Suspense>
-        </SidebarGroup>
       </SidebarContent>
+      {/*
+        Pinned outside the scrolling content so the meter (and the upgrade CTA
+        it grows into at the limit) stays at the bottom of the sidebar instead
+        of scrolling away with the nav.
+      */}
+      <SidebarFooter className="border-t">
+        <Suspense fallback={<Spinner />}>
+          <WorkspaceUsage />
+        </Suspense>
+      </SidebarFooter>
     </Sidebar>
   );
 }

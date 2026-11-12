@@ -1,7 +1,7 @@
 import { getSessionBillingOverview } from "@/lib/billing/overview";
 import { limitLabels } from "@/lib/billing/plans";
 
-import { UpgradeButton } from "./upgrade-button";
+import { UpgradeControl } from "./upgrade-control";
 import { UsageMeter } from "./usage-meter";
 
 /**
@@ -31,17 +31,7 @@ export async function HeaderBilling() {
         className="hidden w-40 sm:flex"
       />
 
-      {overview.reasons.length > 0 ? (
-        <UpgradeButton
-          reasons={overview.reasons}
-          currentPlanId={overview.entitlements.plan.id}
-          activeAudience={overview.organizationId ? "team" : "personal"}
-          canManageBilling={overview.canManageBilling}
-          teams={overview.teams}
-          defaultOrganizationId={overview.defaultOrganizationId}
-          accountName={overview.accountName}
-        />
-      ) : null}
+      <UpgradeControl />
     </>
   );
 }

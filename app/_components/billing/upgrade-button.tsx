@@ -52,6 +52,7 @@ export function UpgradeButton({
   teams,
   defaultOrganizationId,
   accountName,
+  triggerClassName,
 }: {
   reasons: UpgradeReason[];
   currentPlanId: PlanId;
@@ -61,6 +62,8 @@ export function UpgradeButton({
   teams: TeamOption[];
   defaultOrganizationId: string | null;
   accountName: string;
+  /** Lets a surface size the trigger, e.g. full width in the sidebar footer. */
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<PlanId | null>(null);
@@ -112,6 +115,7 @@ export function UpgradeButton({
             variant="primary"
             title={reasons[0]?.title}
             aria-label="Upgrade plan"
+            className={triggerClassName}
           >
             <Sparkles aria-hidden="true" />
             Upgrade
