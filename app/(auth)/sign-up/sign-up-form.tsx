@@ -2,7 +2,10 @@
 
 import { useActionState } from "react";
 
-import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
+import {
+  Alert,
+  AlertDescription,
+} from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import {
   Field,
@@ -24,9 +27,9 @@ export function SignUpForm({ redirectTo }: { redirectTo?: string }) {
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
-      {redirectTo ? (
+      {redirectTo && (
         <input type="hidden" name="redirectTo" value={redirectTo} />
-      ) : null}
+      )}
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="name">Name</FieldLabel>
@@ -66,14 +69,14 @@ export function SignUpForm({ redirectTo }: { redirectTo?: string }) {
         </Field>
       </FieldGroup>
 
-      {state.error ? (
+      {state.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
-      ) : null}
+      )}
 
       <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? <Spinner /> : null}
+        {isPending && <Spinner />}
         {isPending ? "Creating account…" : "Create account"}
       </Button>
     </form>

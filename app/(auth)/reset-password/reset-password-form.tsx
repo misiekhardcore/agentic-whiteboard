@@ -2,7 +2,10 @@
 
 import { useActionState } from "react";
 
-import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
+import {
+  Alert,
+  AlertDescription,
+} from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import {
   Field,
@@ -40,14 +43,14 @@ export function ResetPasswordForm({ token }: { token: string }) {
         </Field>
       </FieldGroup>
 
-      {state.error ? (
+      {state.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
-      ) : null}
+      )}
 
       <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? <Spinner /> : null}
+        {isPending && <Spinner />}
         {isPending ? "Saving…" : "Save password"}
       </Button>
     </form>

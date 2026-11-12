@@ -39,11 +39,11 @@ export function PlanCard({
         className,
       )}
     >
-      {featured ? (
+      {featured && (
         <Badge className="absolute -top-3 left-6" variant="default">
           Most popular
         </Badge>
-      ) : null}
+      )}
 
       <h3
         className={cn(
@@ -92,9 +92,11 @@ export function PlanCard({
 
       <div className={compact ? "mt-5" : "mt-8"}>{footer}</div>
 
-      {note ? (
-        <p className="mt-2 text-center text-xs text-muted-foreground">{note}</p>
-      ) : null}
+      {note && (
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          {note}
+        </p>
+      )}
     </article>
   );
 }

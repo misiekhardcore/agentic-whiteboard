@@ -156,11 +156,11 @@ export function AccountMenuPopover({
           ))}
         </div>
 
-        {error ? (
+        {error && (
           <p className="px-1.5 py-1 text-xs text-destructive">
             {error}
           </p>
-        ) : null}
+        )}
 
         <Separator className="my-1" />
 
@@ -240,9 +240,11 @@ function AccountOption({
           className="size-3.5 shrink-0 animate-spin text-muted-foreground"
           aria-hidden="true"
         />
-      ) : active ? (
-        <Check className="size-4 shrink-0" aria-hidden="true" />
-      ) : null}
+      ) : (
+        active && (
+          <Check className="size-4 shrink-0" aria-hidden="true" />
+        )
+      )}
     </Button>
   );
 }

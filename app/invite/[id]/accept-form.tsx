@@ -20,11 +20,11 @@ export function AcceptInvitationForm({
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <input type="hidden" name="invitationId" value={invitationId} />
-      {state.error ? (
+      {state.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
-      ) : null}
+      ) }
       <Button type="submit" disabled={pending} className="w-full">
         {pending ? "Joining…" : "Accept invitation"}
       </Button>

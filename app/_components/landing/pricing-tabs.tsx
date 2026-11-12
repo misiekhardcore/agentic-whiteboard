@@ -52,10 +52,11 @@ export function PricingTabs({
   // state so the resumed checkout still opens when this component survived the
   // client-side navigation from the auth pages.
   const requested = getPlan(requestedPlanId);
-  const [audienceChoice, setAudienceChoice] = useState<BillingAudience | null>(
+  const [audienceChoice, setAudienceChoice] =
+    useState<BillingAudience | null>(null);
+  const [chosenPlanId, setChosenPlanId] = useState<Plan["id"] | null>(
     null,
   );
-  const [chosenPlanId, setChosenPlanId] = useState<Plan["id"] | null>(null);
   const [dismissedRequestedId, setDismissedRequestedId] = useState<
     Plan["id"] | null
   >(null);
@@ -142,9 +143,19 @@ export function PricingTabs({
                       featured={featured}
                       footer={
                         free ? (
-                          <Button asChild variant="outline" className="w-full">
-                            <Link href={signedIn ? "/dashboard" : "/sign-up"}>
-                              {signedIn ? "Open dashboard" : "Start for free"}
+                          <Button
+                            asChild
+                            variant="outline"
+                            className="w-full"
+                          >
+                            <Link
+                              href={
+                                signedIn ? "/dashboard" : "/sign-up"
+                              }
+                            >
+                              {signedIn
+                                ? "Open dashboard"
+                                : "Start for free"}
                             </Link>
                           </Button>
                         ) : (
@@ -162,18 +173,18 @@ export function PricingTabs({
                 })}
               </div>
 
-              {option === "team" ? (
+              {option === "team" && (
                 <p className="mt-6 text-center text-xs text-muted-foreground">
-                  Team and Enterprise include every Pro feature, billed per
-                  member with unlimited seats.
+                  Team and Enterprise include every Pro feature, billed
+                  per member with unlimited seats.
                 </p>
-              ) : null}
+              )}
             </TabsContent>
           );
         })}
       </Tabs>
 
-      {selectedPlan && isPaidPlan(selectedPlan) ? (
+      {selectedPlan && isPaidPlan(selectedPlan) && (
         <CheckoutSheet
           key={selectedPlan.id}
           plan={selectedPlan}
@@ -184,8 +195,7 @@ export function PricingTabs({
           teams={teams}
           defaultOrganizationId={defaultOrganizationId}
         />
-      ) : null}
+      )}
     </>
   );
 }
-

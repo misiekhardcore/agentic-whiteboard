@@ -14,7 +14,11 @@ import {
 import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
 import { getSessionAccount } from "@/lib/account";
 import { getOrganizationEntitlements } from "@/lib/billing/entitlements";
-import { formatPlanPeriod, formatPlanPrice, isPaidPlan } from "@/lib/billing/plans";
+import {
+  formatPlanPeriod,
+  formatPlanPrice,
+  isPaidPlan,
+} from "@/lib/billing/plans";
 import {
   canManageTeam,
   listOrganizationMembers,
@@ -62,8 +66,8 @@ export default async function TeamPage() {
         <header className="flex flex-col gap-1">
           <h1 className="font-display text-h2 font-semibold">Team</h1>
           <p className="text-sm text-muted-foreground">
-            Team and Enterprise plans bill an organization, so create one to
-            invite people and manage billing.
+            Team and Enterprise plans bill an organization, so create
+            one to invite people and manage billing.
           </p>
         </header>
 
@@ -71,7 +75,8 @@ export default async function TeamPage() {
           <CardHeader>
             <CardTitle>Create your team</CardTitle>
             <CardDescription>
-              You become the owner. You can invite teammates right after.
+              You become the owner. You can invite teammates right
+              after.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -91,8 +96,9 @@ export default async function TeamPage() {
         <header className="flex flex-col gap-1">
           <h1 className="font-display text-h2 font-semibold">Team</h1>
           <p className="text-sm text-muted-foreground">
-            You&rsquo;re using your personal account. Choose an organization to
-            manage its members and billing, or create a new one.
+            You&rsquo;re using your personal account. Choose an
+            organization to manage its members and billing, or create a
+            new one.
           </p>
         </header>
 
@@ -100,8 +106,8 @@ export default async function TeamPage() {
           <CardHeader>
             <CardTitle>Your organizations</CardTitle>
             <CardDescription>
-              Opening one switches the active account. You can switch back to
-              personal from the avatar menu in the header.
+              Opening one switches the active account. You can switch
+              back to personal from the avatar menu in the header.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -153,11 +159,13 @@ export default async function TeamPage() {
 
   const team = activeTeam;
 
-  const [members, pendingInvitations, entitlements] = await Promise.all([
-    listOrganizationMembers(team.id),
-    listPendingInvitations(team.id),
-    getOrganizationEntitlements(team.id),
-  ]);
+  const [members, pendingInvitations, entitlements] = await Promise.all(
+    [
+      listOrganizationMembers(team.id),
+      listPendingInvitations(team.id),
+      getOrganizationEntitlements(team.id),
+    ],
+  );
 
   const canManage = canManageTeam(team.role);
   const { plan, subscription, limits } = entitlements;
@@ -171,14 +179,16 @@ export default async function TeamPage() {
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-h2 font-semibold">{team.name}</h1>
+          <h1 className="font-display text-h2 font-semibold">
+            {team.name}
+          </h1>
           <Badge variant="outline" className="capitalize">
             {team.role}
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          {members.length} {members.length === 1 ? "person" : "people"} ·{" "}
-          {promptLimit}
+          {members.length} {members.length === 1 ? "person" : "people"}{" "}
+          · {promptLimit}
         </p>
       </header>
 
@@ -198,12 +208,16 @@ export default async function TeamPage() {
                   : "$0 forever"}
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">{plan.summary}</p>
+            <p className="text-sm text-muted-foreground">
+              {plan.summary}
+            </p>
             {subscription ? (
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <Badge
                   variant={
-                    subscription.status === "active" ? "default" : "secondary"
+                    subscription.status === "active"
+                      ? "default"
+                      : "secondary"
                   }
                 >
                   {subscription.status.replace(/_/g, " ")}
@@ -212,28 +226,30 @@ export default async function TeamPage() {
                   {subscription.seats}{" "}
                   {subscription.seats === 1 ? "seat" : "seats"}
                 </span>
-                {subscription.currentPeriodEnd ? (
-                  <span>· renews {formatDate(subscription.currentPeriodEnd)}</span>
-                ) : null}
-                {subscription.cancelAtPeriodEnd ? (
+                {subscription.currentPeriodEnd && (
+                  <span>
+                    · renews {formatDate(subscription.currentPeriodEnd)}
+                  </span>
+                )}
+                {subscription.cancelAtPeriodEnd && (
                   <span>· cancels at period end</span>
-                ) : null}
+                )}
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Free plan. Upgrade when the team needs more prompts and share
-                links.
+                Free plan. Upgrade when the team needs more prompts and
+                share links.
               </p>
             )}
           </div>
 
           {canManage ? (
             <div className="flex flex-wrap items-center gap-2">
-              {!isPaidPlan(plan) ? (
+              {!isPaidPlan(plan) && (
                 <Button asChild variant="primary" size="sm">
                   <Link href="/?billing=team#pricing">Upgrade</Link>
                 </Button>
-              ) : null}
+              )}
               <ManageBillingButton organizationId={team.id} />
             </div>
           ) : (
@@ -281,10 +297,13 @@ export default async function TeamPage() {
                       {member.role}
                     </Badge>
                   )}
-                  {canManage && member.userId !== session.user.id ? (
+                  {canManage && member.userId !== session.user.id && (
                     <ConfirmAction
                       action={removeMemberAction}
-                      fields={{ memberId: member.id, organizationId: team.id }}
+                      fields={{
+                        memberId: member.id,
+                        organizationId: team.id,
+                      }}
                       title={`Remove ${member.name}?`}
                       description={`${member.email} loses access to this team right away. On a paid plan the seat is dropped and Stripe prorates the difference.`}
                       confirmLabel="Remove member"
@@ -292,22 +311,25 @@ export default async function TeamPage() {
                       triggerLabel="Remove"
                       triggerVariant="destructive"
                     />
-                  ) : null}
+                  )}
                 </div>
               </li>
             ))}
           </ul>
 
-          {canManage ? (
+          {canManage && (
             <div className="flex flex-col gap-6 border-t pt-5">
               <InviteMemberForm organizationId={team.id} />
 
               <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">Pending invitations</p>
+                <p className="text-sm font-medium">
+                  Pending invitations
+                </p>
                 {pendingInvitations.length === 0 ? (
                   <p className="text-xs text-muted-foreground">
-                    None right now. Invitations expire 48 hours after they are
-                    sent, and can be canceled here until they are accepted.
+                    None right now. Invitations expire 48 hours after
+                    they are sent, and can be canceled here until they
+                    are accepted.
                   </p>
                 ) : (
                   <ul className="flex flex-col divide-y">
@@ -317,7 +339,9 @@ export default async function TeamPage() {
                         className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm">{pending.email}</p>
+                          <p className="truncate text-sm">
+                            {pending.email}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {pending.role ?? "member"} · expires{" "}
                             {formatDate(pending.expiresAt)}
@@ -339,7 +363,7 @@ export default async function TeamPage() {
                 )}
               </div>
             </div>
-          ) : null}
+          )}
         </CardContent>
       </Card>
 
@@ -347,11 +371,15 @@ export default async function TeamPage() {
         <CardHeader>
           <CardTitle>Teams</CardTitle>
           <CardDescription>
-            Switch the account the dashboard shows, or start another one.
+            Switch the account the dashboard shows, or start another
+            one.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
-          <SwitchTeamForm teams={teams} activeOrganizationId={team.id} />
+          <SwitchTeamForm
+            teams={teams}
+            activeOrganizationId={team.id}
+          />
           <div className="flex flex-col gap-3 border-t pt-6">
             <p className="text-sm font-medium">New team</p>
             <CreateTeamForm />

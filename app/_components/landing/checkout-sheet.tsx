@@ -1,6 +1,9 @@
 "use client";
 
-import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
+import {
+  Alert,
+  AlertDescription,
+} from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import { Input } from "@konopskidev/ui/components/input";
 import { Label } from "@konopskidev/ui/components/label";
@@ -83,7 +86,9 @@ export function CheckoutSheet({
   const [organizationId, setOrganizationId] = useState(initialTeamId);
   const [organizationName, setOrganizationName] = useState("");
   const [seats, setSeats] = useState(() =>
-    String(teams.find((team) => team.id === initialTeamId)?.memberCount ?? 1),
+    String(
+      teams.find((team) => team.id === initialTeamId)?.memberCount ?? 1,
+    ),
   );
 
   const [loading, setLoading] = useState(false);
@@ -91,8 +96,13 @@ export function CheckoutSheet({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [complete, setComplete] = useState(false);
 
-  const seatCount = Math.min(500, Math.max(1, Math.floor(Number(seats) || 1)));
-  const total = plan.perSeat ? plan.priceUsd * seatCount : plan.priceUsd;
+  const seatCount = Math.min(
+    500,
+    Math.max(1, Math.floor(Number(seats) || 1)),
+  );
+  const total = plan.perSeat
+    ? plan.priceUsd * seatCount
+    : plan.priceUsd;
   const stripe = getStripePromise();
 
   async function startCheckout() {
@@ -116,9 +126,12 @@ export function CheckoutSheet({
         body: JSON.stringify({
           planId: plan.id,
           seats: plan.perSeat ? seatCount : 1,
-          organizationId: isTeamPlan && hasTeams ? organizationId : undefined,
+          organizationId:
+            isTeamPlan && hasTeams ? organizationId : undefined,
           organizationName:
-            isTeamPlan && !hasTeams ? organizationName.trim() : undefined,
+            isTeamPlan && !hasTeams
+              ? organizationName.trim()
+              : undefined,
         }),
       });
 
@@ -137,7 +150,9 @@ export function CheckoutSheet({
       // no payment form to show. Refresh so the server sees the new plan before
       // the header's upgrade button unmounts.
       if (data.changed) {
-        toast.success(`You’re on ${plan.name} now.`, { closeButton: true });
+        toast.success(`You’re on ${plan.name} now.`, {
+          closeButton: true,
+        });
         onOpenChange(false);
         router.refresh();
         return;
@@ -150,7 +165,9 @@ export function CheckoutSheet({
 
       setClientSecret(data.clientSecret);
     } catch {
-      setError("Could not reach the server. Check your connection and try again.");
+      setError(
+        "Could not reach the server. Check your connection and try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -164,7 +181,9 @@ export function CheckoutSheet({
       >
         <SheetHeader>
           <SheetTitle>
-            {complete ? `You’re on ${plan.name}` : `Choose ${plan.name}`}
+            {complete
+              ? `You’re on ${plan.name}`
+              : `Choose ${plan.name}`}
           </SheetTitle>
           <SheetDescription>
             {complete
@@ -189,12 +208,16 @@ export function CheckoutSheet({
                     <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border border-primary/30 bg-primary/5 text-primary">
                       <Check className="size-2.5" aria-hidden="true" />
                     </span>
-                    <span className="text-foreground/90">{feature}</span>
+                    <span className="text-foreground/90">
+                      {feature}
+                    </span>
                   </li>
                 ))}
               </ul>
               <Button asChild variant="primary" className="w-full">
-                <Link href={isTeamPlan ? "/dashboard/team" : "/dashboard"}>
+                <Link
+                  href={isTeamPlan ? "/dashboard/team" : "/dashboard"}
+                >
                   Go to dashboard
                 </Link>
               </Button>
@@ -213,8 +236,8 @@ export function CheckoutSheet({
             ) : (
               <Alert variant="destructive">
                 <AlertDescription>
-                  Stripe is not configured: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is
-                  missing.
+                  Stripe is not configured:
+                  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is missing.
                 </AlertDescription>
               </Alert>
             )
@@ -222,7 +245,9 @@ export function CheckoutSheet({
             <div className="flex flex-col gap-6">
               <div className="flex items-baseline justify-between gap-4 border-y py-4">
                 <span className="text-sm text-muted-foreground">
-                  {plan.perSeat ? `${seatCount} × ${formatPlanPrice(plan)}` : plan.name}
+                  {plan.perSeat
+                    ? `${seatCount} × ${formatPlanPrice(plan)}`
+                    : plan.name}
                 </span>
                 <span className="flex items-baseline gap-1.5">
                   <span className="font-display text-h3 font-semibold">
@@ -234,8 +259,9 @@ export function CheckoutSheet({
                 </span>
               </div>
 
-              {isTeamPlan && !changeMode ? (
-                hasTeams ? (
+              {isTeamPlan &&
+                !changeMode &&
+                (hasTeams ? (
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="checkout-team">Team</Label>
                     <Select
@@ -245,10 +271,14 @@ export function CheckoutSheet({
                         const selected = teams.find(
                           (team) => team.id === value,
                         );
-                        if (selected) setSeats(String(selected.memberCount));
+                        if (selected)
+                          setSeats(String(selected.memberCount));
                       }}
                     >
-                      <SelectTrigger id="checkout-team" className="w-full">
+                      <SelectTrigger
+                        id="checkout-team"
+                        className="w-full"
+                      >
                         <SelectValue placeholder="Choose a team" />
                       </SelectTrigger>
                       <SelectContent>
@@ -270,7 +300,9 @@ export function CheckoutSheet({
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="checkout-team-name">Team name</Label>
+                    <Label htmlFor="checkout-team-name">
+                      Team name
+                    </Label>
                     <Input
                       id="checkout-team-name"
                       value={organizationName}
@@ -284,10 +316,9 @@ export function CheckoutSheet({
                       We’ll create the team and make you its owner.
                     </p>
                   </div>
-                )
-              ) : null}
+                ))}
 
-              {plan.perSeat && !changeMode ? (
+              {plan.perSeat && !changeMode && (
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="checkout-seats">Seats</Label>
                   <Input
@@ -299,17 +330,17 @@ export function CheckoutSheet({
                     onChange={(event) => setSeats(event.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Seats stay in sync with your member count as people join or
-                    leave.
+                    Seats stay in sync with your member count as people
+                    join or leave.
                   </p>
                 </div>
-              ) : null}
+              )}
 
-              {error ? (
+              {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
-              ) : null}
+              )}
 
               <Button
                 variant="primary"
@@ -319,7 +350,10 @@ export function CheckoutSheet({
               >
                 {loading ? (
                   <>
-                    <Loader2 className="animate-spin" aria-hidden="true" />
+                    <Loader2
+                      className="animate-spin"
+                      aria-hidden="true"
+                    />
                     Starting secure checkout…
                   </>
                 ) : changeMode ? (

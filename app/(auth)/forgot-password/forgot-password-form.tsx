@@ -2,7 +2,10 @@
 
 import { useActionState } from "react";
 
-import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
+import {
+  Alert,
+  AlertDescription,
+} from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import {
   Field,
@@ -38,20 +41,20 @@ export function ForgotPasswordForm() {
         </Field>
       </FieldGroup>
 
-      {state.notice ? (
+      {state.notice && (
         <Alert>
           <AlertDescription>{state.notice}</AlertDescription>
         </Alert>
-      ) : null}
+      )}
 
-      {state.error ? (
+      {state.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
-      ) : null}
+      )}
 
       <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? <Spinner /> : null}
+        {isPending && <Spinner />}
         {isPending ? "Sending…" : "Send reset link"}
       </Button>
     </form>

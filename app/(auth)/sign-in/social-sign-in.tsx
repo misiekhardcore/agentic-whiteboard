@@ -16,7 +16,12 @@ const LABELS: Record<SocialProvider, string> = {
 
 function GitHubIcon() {
   return (
-    <svg aria-hidden viewBox="0 0 24 24" fill="currentColor" className="size-4">
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="size-4"
+    >
       <path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7 0-.7 0-.7 1.2 0 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.4-1.3-5.4-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C16.9 4.9 18 5.2 18 5.2c.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.4 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3Z" />
     </svg>
   );
@@ -49,8 +54,19 @@ function ProviderButton({ provider }: { provider: SocialProvider }) {
   const { pending } = useFormStatus();
 
   return (
-    <Button type="submit" variant="outline" className="w-full" disabled={pending}>
-      {pending ? <Spinner /> : provider === "github" ? <GitHubIcon /> : <GoogleIcon />}
+    <Button
+      type="submit"
+      variant="outline"
+      className="w-full"
+      disabled={pending}
+    >
+      {pending ? (
+        <Spinner />
+      ) : provider === "github" ? (
+        <GitHubIcon />
+      ) : (
+        <GoogleIcon />
+      )}
       {LABELS[provider]}
     </Button>
   );
@@ -68,9 +84,9 @@ export function SocialSignIn({
       {providers.map((provider) => (
         <form key={provider} action={signInWithProviderAction}>
           <input type="hidden" name="provider" value={provider} />
-          {redirectTo ? (
+          {redirectTo && (
             <input type="hidden" name="redirectTo" value={redirectTo} />
-          ) : null}
+          )}
           <ProviderButton provider={provider} />
         </form>
       ))}
