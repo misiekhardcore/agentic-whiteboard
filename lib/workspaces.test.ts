@@ -7,7 +7,12 @@ import {
   WORKSPACE_STATUSES,
   WORKSPACE_STATUS_LABELS,
 } from "@/lib/workspace-status";
-import { workspacePermission, type WorkspaceAccess } from "@/lib/workspaces";
+import {
+  mergeRecentItems,
+  workspacePermission,
+  type RecentWorkspaceItem,
+  type WorkspaceAccess,
+} from "@/lib/workspaces";
 
 function access(overrides: Partial<WorkspaceAccess> = {}): WorkspaceAccess {
   return {
@@ -48,6 +53,77 @@ describe("workspace permission", () => {
         ),
       ).toBe("edit");
     }
+  });
+});
+
+function recentItem(
+  overrides: Partial<RecentWorkspaceItem> = {},
+): RecentWorkspaceItem {
+  return {
+    key: "workspace:ws_1",
+    type: "workspace",
+    id: "ws_1",
+    workspaceId: "ws_1",
+    workspaceName: "Board",
+    description: null,
+    status: "PLANNING",
+    updatedAt: new Date("2026-11-01T00:00:00Z"),
+    ...overrides,
+  };
+}
+
+describe("recent workspace items", () => {
+  it("orders boards, docs and canvases together, newest first", () => {
+    const items = mergeRecentItems(
+      [
+        recentItem({ key: "workspace:ws_1", updatedAt: new Date("2026-11-01T00:00:00Z") }),
+        recentItem({
+          key: "doc:doc_1",
+          type: "doc",
+          id: "doc_1",
+          updatedAt: new Date("2026-11-03T00:00:00Z"),
+        }),
+        recentItem({
+          key: "canvas:canvas_1",
+          type: "canvas",
+          id: "canvas_1",
+          updatedAt: new Date("2026-11-02T00:00:00Z"),
+        }),
+      ],
+      5,
+    );
+
+    expect(items.map((item) => item.key)).toEqual([
+      "doc:doc_1",
+      "canvas:canvas_1",
+      "workspace:ws_1",
+    ]);
+  });
+
+  it("caps the list at the requested limit", () => {
+    const items = Array.from({ length: 8 }, (_, index) =>
+      recentItem({
+        key: `workspace:ws_${index}`,
+        id: `ws_${index}`,
+        updatedAt: new Date(2026, 10, index + 1),
+      }),
+    );
+
+    expect(mergeRecentItems(items, 5)).toHaveLength(5);
+    expect(mergeRecentItems(items, 5)[0]?.id).toBe("ws_7");
+  });
+
+  it("breaks ties by key so the order is stable", () => {
+    const at = new Date("2026-11-01T00:00:00Z");
+    const items = mergeRecentItems(
+      [
+        recentItem({ key: "workspace:b", id: "b", updatedAt: at }),
+        recentItem({ key: "workspace:a", id: "a", updatedAt: at }),
+      ],
+      5,
+    );
+
+    expect(items.map((item) => item.id)).toEqual(["a", "b"]);
   });
 });
 

@@ -1,16 +1,20 @@
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Loading } from "@/components/Loading/Loading";
-import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
 import { getSessionAccount } from "@/lib/account";
-import { archiveWorkspaceAction } from "@/lib/workspace-actions";
+import { formatDay } from "@/lib/formatDate";
 import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace-status";
-import { listAccountWorkspaces } from "@/lib/workspaces";
-import { Folder } from "lucide-react";
+import {
+  listRecentWorkspaceItems,
+  type RecentWorkspaceItem,
+} from "@/lib/workspaces";
+import { FileText, Frame, Folder } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { CreateNewBoardDialog } from "./CreateNewBoardDialog";
-import { EditBoardDialog } from "./EditBoardDialog";
+import { BoardCard } from "./BoardCard";
+
+const RECENT_LIMIT = 5;
 
 export function ProjectsList() {
   return (
@@ -27,12 +31,13 @@ async function ProjectsListInner() {
 
   const { activeTeam, session } = account;
   const accountName = activeTeam?.name ?? "Personal account";
-  const boards = await listAccountWorkspaces(
+  const items = await listRecentWorkspaceItems(
     session.user.id,
     activeTeam?.id ?? null,
+    RECENT_LIMIT,
   );
 
-  if (boards.length === 0) {
+  if (items.length === 0) {
     return (
       <EmptyState
         icon={
@@ -54,58 +59,63 @@ async function ProjectsListInner() {
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <h2 className="text-2xl font-bold">{accountName} boards</h2>
+        <h2 className="text-2xl font-bold">Latest in {accountName}</h2>
         <p className="text-sm text-muted-foreground">
-          {boards.length} {boards.length === 1 ? "board" : "boards"} in
-          this account.
+          The {items.length} most recently updated{" "}
+          {items.length === 1 ? "item" : "items"} across boards, docs and
+          canvases.
         </p>
       </div>
 
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {boards.map((board) => (
-          <li
-            key={board.id}
-            className="card flex h-full flex-col gap-3 p-4 transition-colors hover:border-primary/40"
-          >
-            <Link
-              href={`/workspace/${board.id}`}
-              className="flex flex-col gap-2"
-            >
-              <span className="font-medium">{board.name}</span>
-              {board.description && (
-                <span className="line-clamp-2 text-sm text-muted-foreground">
-                  {board.description}
-                </span>
-              )}
-            </Link>
-
-            <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
-              <span className="font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
-                {WORKSPACE_STATUS_LABELS[board.status]}
-              </span>
-
-              <div className="flex items-center gap-2">
-                <EditBoardDialog
-                  id={board.id}
-                  name={board.name}
-                  description={board.description}
-                  status={board.status}
-                />
-                <ConfirmAction
-                  action={archiveWorkspaceAction}
-                  fields={{ id: board.id }}
-                  title={`Archive ${board.name}?`}
-                  description="The board leaves the dashboard and stops counting against your plan. Its documents, canvas and agent history are kept, and you can restore it at any time."
-                  confirmLabel="Archive board"
-                  pendingLabel="Archiving…"
-                  triggerLabel="Archive"
-                  triggerVariant="ghost"
-                />
-              </div>
-            </div>
-          </li>
-        ))}
+      <ul aria-label="Latest items" className="flex flex-col gap-3">
+        {items.map((item) =>
+          item.type === "workspace" ? (
+            <BoardCard
+              key={item.key}
+              board={{
+                id: item.id,
+                name: item.workspaceName,
+                description: item.description,
+                status: item.status,
+                updatedAt: item.updatedAt,
+              }}
+            />
+          ) : (
+            <SurfaceCard key={item.key} item={item} />
+          ),
+        )}
       </ul>
     </div>
+  );
+}
+
+/**
+ * A doc or canvas is shown through the board that owns it: the surface has no
+ * name of its own, and opening the row lands on the board.
+ */
+function SurfaceCard({ item }: { item: RecentWorkspaceItem }) {
+  const isDoc = item.type === "doc";
+  const Icon = isDoc ? FileText : Frame;
+  const label = isDoc ? "Doc" : "Canvas";
+
+  return (
+    <li className="card flex flex-wrap items-center justify-between gap-3 p-4 transition-colors hover:border-primary/40">
+      <Link
+        href={`/workspace/${item.workspaceId}`}
+        className="flex min-w-0 items-center gap-3"
+      >
+        <Icon className="size-4 shrink-0 text-muted-foreground" />
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate font-medium">{item.workspaceName}</span>
+          <span className="text-sm text-muted-foreground">
+            {label} · updated {formatDay(item.updatedAt)}
+          </span>
+        </span>
+      </Link>
+
+      <span className="font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+        {WORKSPACE_STATUS_LABELS[item.status]}
+      </span>
+    </li>
   );
 }

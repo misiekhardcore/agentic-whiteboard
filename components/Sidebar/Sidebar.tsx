@@ -40,7 +40,7 @@ export function DashboardSidebar() {
           <SidebarGroupLabel>My boards</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuLink href="/dashboard/boards">
+              <SidebarMenuLink href="/workspaces">
                 <LayoutGrid />
                 All boards
               </SidebarMenuLink>

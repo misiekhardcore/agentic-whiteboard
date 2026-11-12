@@ -54,6 +54,23 @@ async function findBoardId(
   return rows[0].id;
 }
 
+async function findOrganizationId(
+  db: Client,
+  userId: string,
+): Promise<string> {
+  const { rows } = await db.query<{ id: string }>(
+    `select o.id
+       from organization o
+       join member m on m.organization_id = o.id
+      where m.user_id = $1
+      order by o.created_at desc
+      limit 1`,
+    [userId],
+  );
+  if (!rows[0]) throw new Error("The organization was not created");
+  return rows[0].id;
+}
+
 /**
  * Dialogs ignore clicks until the client bundle hydrates, so retry the trigger
  * instead of relying on a fixed wait. Once the dialog is open the assertion
@@ -72,7 +89,11 @@ async function openDialog(
 
 async function createBoard(
   page: Page,
-  { name, description }: { name: string; description?: string },
+  {
+    name,
+    description,
+    verify = true,
+  }: { name: string; description?: string; verify?: boolean },
 ) {
   await openDialog(
     page,
@@ -85,7 +106,7 @@ async function createBoard(
   await dialog.getByRole("button", { name: "Save" }).click();
 
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByText(name).first()).toBeVisible();
+  if (verify) await expect(page.getByText(name).first()).toBeVisible();
 }
 
 async function signUpInNewContext(
@@ -136,7 +157,7 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       });
 
       await expect(
-        page.getByRole("heading", { name: "Personal account boards" }),
+        page.getByRole("heading", { name: "Latest in Personal account" }),
       ).toBeVisible();
       await expect(page.getByText("Where the quarter goes")).toBeVisible();
       await expect(page.getByText("1 / 3")).toBeVisible();
@@ -223,6 +244,29 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await expect(page.getByText("1 / 3")).toBeVisible();
     });
 
+    await test.step("the dashboard lists boards, docs and canvases together", async () => {
+      if (!boardId) throw new Error("The board id is missing");
+
+      await db.query('insert into doc (id, "workspaceId") values ($1, $2)', [
+        randomUUID(),
+        boardId,
+      ]);
+      await db.query(
+        'insert into canvas (id, "workspaceId") values ($1, $2)',
+        [randomUUID(), boardId],
+      );
+
+      await page.reload();
+
+      await expect(page.getByText(/Doc · updated/)).toBeVisible();
+      await expect(page.getByText(/Canvas · updated/)).toBeVisible();
+      await expect(
+        page
+          .getByRole("list", { name: "Latest items" })
+          .getByRole("listitem"),
+      ).toHaveCount(3);
+    });
+
     await test.step("the Free plan blocks a fourth board", async () => {
       await createBoard(page, { name: `Second ${id}` });
       await createBoard(page, { name: `Third ${id}` });
@@ -262,6 +306,69 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       .query('delete from "user" where email = any($1)', [
         [email, otherEmail],
       ])
+      .catch(() => undefined);
+    await db.end();
+  }
+});
+
+test("an organization board records the creating member and opens from /workspaces", async ({
+  page,
+}) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-org-boards-${id}@example.com`;
+  const password = `e2e-pass-${id}`;
+  const teamName = `Boards Team ${id}`;
+  const boardName = `Team roadmap ${id}`;
+
+  const db = new Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+
+  let userId: string | null = null;
+  let organizationId: string | null = null;
+
+  try {
+    await signUp(page, { name: "Org Board Tester", email, password });
+    userId = await findUserId(db, email);
+
+    await page.goto("/dashboard/organization");
+    await page.getByLabel("Organization name").fill(teamName);
+    await page.getByRole("button", { name: "Create organization" }).click();
+    await expect(
+      page.getByRole("heading", { name: teamName }),
+    ).toBeVisible({ timeout: 15_000 });
+
+    organizationId = await findOrganizationId(db, userId);
+
+    await page.goto("/dashboard");
+    // The team's fresh dashboard is empty; the helper's visibility check would
+    // race the revalidation, so the row is asserted below instead.
+    await createBoard(page, { name: boardName, verify: false });
+
+    const { rows } = await db.query<{
+      creatorId: string;
+      orgId: string | null;
+    }>('select "creatorId", "orgId" from workspace where name = $1', [
+      boardName,
+    ]);
+
+    expect(rows[0]).toEqual({ creatorId: userId, orgId: organizationId });
+
+    await page.goto("/workspaces");
+    await expect(page.getByRole("heading", { name: "All boards" })).toBeVisible();
+    await expect(page.getByText(boardName).first()).toBeVisible();
+  } finally {
+    if (userId) {
+      await db
+        .query('delete from workspace where "creatorId" = $1', [userId])
+        .catch(() => undefined);
+    }
+    if (organizationId) {
+      await db
+        .query("delete from organization where id = $1", [organizationId])
+        .catch(() => undefined);
+    }
+    await db
+      .query('delete from "user" where email = $1', [email])
       .catch(() => undefined);
     await db.end();
   }

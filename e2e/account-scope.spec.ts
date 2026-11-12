@@ -127,7 +127,7 @@ test("personal and organization accounts stay separate", async ({
       await page.reload();
 
       await expect(
-        page.getByRole("heading", { name: "Personal account boards" }),
+        page.getByRole("heading", { name: "Latest in Personal account" }),
       ).toBeVisible();
       await expect(page.getByText(personalBoard)).toBeVisible();
     });
@@ -159,7 +159,7 @@ test("personal and organization accounts stay separate", async ({
         page.getByText(`Working in ${teamName}.`),
       ).toBeVisible();
       await expect(
-        page.getByRole("heading", { name: `${teamName} boards` }),
+        page.getByRole("heading", { name: `Latest in ${teamName}` }),
       ).toBeVisible();
       await expect(page.getByText(organizationBoard)).toBeVisible();
       await expect(page.getByText(personalBoard)).toHaveCount(0);
@@ -186,7 +186,7 @@ test("personal and organization accounts stay separate", async ({
 
       await page.goto("/dashboard");
       await expect(
-        page.getByRole("heading", { name: "Personal account boards" }),
+        page.getByRole("heading", { name: "Latest in Personal account" }),
       ).toBeVisible();
       await expect(page.getByText(personalBoard)).toBeVisible();
       await expect(page.getByText(organizationBoard)).toHaveCount(0);

@@ -153,6 +153,7 @@ export async function createWorkspaceAction(
   }
 
   revalidatePath("/dashboard");
+  revalidatePath("/workspaces");
   return {
     ...EMPTY_WORKSPACE_FORM_STATE,
     notice: `${name} created.`,
@@ -214,6 +215,7 @@ export async function updateWorkspaceAction(
     .where(eq(workspaces.id, id));
 
   revalidatePath("/dashboard");
+  revalidatePath("/workspaces");
   revalidatePath(`/workspace/${id}`);
 
   return {
@@ -238,6 +240,7 @@ export async function archiveWorkspaceAction(formData: FormData): Promise<void> 
     .where(eq(workspaces.id, id));
 
   revalidatePath("/dashboard");
+  revalidatePath("/workspaces");
   revalidatePath(`/workspace/${id}`);
 }
 
@@ -256,5 +259,6 @@ export async function restoreWorkspaceAction(formData: FormData): Promise<void> 
     .where(eq(workspaces.id, id));
 
   revalidatePath("/dashboard");
+  revalidatePath("/workspaces");
   revalidatePath(`/workspace/${id}`);
 }
