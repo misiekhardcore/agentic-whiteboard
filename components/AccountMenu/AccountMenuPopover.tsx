@@ -15,6 +15,7 @@ import { Separator } from "@konopskidev/ui/components/separator";
 import {
   Building2,
   Check,
+  CreditCard,
   Loader2,
   LogOut,
   Settings,
@@ -171,11 +172,18 @@ export function AccountMenuPopover({
           <Settings /> Account settings
         </MenuLink>
         <MenuLink
-          href="/dashboard/team"
+          href="/dashboard/organization"
           onNavigate={() => setOpen(false)}
         >
           <Users />
-          Team &amp; billing
+          Organizations
+        </MenuLink>
+        <MenuLink
+          href="/dashboard/billing"
+          onNavigate={() => setOpen(false)}
+        >
+          <CreditCard />
+          Billing
         </MenuLink>
 
         <Separator className="my-1" />

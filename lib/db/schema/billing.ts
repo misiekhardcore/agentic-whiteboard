@@ -49,6 +49,15 @@ export const subscriptions = pgTable(
      * offers more than one.
      */
     currency: text("currency").default("usd").notNull(),
+    /**
+     * The recurring interval of the price Stripe bills (month, year, ...). It
+     * comes from Stripe with the currency, so the billing cycle shown to the
+     * customer is the one they are actually charged on, not a catalog guess.
+     */
+    billingInterval: text("billingInterval").default("month").notNull(),
+
+    /** When Stripe says the subscription began. */
+    startedAt: timestamp("startedAt", { precision: 3, mode: "date" }),
 
     currentPeriodStart: timestamp("currentPeriodStart", {
       precision: 3,

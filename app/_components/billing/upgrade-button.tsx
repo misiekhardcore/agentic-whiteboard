@@ -160,7 +160,7 @@ export function UpgradeButton({
 
           {!canManageBilling && (
             <p className="text-sm text-muted-foreground">
-              Only team owners and admins can change billing. Ask an
+              Only organization owners and admins can change billing. Ask an
               owner to upgrade {accountName}.
             </p>
           )}
@@ -170,11 +170,11 @@ export function UpgradeButton({
               You’re on the highest plan for this account. Manage the
               subscription from{" "}
               <Link
-                href="/dashboard/team"
+                href="/dashboard/billing"
                 className="underline underline-offset-3"
                 onClick={() => setOpen(false)}
               >
-                Team &amp; billing
+                Billing
               </Link>
               .
             </p>

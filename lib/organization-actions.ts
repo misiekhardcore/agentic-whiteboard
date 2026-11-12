@@ -14,25 +14,25 @@ import { canManageTeam, getMemberRole } from "@/lib/organizations";
 import type { TeamFormState } from "@/lib/organization-form";
 
 const MESSAGES: Record<string, string> = {
-  ORGANIZATION_ALREADY_EXISTS: "A team with that name already exists.",
-  ORGANIZATION_NOT_FOUND: "That team no longer exists.",
+  ORGANIZATION_ALREADY_EXISTS: "An organization with that name already exists.",
+  ORGANIZATION_NOT_FOUND: "That organization no longer exists.",
   USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION:
-    "That person is already on the team.",
+    "That person is already a member.",
   USER_IS_ALREADY_INVITED_TO_THIS_ORGANIZATION:
     "That person already has a pending invitation.",
   YOU_ARE_NOT_ALLOWED_TO_INVITE_USERS_TO_THIS_ORGANIZATION:
-    "Only team owners and admins can invite people.",
+    "Only organization owners and admins can invite people.",
   YOU_ARE_NOT_ALLOWED_TO_DELETE_THIS_MEMBER:
     "You cannot remove that member.",
   YOU_ARE_NOT_ALLOWED_TO_CANCEL_THIS_INVITATION:
     "You cannot cancel that invitation.",
-  MEMBER_NOT_FOUND: "That person is no longer on the team.",
+  MEMBER_NOT_FOUND: "That person is no longer a member.",
   INVITATION_NOT_FOUND: "That invitation no longer exists.",
   YOU_ARE_NOT_THE_RECIPIENT_OF_THE_INVITATION:
     "That invitation was sent to a different email address.",
   INVITATION_EXPIRED:
-    "That invitation has expired. Ask a team admin for a new one.",
-  MEMBERSHIP_LIMIT_REACHED: "This team has reached its member limit.",
+    "That invitation has expired. Ask an organization admin for a new one.",
+  MEMBERSHIP_LIMIT_REACHED: "This organization has reached its member limit.",
 };
 
 function toMessage(error: unknown, fallback: string): string {
@@ -50,23 +50,23 @@ function slugify(value: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
-  return slug || "team";
+  return slug || "org";
 }
 
 async function requireSession() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in?redirectTo=/dashboard/team");
+  if (!session) redirect("/sign-in?redirectTo=/dashboard/organization");
   return session;
 }
 
-export async function createTeamAction(
+export async function createOrganizationAction(
   _previousState: TeamFormState,
   formData: FormData,
 ): Promise<TeamFormState> {
   await requireSession();
   const name = String(formData.get("name") ?? "").trim();
 
-  if (!name) return { error: "Name your team." };
+  if (!name) return { error: "Name your organization." };
 
   try {
     await auth.api.createOrganization({
@@ -77,18 +77,18 @@ export async function createTeamAction(
       headers: await headers(),
     });
   } catch (error) {
-    return { error: toMessage(error, "Could not create the team. Try again.") };
+    return { error: toMessage(error, "Could not create the organization. Try again.") };
   }
 
-  // Creating a team makes it the active organization, so the header menu and
-  // every account-aware page need to render again.
+  // Creating an organization makes it the active account, so the header menu
+  // and every account-aware page need to render again.
   revalidatePath("/", "layout");
-  redirect("/dashboard/team");
+  redirect("/dashboard/organization");
 }
 
 /**
  * Switching only changes the session's active organization; every page that
- * shows team context reads it from there. An empty organization id means the
+ * shows organization context reads it from there. An empty organization id means the
  * personal account, which better-auth stores as a null active organization.
  */
 export async function switchAccountAction(
@@ -132,7 +132,7 @@ export async function inviteMemberAction(
 
   const callerRole = await getMemberRole(organizationId, session.user.id);
   if (!callerRole || !canManageTeam(callerRole)) {
-    return { error: "Only team owners and admins can invite people." };
+    return { error: "Only organization owners and admins can invite people." };
   }
 
   try {
@@ -144,7 +144,7 @@ export async function inviteMemberAction(
     return { error: toMessage(error, "Could not send the invitation.") };
   }
 
-  revalidatePath("/dashboard/team");
+  revalidatePath("/dashboard/organization");
   return { error: null, notice: `Invitation sent to ${email}.` };
 }
 
@@ -167,7 +167,7 @@ export async function updateMemberRoleAction(
 
   const callerRole = await getMemberRole(organizationId, session.user.id);
   if (!callerRole || !canManageTeam(callerRole)) {
-    return { error: "Only team owners and admins can change roles." };
+    return { error: "Only organization owners and admins can change roles." };
   }
 
   const [target] = await db
@@ -178,9 +178,9 @@ export async function updateMemberRoleAction(
     )
     .limit(1);
 
-  if (!target) return { error: "That person is no longer on the team." };
+  if (!target) return { error: "That person is no longer a member." };
   if (target.role === "owner") {
-    return { error: "The team owner's role cannot be changed." };
+    return { error: "The organization owner's role cannot be changed." };
   }
 
   try {
@@ -194,7 +194,7 @@ export async function updateMemberRoleAction(
     };
   }
 
-  revalidatePath("/dashboard/team");
+  revalidatePath("/dashboard/organization");
   return { error: null };
 }
 
@@ -212,7 +212,7 @@ export async function cancelInvitationAction(formData: FormData): Promise<void> 
     console.error("[organization] could not cancel invitation:", error);
   }
 
-  revalidatePath("/dashboard/team");
+  revalidatePath("/dashboard/organization");
 }
 
 export async function removeMemberAction(formData: FormData): Promise<void> {
@@ -231,7 +231,7 @@ export async function removeMemberAction(formData: FormData): Promise<void> {
     console.error("[organization] could not remove member:", error);
   }
 
-  // The account menu shows the member count for each team.
+  // The account menu shows the member count for each organization.
   revalidatePath("/", "layout");
 }
 
@@ -264,5 +264,5 @@ export async function acceptInvitationAction(
 
   // A new organization joins the account menu.
   revalidatePath("/", "layout");
-  redirect("/dashboard/team");
+  redirect("/dashboard/organization");
 }

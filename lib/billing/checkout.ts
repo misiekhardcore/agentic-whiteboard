@@ -38,7 +38,7 @@ export type CheckoutUser = {
  * second.
  */
 export type CheckoutResult =
-  | { clientSecret: string }
+  | { clientSecret: string; sessionId: string }
   | { changed: true; planId: Plan["id"] };
 
 function clampSeats(value: unknown): number {
@@ -92,13 +92,13 @@ async function resolveTeamOrganization({
 
     if (!membership) {
       throw new BillingRequestError(
-        "You are not a member of that team.",
+        "You are not a member of that organization.",
         403,
       );
     }
     if (!BILLING_ROLES.includes(membership.role as (typeof BILLING_ROLES)[number])) {
       throw new BillingRequestError(
-        "Only team owners and admins can manage billing.",
+        "Only organization owners and admins can manage billing.",
         403,
       );
     }
@@ -118,13 +118,13 @@ async function resolveTeamOrganization({
       headers,
     });
     if (!created?.id) {
-      throw new BillingRequestError("Could not create the team.", 502);
+      throw new BillingRequestError("Could not create the organization.", 502);
     }
     return created.id;
   }
 
   throw new BillingRequestError(
-    "Choose a team before starting a team plan.",
+    "Choose an organization before starting a team plan.",
     400,
   );
 }
@@ -179,7 +179,7 @@ export async function startCheckout({
       .where(eq(organization.id, ownerId))
       .limit(1);
     if (!team) {
-      throw new BillingRequestError("That team no longer exists.", 404);
+      throw new BillingRequestError("That organization no longer exists.", 404);
     }
     customerName = team.name;
   }
@@ -221,7 +221,7 @@ export async function startCheckout({
     // The sheet shows its own success state; only payment methods that force a
     // redirect (e.g. some bank auth flows) leave the page.
     redirect_on_completion: "if_required",
-    return_url: `${appUrl()}${ownerType === "ORGANIZATION" ? "/dashboard/team" : "/dashboard"}?billing=success`,
+    return_url: `${appUrl()}/dashboard/billing?billing=success`,
   });
 
   if (!session.client_secret) {
@@ -231,5 +231,8 @@ export async function startCheckout({
     );
   }
 
-  return { clientSecret: session.client_secret };
+  // The id travels with the secret so the browser can ask the server to pull
+  // the finished subscription from Stripe, instead of waiting for the webhook
+  // (which a local run only receives while `stripe listen` is running).
+  return { clientSecret: session.client_secret, sessionId: session.id };
 }

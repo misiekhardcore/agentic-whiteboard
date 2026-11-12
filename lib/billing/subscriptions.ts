@@ -131,6 +131,10 @@ export async function applyStripeSubscription(
   // the event and not from the catalog. The catalog value only fills in for a
   // subscription without items.
   const currency = (item?.price.currency ?? BILLING_CURRENCY).toLowerCase();
+  // The cycle is the price's own recurring interval, so a subscription billed
+  // yearly by Stripe would read "Yearly" even though every catalog price is
+  // monthly today.
+  const billingInterval = item?.price.recurring?.interval ?? "month";
   const plan =
     getPlan(stripeSubscription.metadata?.plan) ??
     (await storedPlan(stripeSubscription.id));
@@ -156,6 +160,8 @@ export async function applyStripeSubscription(
     stripeSubscriptionId: stripeSubscription.id,
     stripePriceId: priceId,
     currency,
+    billingInterval,
+    startedAt: new Date(stripeSubscription.created * 1000),
     currentPeriodStart: item?.current_period_start
       ? new Date(item.current_period_start * 1000)
       : null,

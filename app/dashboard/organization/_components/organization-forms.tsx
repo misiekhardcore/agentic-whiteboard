@@ -18,26 +18,29 @@ import { useState, useTransition } from "react";
 import { useActionState } from "react";
 
 import {
-  createTeamAction,
+  createOrganizationAction,
   inviteMemberAction,
-  switchTeamAction,
   updateMemberRoleAction,
 } from "@/lib/organization-actions";
 import { EMPTY_TEAM_FORM_STATE } from "@/lib/organization-form";
-import type { TeamOption } from "@/lib/organizations";
 
-export function CreateTeamForm() {
+/**
+ * Creating an organization is only offered from the personal account: it makes
+ * the new organization active and moves the dashboard into it, where every
+ * later change is made.
+ */
+export function CreateOrganizationForm() {
   const [state, formAction, pending] = useActionState(
-    createTeamAction,
+    createOrganizationAction,
     EMPTY_TEAM_FORM_STATE,
   );
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="team-name">Team name</Label>
+        <Label htmlFor="organization-name">Organization name</Label>
         <Input
-          id="team-name"
+          id="organization-name"
           name="name"
           placeholder="Product design"
           autoComplete="organization"
@@ -50,45 +53,7 @@ export function CreateTeamForm() {
         </Alert>
       )}
       <Button type="submit" disabled={pending} className="self-start">
-        {pending ? "Creating…" : "Create team"}
-      </Button>
-    </form>
-  );
-}
-
-export function SwitchTeamForm({
-  teams,
-  activeOrganizationId,
-}: {
-  teams: TeamOption[];
-  activeOrganizationId: string | null;
-}) {
-  return (
-    <form
-      action={switchTeamAction}
-      className="flex flex-col gap-3 sm:flex-row sm:items-end"
-    >
-      <div className="flex flex-1 flex-col gap-2">
-        <Label htmlFor="active-team">Active account</Label>
-        <Select
-          name="organizationId"
-          defaultValue={activeOrganizationId ?? "personal"}
-        >
-          <SelectTrigger id="active-team" className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="personal">Personal account</SelectItem>
-            {teams.map((team) => (
-              <SelectItem key={team.id} value={team.id}>
-                {team.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <Button type="submit" variant="outline">
-        Switch
+        {pending ? "Creating…" : "Create organization"}
       </Button>
     </form>
   );
@@ -106,11 +71,7 @@ export function InviteMemberForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <input
-        type="hidden"
-        name="organizationId"
-        value={organizationId}
-      />
+      <input type="hidden" name="organizationId" value={organizationId} />
 
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_9rem_auto] sm:items-end">
         <div className="flex flex-col gap-2">
@@ -191,11 +152,7 @@ export function MemberRoleForm({
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <Select
-        defaultValue={role}
-        onValueChange={change}
-        disabled={pending}
-      >
+      <Select defaultValue={role} onValueChange={change} disabled={pending}>
         <SelectTrigger
           aria-label="Role"
           className="h-9 w-28 data-[size=default]:h-9"
@@ -207,58 +164,6 @@ export function MemberRoleForm({
           <SelectItem value="admin">Admin</SelectItem>
         </SelectContent>
       </Select>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
-  );
-}
-
-/**
- * The Stripe billing portal is the only cancellation path, so it is a plain
- * button that asks the server for a fresh session URL.
- */
-export function ManageBillingButton({
-  organizationId,
-  label = "Manage billing",
-}: {
-  organizationId?: string;
-  label?: string;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function openPortal() {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/billing/portal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(organizationId ? { organizationId } : {}),
-      });
-      const data = (await response.json()) as {
-        url?: string;
-        error?: string;
-      };
-
-      if (!response.ok || !data.url) {
-        setError(data.error ?? "Could not open the billing portal.");
-        return;
-      }
-
-      window.location.assign(data.url);
-    } catch {
-      setError("Could not reach the server. Try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="flex flex-col items-start gap-1.5">
-      <Button variant="outline" onClick={openPortal} disabled={loading}>
-        {loading ? "Opening…" : label}
-      </Button>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );

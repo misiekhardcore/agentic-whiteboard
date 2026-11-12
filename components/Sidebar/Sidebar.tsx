@@ -1,6 +1,6 @@
 import {
   Archive,
-  Building2,
+  CreditCard,
   LayoutGrid,
   Settings,
   Sparkles,
@@ -15,8 +15,6 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
 } from "@konopskidev/ui/components/sidebar";
 import { Suspense } from "react";
 import { WorkspaceUsage } from "./WorkspaceUsage";
@@ -44,24 +42,18 @@ export function DashboardSidebar() {
           <SidebarGroupLabel>My boards</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton>
-                  <LayoutGrid />
-                  All boards
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton>
-                  <Users />
-                  Shared
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton>
-                  <Archive />
-                  Archived
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              <SidebarMenuLink href="/dashboard/boards">
+                <LayoutGrid />
+                All boards
+              </SidebarMenuLink>
+              <SidebarMenuLink href="/dashboard/shared">
+                <Users />
+                Shared
+              </SidebarMenuLink>
+              <SidebarMenuLink href="/dashboard/archive">
+                <Archive />
+                Archived
+              </SidebarMenuLink>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -69,9 +61,13 @@ export function DashboardSidebar() {
           <SidebarGroupLabel>Others</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuLink href="/dashboard/team">
-                <Building2 />
-                Team &amp; billing
+              <SidebarMenuLink href="/dashboard/organization">
+                <Users />
+                Organizations
+              </SidebarMenuLink>
+              <SidebarMenuLink href="/dashboard/billing">
+                <CreditCard />
+                Billing
               </SidebarMenuLink>
               <SidebarMenuLink href={"/dashboard/ai-helper"}>
                 <Sparkles />
