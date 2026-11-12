@@ -109,7 +109,8 @@ test("personal and organization accounts stay separate", async ({
     await test.step("the personal account is the default", async () => {
       await signUp(page, { name: userName, email, password });
 
-      await expect(page.getByText("Personal account.")).toBeVisible();
+      // The dashboard opens with the prompt composer, so the active account is
+      // asserted through the list it scopes rather than a banner line.
       await expect(
         page.getByText("No workspaces in Personal account"),
       ).toBeVisible();
@@ -155,9 +156,6 @@ test("personal and organization accounts stay separate", async ({
 
       await page.goto("/dashboard");
 
-      await expect(
-        page.getByText(`Working in ${teamName}.`),
-      ).toBeVisible();
       await expect(
         page.getByRole("heading", { name: `Latest in ${teamName}` }),
       ).toBeVisible();
