@@ -1,10 +1,6 @@
 import { SidebarProvider } from "@konopskidev/ui/components/sidebar";
-import { Suspense } from "react";
 
-import {
-  DashboardSidebar,
-} from "@/components/Sidebar/Sidebar";
-import { WorkspaceUsage } from "@/components/Sidebar/WorkspaceUsage";
+import { DashboardSidebar } from "@/components/Sidebar/Sidebar";
 
 export default function DashboardLayout({
   children,
@@ -15,13 +11,7 @@ export default function DashboardLayout({
     // remaining height so the page below can scroll inside it instead of
     // pushing its last rows past the viewport.
     <SidebarProvider className="min-h-0! flex-1 overflow-hidden">
-      <DashboardSidebar
-        footer={
-          <Suspense fallback={null}>
-            <WorkspaceUsage />
-          </Suspense>
-        }
-      />
+      <DashboardSidebar />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-4">
         {children}
       </div>

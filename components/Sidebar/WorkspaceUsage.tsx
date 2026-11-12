@@ -22,7 +22,7 @@ export async function WorkspaceUsage() {
         title={`Workspaces in ${overview.accountName}`}
       />
       {workspaces.limit !== null && workspaces.used >= workspaces.limit ? (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Upgrade for unlimited boards.
         </p>
       ) : null}
