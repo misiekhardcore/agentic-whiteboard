@@ -20,8 +20,8 @@ import {
 } from "@konopskidev/ui/components/sidebar";
 import { Suspense } from "react";
 import { WorkspaceUsage } from "./WorkspaceUsage";
-import { Spinner } from "@konopskidev/ui/components/spinner";
 import { SidebarMenuLink } from "./SidebarMenuLink";
+import { Loading } from "../Loading/Loading";
 
 export function DashboardSidebar() {
   return (
@@ -85,7 +85,7 @@ export function DashboardSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <Suspense fallback={<Spinner />}>
+          <Suspense fallback={<Loading />}>
             <WorkspaceUsage />
           </Suspense>
         </SidebarGroup>

@@ -1,7 +1,8 @@
-import { and, count, eq, gte, isNull } from "drizzle-orm";
+import { and, count, eq, gte } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { agentPrompts, workspaces } from "@/lib/db/schema";
+import { accountWorkspacesWhere } from "@/lib/workspaces";
 
 import type { PlanLimits } from "./plans";
 import type { SubscriptionRow } from "./subscriptions";
@@ -95,14 +96,7 @@ export async function getAccountUsage({
     db
       .select({ total: count() })
       .from(workspaces)
-      .where(
-        organizationId
-          ? eq(workspaces.orgId, organizationId)
-          : and(
-              eq(workspaces.creatorId, userId),
-              isNull(workspaces.orgId),
-            ),
-      ),
+      .where(accountWorkspacesWhere(userId, organizationId)),
   ]);
 
   return {

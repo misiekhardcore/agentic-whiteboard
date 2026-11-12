@@ -1,11 +1,9 @@
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Loading } from "@/components/Loading/Loading";
-import { auth } from "@/lib/auth";
-import { getAccountContext } from "@/lib/organizations";
+import { getSessionAccount } from "@/lib/account";
 import { listAccountWorkspaces } from "@/lib/workspaces";
 import { Button } from "@konopskidev/ui/components/button";
 import { Folder } from "lucide-react";
-import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -18,13 +16,11 @@ export function ProjectsList() {
 }
 
 async function ProjectsListInner() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const account = await getSessionAccount();
 
-  if (!session) return null;
+  if (!account) return null;
 
-  const { activeTeam } = await getAccountContext(session);
+  const { activeTeam, session } = account;
   const accountName = activeTeam?.name ?? "Personal account";
   const boards = await listAccountWorkspaces(
     session.user.id,

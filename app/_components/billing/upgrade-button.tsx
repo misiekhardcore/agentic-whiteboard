@@ -25,7 +25,8 @@ import { CheckoutSheet } from "@/app/_components/landing/checkout-sheet";
 import {
   getPlan,
   isPaidPlan,
-  plans,
+  plansForAudience,
+  planServesAudience,
   type BillingAudience,
   type Plan,
   type PlanId,
@@ -36,11 +37,8 @@ import { cn } from "@/lib/utils";
 
 /** Paid plans for a tab, minus the plan the account is already on. */
 function plansFor(audience: BillingAudience, currentPlanId: PlanId): Plan[] {
-  return Object.values(plans).filter(
-    (plan) =>
-      isPaidPlan(plan) &&
-      (plan.audience as readonly BillingAudience[]).includes(audience) &&
-      plan.id !== currentPlanId,
+  return plansForAudience(audience).filter(
+    (plan) => isPaidPlan(plan) && plan.id !== currentPlanId,
   );
 }
 
@@ -93,7 +91,7 @@ export function UpgradeButton({
       plan &&
         activeAudience === "team" &&
         currentPlanId !== "free" &&
-        plan.audience.includes("team"),
+        planServesAudience(plan, "team"),
     );
   }
 

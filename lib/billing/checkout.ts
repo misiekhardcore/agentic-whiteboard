@@ -6,7 +6,13 @@ import { member, organization } from "@/lib/db/schema";
 
 import { ensureStripeCustomer } from "./customers";
 import { changeSubscriptionPlan } from "./plan-change";
-import { getPlan, isPlanId, type BillingOwnerType, type Plan } from "./plans";
+import {
+  getPlan,
+  isPlanId,
+  planServesAudience,
+  type BillingOwnerType,
+  type Plan,
+} from "./plans";
 import {
   appUrl,
   BillingRequestError,
@@ -151,7 +157,7 @@ export async function startCheckout({
     throw new BillingRequestError("The free plan does not need checkout.");
   }
 
-  const isTeamPlan = plan.audience.includes("team");
+  const isTeamPlan = planServesAudience(plan, "team");
   const quantity = plan.perSeat ? clampSeats(seats) : 1;
 
   let ownerType: BillingOwnerType = "USER";

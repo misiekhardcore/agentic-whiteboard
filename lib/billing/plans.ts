@@ -167,6 +167,21 @@ export function isPaidPlan(plan: Plan): boolean {
   return plan.priceUsd > 0;
 }
 
+/** Whether this plan can be sold to this kind of account. */
+export function planServesAudience(
+  plan: Plan,
+  audience: BillingAudience,
+): boolean {
+  return (plan.audience as readonly BillingAudience[]).includes(audience);
+}
+
+/** Every plan offered to this kind of account, in catalog order. */
+export function plansForAudience(audience: BillingAudience): Plan[] {
+  return Object.values(plans).filter((plan) =>
+    planServesAudience(plan, audience),
+  );
+}
+
 export function formatPlanPrice(plan: Plan): string {
   return `$${plan.priceUsd}`;
 }

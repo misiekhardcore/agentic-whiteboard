@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { Badge } from "@konopskidev/ui/components/badge";
@@ -13,12 +12,11 @@ import {
 } from "@konopskidev/ui/components/card";
 
 import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
-import { auth } from "@/lib/auth";
+import { getSessionAccount } from "@/lib/account";
 import { getOrganizationEntitlements } from "@/lib/billing/entitlements";
 import { formatPlanPeriod, formatPlanPrice, isPaidPlan } from "@/lib/billing/plans";
 import {
   canManageTeam,
-  getAccountContext,
   listOrganizationMembers,
   listPendingInvitations,
 } from "@/lib/organizations";
@@ -53,10 +51,10 @@ function formatDate(value: Date) {
 }
 
 export default async function TeamPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in?redirectTo=/dashboard/team");
+  const account = await getSessionAccount();
+  if (!account) redirect("/sign-in?redirectTo=/dashboard/team");
 
-  const { teams, activeTeam } = await getAccountContext(session);
+  const { teams, activeTeam, session } = account;
 
   if (teams.length === 0) {
     return (

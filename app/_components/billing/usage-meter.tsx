@@ -43,31 +43,29 @@ export function UsageMeter({
         </span>
         <span
           className={cn(
-            "shrink-0 font-mono text-[11px] tabular-nums",
+            "shrink-0 font-mono text-xs tabular-nums",
             atLimit ? "text-destructive" : "text-muted-foreground",
           )}
         >
           {unlimited
-            ? `${used.toLocaleString("en-US")} used · unlimited`
+            ? `${used.toLocaleString("en-US")} used`
             : `${used.toLocaleString("en-US")} / ${limit.toLocaleString("en-US")}`}
         </span>
       </div>
 
-      {unlimited ? null : (
+      {!unlimited && (
         <Progress
           value={percent}
           aria-label={`${label} usage`}
           aria-valuetext={
-            unlimited
-              ? "Unlimited"
-              : `${used} of ${limit} used`
+            unlimited ? "Unlimited" : `${used} of ${limit} used`
           }
           className={cn(
             "h-1.5",
             atLimit
-              ? "[&_[data-slot=progress-indicator]]:bg-destructive"
+              ? "**:data-[slot=progress-indicator]:bg-destructive"
               : percent >= 80
-                ? "[&_[data-slot=progress-indicator]]:bg-amber-500"
+                ? "**:data-[slot=progress-indicator]:bg-amber-500"
                 : undefined,
           )}
         />

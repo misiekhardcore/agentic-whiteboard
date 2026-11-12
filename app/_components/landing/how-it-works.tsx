@@ -36,7 +36,7 @@ export function HowItWorks() {
           />
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute top-[17px] right-1 hidden size-1.5 rotate-45 bg-primary/50 md:block"
+            className="pointer-events-none absolute top-4.25 right-1 hidden size-1.5 rotate-45 bg-primary/50 md:block"
           />
 
           {steps.map((step, index) => (
@@ -44,11 +44,11 @@ export function HowItWorks() {
               {index < steps.length - 1 ? (
                 <span
                   aria-hidden="true"
-                  className="absolute top-14 bottom-[-2.5rem] left-5 border-l border-dashed border-primary/40 md:hidden"
+                  className="absolute top-14 -bottom-10 left-5 border-l border-dashed border-primary/40 md:hidden"
                 />
               ) : null}
 
-              <span className="grid size-10 shrink-0 place-items-center rounded-full border border-primary/40 bg-background font-mono text-[11px] font-semibold text-primary shadow-xs">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full border border-primary/40 bg-background font-mono text-xs font-semibold text-primary shadow-xs">
                 <span aria-hidden="true">
                   {String(index + 1).padStart(2, "0")}
                 </span>

@@ -16,6 +16,7 @@ import { landing } from "@/app/_data/landing";
 import {
   getPlan,
   isPaidPlan,
+  planServesAudience,
   type BillingAudience,
   type Plan,
 } from "@/lib/billing/plans";
@@ -61,7 +62,9 @@ export function PricingTabs({
 
   const audience =
     audienceChoice ??
-    (requested?.audience.includes("team") ? "team" : "personal");
+    (requested && planServesAudience(requested, "team")
+      ? "team"
+      : "personal");
   const selectedPlanId =
     chosenPlanId ??
     (signedIn && requested && dismissedRequestedId !== requested.id

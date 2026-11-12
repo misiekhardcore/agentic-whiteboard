@@ -29,8 +29,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import type { Plan } from "@/lib/billing/plans";
-import { formatPlanPeriod, formatPlanPrice } from "@/lib/billing/plans";
+import {
+  formatPlanPeriod,
+  formatPlanPrice,
+  planServesAudience,
+  type Plan,
+} from "@/lib/billing/plans";
 import type { TeamOption } from "@/lib/organizations";
 
 /** Loaded once per page load; Stripe.js is cached by the browser afterwards. */
@@ -68,7 +72,7 @@ export function CheckoutSheet({
    */
   mode?: "checkout" | "change";
 }) {
-  const isTeamPlan = plan.audience.includes("team");
+  const isTeamPlan = planServesAudience(plan, "team");
   const hasTeams = teams.length > 0;
   const changeMode = mode === "change";
   const router = useRouter();

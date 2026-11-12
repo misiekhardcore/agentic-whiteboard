@@ -26,7 +26,13 @@ export function SurfaceMock({ surface }: { surface: SurfaceId }) {
   }
 }
 
-function MockFrame({ file, children }: { file: string; children: ReactNode }) {
+function MockFrame({
+  file,
+  children,
+}: {
+  file: string;
+  children: ReactNode;
+}) {
   return (
     <div
       aria-hidden="true"
@@ -77,7 +83,10 @@ function CanvasMock() {
               markerHeight="5"
               orient="auto-start-reverse"
             >
-              <path d="M0 0 L8 4 L0 8 Z" className="fill-muted-foreground" />
+              <path
+                d="M0 0 L8 4 L0 8 Z"
+                className="fill-muted-foreground"
+              />
             </marker>
           </defs>
 
@@ -94,8 +103,14 @@ function CanvasMock() {
               d="M218 69 L218 88 L76 88 L76 100"
               markerEnd="url(#canvas-arrow)"
             />
-            <path d="M122 123 L172 123" markerEnd="url(#canvas-arrow)" />
-            <path d="M224 140 L224 166" markerEnd="url(#canvas-arrow)" />
+            <path
+              d="M122 123 L172 123"
+              markerEnd="url(#canvas-arrow)"
+            />
+            <path
+              d="M224 140 L224 166"
+              markerEnd="url(#canvas-arrow)"
+            />
           </g>
           <text
             x="128"
@@ -117,7 +132,11 @@ function CanvasMock() {
                 rx="3"
                 className="fill-card stroke-border"
               />
-              <text x="76" y="49" className="fill-foreground font-medium">
+              <text
+                x="76"
+                y="49"
+                className="fill-foreground font-medium"
+              >
                 Problem
               </text>
             </g>
@@ -127,7 +146,11 @@ function CanvasMock() {
                 points="218,21 258,45 218,69 178,45"
                 className="fill-card stroke-border"
               />
-              <text x="218" y="49" className="fill-foreground font-medium">
+              <text
+                x="218"
+                y="49"
+                className="fill-foreground font-medium"
+              >
                 Scope?
               </text>
             </g>
@@ -155,7 +178,11 @@ function CanvasMock() {
                 rx="3"
                 className="fill-card stroke-border"
               />
-              <text x="224" y="127" className="fill-foreground font-medium">
+              <text
+                x="224"
+                y="127"
+                className="fill-foreground font-medium"
+              >
                 Spec
               </text>
             </g>
@@ -169,7 +196,11 @@ function CanvasMock() {
                 rx="3"
                 className="fill-card stroke-border"
               />
-              <text x="224" y="187" className="fill-foreground font-medium">
+              <text
+                x="224"
+                y="187"
+                className="fill-foreground font-medium"
+              >
                 Ship
               </text>
             </g>
@@ -208,7 +239,7 @@ function CanvasMock() {
         </div>
 
         {/* agent instruction */}
-        <div className="absolute right-3 bottom-3 flex max-w-[200px] items-start gap-1.5 rounded-sm border bg-card p-2 shadow-md">
+        <div className="absolute right-3 bottom-3 flex max-w-50 items-start gap-1.5 rounded-sm border bg-card p-2 shadow-md">
           <Wand2 className="mt-px size-3 shrink-0 text-primary" />
           <p className="text-[10px] leading-snug text-foreground">
             Add a review step after Scope
@@ -222,12 +253,12 @@ function CanvasMock() {
 function DocMock() {
   return (
     <MockFrame file="checkout-spec.doc">
-      <div className="relative aspect-[4/3] overflow-hidden bg-card px-5 py-4">
+      <div className="relative aspect-4/3 overflow-hidden bg-card px-5 py-4">
         <div className="flex items-center justify-between gap-3">
           <p className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
             Docs / Checkout flow
           </p>
-          <span className="rounded-sm border border-primary/30 bg-primary/5 px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em] text-primary uppercase">
+          <span className="rounded-sm border border-primary/30 bg-primary/5 px-1.5 py-0.5 font-mono text-[9px] tracking-widest text-primary uppercase">
             Agent draft
           </span>
         </div>
@@ -249,10 +280,10 @@ function DocMock() {
             <p className="font-sans text-[9px] font-bold tracking-[0.12em] text-primary uppercase">
               Summarized by the agent
             </p>
-            <p className="mt-1 text-[11px] leading-snug text-foreground/80">
+            <p className="mt-1 text-xs leading-snug text-foreground/80">
               Three-step flow, generated from{" "}
-              <span className="font-mono text-[10px]">flow.canvas</span> · 2 min
-              ago
+              <span className="font-mono text-[10px]">flow.canvas</span>{" "}
+              · 2 min ago
             </p>
           </div>
 
@@ -262,11 +293,11 @@ function DocMock() {
             </p>
             <ul className="mt-1.5 space-y-1">
               <li className="flex items-start gap-1.5">
-                <span className="mt-[5px] size-1 shrink-0 rounded-full bg-primary/60" />
+                <span className="mt-1.25 size-1 shrink-0 rounded-full bg-primary/60" />
                 Address and delivery options
               </li>
               <li className="flex items-start gap-1.5">
-                <span className="mt-[5px] size-1 shrink-0 rounded-full bg-primary/60" />
+                <span className="mt-1.25 size-1 shrink-0 rounded-full bg-primary/60" />
                 Discount code applied inline
               </li>
             </ul>
@@ -292,7 +323,7 @@ function DocMock() {
 function BoardMock() {
   return (
     <MockFrame file="team.board">
-      <div className="relative aspect-[4/3] overflow-hidden bg-muted/30 p-3">
+      <div className="relative aspect-4/3 overflow-hidden bg-muted/30 p-3">
         <div className="grid grid-cols-3 gap-2.5">
           <BoardColumn label="Backlog" count={3} marker="bg-border">
             <BoardCard title="Pricing page" tag="docs" />
@@ -349,7 +380,12 @@ function BoardColumn({
   children: ReactNode;
 }) {
   return (
-    <div className={cn("rounded-sm border bg-background/70 p-1.5", className)}>
+    <div
+      className={cn(
+        "rounded-sm border bg-background/70 p-1.5",
+        className,
+      )}
+    >
       <div className="flex items-center justify-between gap-1 px-0.5 pb-1.5">
         <div className="flex items-center gap-1.5">
           <span className={cn("size-1.5 rounded-full", marker)} />

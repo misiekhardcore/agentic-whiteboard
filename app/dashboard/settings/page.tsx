@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { Badge } from "@konopskidev/ui/components/badge";
@@ -12,8 +11,8 @@ import {
   CardTitle,
 } from "@konopskidev/ui/components/card";
 
-import { auth } from "@/lib/auth";
-import { canManageTeam, getAccountContext } from "@/lib/organizations";
+import { getSessionAccount } from "@/lib/account";
+import { canManageTeam } from "@/lib/organizations";
 
 import {
   OrganizationProfileForm,
@@ -28,10 +27,10 @@ export const metadata = {
 export const instant = false;
 
 export default async function SettingsPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in?redirectTo=/dashboard/settings");
+  const account = await getSessionAccount();
+  if (!account) redirect("/sign-in?redirectTo=/dashboard/settings");
 
-  const { teams, activeTeam } = await getAccountContext(session);
+  const { teams, activeTeam, session } = account;
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">

@@ -1,12 +1,7 @@
-import { headers } from "next/headers";
 import { cache } from "react";
 
-import { auth } from "@/lib/auth";
-import {
-  canManageTeam,
-  getAccountContext,
-  type TeamOption,
-} from "@/lib/organizations";
+import { getSessionAccount } from "@/lib/account";
+import { canManageTeam, type TeamOption } from "@/lib/organizations";
 
 import {
   getOrganizationEntitlements,
@@ -48,13 +43,11 @@ export type BillingOverview = {
  */
 export const getSessionBillingOverview = cache(
   async (): Promise<BillingOverview | null> => {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
+    const account = await getSessionAccount();
 
-    if (!session) return null;
+    if (!account) return null;
 
-    const { teams, activeTeam } = await getAccountContext(session);
+    const { session, teams, activeTeam } = account;
     const organizationId = activeTeam?.id ?? null;
 
     const entitlements = activeTeam

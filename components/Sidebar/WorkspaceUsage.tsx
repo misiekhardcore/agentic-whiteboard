@@ -14,8 +14,6 @@ export async function WorkspaceUsage() {
   if (!overview) return null;
 
   const { workspaces } = overview.usage;
-  const atLimit =
-    workspaces.limit !== null && workspaces.used >= workspaces.limit;
 
   return (
     <div className="flex w-full flex-col gap-1.5">
@@ -25,15 +23,7 @@ export async function WorkspaceUsage() {
         limit={workspaces.limit}
         title={`Workspaces in ${overview.accountName}`}
       />
-      {atLimit ? (
-        <div className="flex flex-col gap-1.5 pt-0.5">
-          <p className="text-[11px] text-muted-foreground">
-            Upgrade for unlimited boards.
-          </p>
-          {/* The same CTA the header shows: one gate, one dialog. */}
-          <UpgradeControl className="w-full" />
-        </div>
-      ) : null}
+      <UpgradeControl className="w-full" />
     </div>
   );
 }

@@ -1,10 +1,8 @@
 import { Suspense } from "react";
-import { headers } from "next/headers";
 
 import { landing } from "@/app/_data/landing";
-import { auth } from "@/lib/auth";
+import { getSessionAccount } from "@/lib/account";
 import { getPlan, isPaidPlan } from "@/lib/billing/plans";
-import { getAccountContext } from "@/lib/organizations";
 
 import { PricingTabs } from "./pricing-tabs";
 
@@ -53,7 +51,7 @@ export function Pricing({
           <PricingForSession searchParams={searchParams} />
         </Suspense>
 
-        <p className="mt-8 flex items-center gap-2 font-mono text-[11px] tracking-[0.12em] text-muted-foreground uppercase">
+        <p className="mt-8 flex items-center gap-2 font-mono text-xs tracking-[0.12em] text-muted-foreground uppercase">
           <span aria-hidden="true" className="size-1 rotate-45 bg-primary/60" />
           {note}
         </p>
@@ -67,15 +65,15 @@ async function PricingForSession({
 }: {
   searchParams: LandingSearchParams;
 }) {
-  const [session, params] = await Promise.all([
-    auth.api.getSession({ headers: await headers() }),
+  const [account, params] = await Promise.all([
+    getSessionAccount(),
     searchParams,
   ]);
   const billing = typeof params.billing === "string" ? params.billing : null;
   const requested = getPlan(billing);
   const requestedPlanId = requested && isPaidPlan(requested) ? requested.id : null;
 
-  if (!session) {
+  if (!account) {
     return (
       <PricingTabs
         signedIn={false}
@@ -86,7 +84,7 @@ async function PricingForSession({
     );
   }
 
-  const { teams, activeOrganizationId } = await getAccountContext(session);
+  const { teams, activeOrganizationId } = account;
 
   return (
     <PricingTabs

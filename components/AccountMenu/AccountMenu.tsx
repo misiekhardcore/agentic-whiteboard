@@ -1,8 +1,6 @@
-import { headers } from "next/headers";
 import { Suspense } from "react";
 
-import { auth } from "@/lib/auth";
-import { getAccountContext } from "@/lib/organizations";
+import { getSessionAccount } from "@/lib/account";
 
 import { AccountMenuPopover } from "./AccountMenuPopover";
 
@@ -20,13 +18,11 @@ export function AccountMenu() {
 }
 
 async function AccountMenuInner() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const account = await getSessionAccount();
 
-  if (!session) return null;
+  if (!account) return null;
 
-  const { teams, activeOrganizationId } = await getAccountContext(session);
+  const { teams, activeOrganizationId, session } = account;
 
   return (
     <AccountMenuPopover
