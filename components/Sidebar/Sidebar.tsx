@@ -27,9 +27,12 @@ import { ReactNode } from "react";
 
 export function DashboardSidebar({ footer }: { footer?: ReactNode }) {
   return (
-    // The sidebar is `fixed`, so it starts below the sticky header and loses
-    // that height from its own; otherwise the footer sits past the viewport.
-    <Sidebar className="top-14.5 h-[calc(100svh-3.625rem)] min-h-0" variant="sidebar">
+    // The sidebar is `fixed` to the viewport, so it starts below the header and
+    // gives up that height; otherwise the footer is pushed past the bottom edge.
+    <Sidebar
+      className="top-(--app-header-height) h-[calc(100svh-var(--app-header-height))] min-h-0"
+      variant="sidebar"
+    >
       <SidebarHeader>Dashboard</SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
