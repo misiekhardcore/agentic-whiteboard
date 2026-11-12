@@ -83,20 +83,27 @@ export function UpgradeButton({
   const [tab, setTab] = useState<BillingAudience>(defaultTab);
   const activeTab = showPersonal ? tab : "team";
 
+  /**
+   * An organization that already pays switches plans; everyone else buys one.
+   * The button label and the checkout mode answer the same question, so they
+   * ask it in one place.
+   */
+  function isPlanChange(plan: Plan | undefined): boolean {
+    return Boolean(
+      plan &&
+        activeAudience === "team" &&
+        currentPlanId !== "free" &&
+        plan.audience.includes("team"),
+    );
+  }
+
   const selectedPlan = getPlan(selectedPlanId);
-  const changeMode = Boolean(
-    selectedPlan &&
-      activeAudience === "team" &&
-      currentPlanId !== "free" &&
-      selectedPlan.audience.includes("team"),
-  );
+  const changeMode = isPlanChange(selectedPlan);
 
   function ctaLabel(plan: Plan): string {
-    const change =
-      activeAudience === "team" &&
-      currentPlanId !== "free" &&
-      plan.audience.includes("team");
-    return change ? `Switch to ${plan.name}` : `Upgrade to ${plan.name}`;
+    return isPlanChange(plan)
+      ? `Switch to ${plan.name}`
+      : `Upgrade to ${plan.name}`;
   }
 
   function choosePlan(plan: Plan) {
