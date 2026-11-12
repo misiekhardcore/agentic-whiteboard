@@ -185,7 +185,7 @@ describe("workspace limit message", () => {
 
   it("explains the limit at exactly the allowance", () => {
     expect(workspaceLimitMessage({ ...base, used: 3 })).toBe(
-      "Acme has used all 3 workspaces on the Free plan. Upgrade to keep every board in one place.",
+      "Acme has used all 3 workspaces on the Free plan. Upgrade to keep every workspace in one place.",
     );
   });
 

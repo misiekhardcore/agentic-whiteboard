@@ -10,9 +10,9 @@ import {
 import { Client } from "pg";
 
 /**
- * Boards are managed from the dashboard and reached through /workspace/:id.
- * Access is decided by the board's own account, not by whichever account the
- * dashboard is showing, so a second person must get a 404 for a personal board
+ * Workspaces are managed from the dashboard and reached through /workspace/:id.
+ * Access is decided by the workspace's own account, not by whichever account the
+ * dashboard is showing, so a second person must get a 404 for a personal workspace
  * even though both are signed in. Archiving is a soft delete: it frees a plan
  * slot and can be undone.
  */
@@ -42,7 +42,7 @@ async function findUserId(db: Client, email: string): Promise<string> {
   return rows[0].id;
 }
 
-async function findBoardId(
+async function findWorkspaceId(
   db: Client,
   { name, creatorId }: { name: string; creatorId: string },
 ): Promise<string> {
@@ -87,7 +87,7 @@ async function openDialog(
   }).toPass({ timeout: 30_000 });
 }
 
-async function createBoard(
+async function createWorkspace(
   page: Page,
   {
     name,
@@ -97,11 +97,11 @@ async function createBoard(
 ) {
   await openDialog(
     page,
-    page.getByRole("button", { name: "Create new board" }).first(),
+    page.getByRole("button", { name: "Create new workspace" }).first(),
   );
 
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Board name").fill(name);
+  await dialog.getByLabel("Workspace name").fill(name);
   if (description) await dialog.getByLabel("Description").fill(description);
   await dialog.getByRole("button", { name: "Save" }).click();
 
@@ -130,29 +130,29 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
   browser,
 }) => {
   const id = randomUUID().slice(0, 8);
-  const email = `e2e-boards-${id}@example.com`;
+  const email = `e2e-workspaces-${id}@example.com`;
   const password = `e2e-pass-${id}`;
-  const otherEmail = `e2e-boards-other-${id}@example.com`;
+  const otherEmail = `e2e-workspaces-other-${id}@example.com`;
   const otherPassword = `e2e-pass-other-${id}`;
-  const boardName = `Roadmap ${id}`;
-  const renamedBoard = `Roadmap renamed ${id}`;
+  const workspaceName = `Roadmap ${id}`;
+  const renamedWorkspace = `Roadmap renamed ${id}`;
 
   const db = new Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
 
   let userId: string | null = null;
-  let boardId: string | null = null;
+  let workspaceId: string | null = null;
   const cleanups: Array<() => Promise<void>> = [];
 
   try {
-    await test.step("a new account has no boards and can create one", async () => {
-      await signUp(page, { name: "Board Tester", email, password });
+    await test.step("a new account has no workspaces and can create one", async () => {
+      await signUp(page, { name: "Workspace Tester", email, password });
 
-      await expect(page.getByText("No boards in Personal account")).toBeVisible();
+      await expect(page.getByText("No workspaces in Personal account")).toBeVisible();
       await expect(page.getByText("0 / 3")).toBeVisible();
 
-      await createBoard(page, {
-        name: boardName,
+      await createWorkspace(page, {
+        name: workspaceName,
         description: "Where the quarter goes",
       });
 
@@ -163,17 +163,17 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await expect(page.getByText("1 / 3")).toBeVisible();
 
       userId = await findUserId(db, email);
-      boardId = await findBoardId(db, { name: boardName, creatorId: userId });
+      workspaceId = await findWorkspaceId(db, { name: workspaceName, creatorId: userId });
     });
 
-    await test.step("the board route opens only for someone with access", async () => {
-      await page.getByRole("link", { name: boardName }).click();
-      await page.waitForURL(`**/workspace/${boardId}`);
+    await test.step("the workspace route opens only for someone with access", async () => {
+      await page.getByRole("link", { name: workspaceName }).click();
+      await page.waitForURL(`**/workspace/${workspaceId}`);
 
       await expect(
-        page.getByRole("heading", { name: boardName }),
+        page.getByRole("heading", { name: workspaceName }),
       ).toBeVisible();
-      await expect(page.getByText("The board editor is on its way")).toBeVisible();
+      await expect(page.getByText("The workspace editor is on its way")).toBeVisible();
 
       const other = await signUpInNewContext(browser, {
         email: otherEmail,
@@ -181,38 +181,38 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       });
       cleanups.push(other.close);
 
-      await other.page.goto(`/workspace/${boardId}`);
+      await other.page.goto(`/workspace/${workspaceId}`);
       await expect(
         other.page.getByText("This page could not be found."),
       ).toBeVisible();
-      await expect(other.page.getByText(boardName)).toHaveCount(0);
+      await expect(other.page.getByText(workspaceName)).toHaveCount(0);
     });
 
-    await test.step("renaming and restaging the board persists", async () => {
+    await test.step("renaming and restaging the workspace persists", async () => {
       await page.goto("/dashboard");
 
       const card = page
         .getByRole("listitem")
-        .filter({ hasText: boardName })
+        .filter({ hasText: workspaceName })
         .first();
       await openDialog(page, card.getByRole("button", { name: "Edit" }));
 
       const dialog = page.getByRole("dialog");
-      await expect(dialog.getByText("Edit board")).toBeVisible();
-      await dialog.getByLabel("Board name").fill(renamedBoard);
+      await expect(dialog.getByText("Edit workspace")).toBeVisible();
+      await dialog.getByLabel("Workspace name").fill(renamedWorkspace);
       await dialog.getByLabel("Stage").click();
       await page.getByRole("option", { name: "In progress" }).click();
       await dialog.getByRole("button", { name: "Save" }).click();
 
       await expect(dialog).toHaveCount(0);
-      await expect(page.getByText(renamedBoard).first()).toBeVisible();
+      await expect(page.getByText(renamedWorkspace).first()).toBeVisible();
       await expect(page.getByText("In progress").first()).toBeVisible();
     });
 
-    await test.step("archiving hides the board and frees its plan slot", async () => {
+    await test.step("archiving hides the workspace and frees its plan slot", async () => {
       const card = page
         .getByRole("listitem")
-        .filter({ hasText: renamedBoard })
+        .filter({ hasText: renamedWorkspace })
         .first();
       await openDialog(
         page,
@@ -221,39 +221,39 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       );
 
       const dialog = page.getByRole("alertdialog");
-      await expect(dialog.getByText(`Archive ${renamedBoard}?`)).toBeVisible();
-      await dialog.getByRole("button", { name: "Archive board" }).click();
+      await expect(dialog.getByText(`Archive ${renamedWorkspace}?`)).toBeVisible();
+      await dialog.getByRole("button", { name: "Archive workspace" }).click();
 
-      await expect(page.getByText("No boards in Personal account")).toBeVisible();
+      await expect(page.getByText("No workspaces in Personal account")).toBeVisible();
       await expect(page.getByText("0 / 3")).toBeVisible();
-      await expect(page.getByText("Archived boards")).toBeVisible();
+      await expect(page.getByText("Archived workspaces")).toBeVisible();
       await expect(
-        page.getByRole("listitem").filter({ hasText: renamedBoard }),
+        page.getByRole("listitem").filter({ hasText: renamedWorkspace }),
       ).toHaveCount(1);
     });
 
-    await test.step("a restored board comes back with its stage", async () => {
+    await test.step("a restored workspace comes back with its stage", async () => {
       const archived = page
         .getByRole("listitem")
-        .filter({ hasText: renamedBoard })
+        .filter({ hasText: renamedWorkspace })
         .first();
       await archived.getByRole("button", { name: "Restore" }).click();
 
-      await expect(page.getByText("Archived boards")).toHaveCount(0);
-      await expect(page.getByText(renamedBoard).first()).toBeVisible();
+      await expect(page.getByText("Archived workspaces")).toHaveCount(0);
+      await expect(page.getByText(renamedWorkspace).first()).toBeVisible();
       await expect(page.getByText("1 / 3")).toBeVisible();
     });
 
-    await test.step("the dashboard lists boards, docs and canvases together", async () => {
-      if (!boardId) throw new Error("The board id is missing");
+    await test.step("the dashboard lists workspaces, docs and canvases together", async () => {
+      if (!workspaceId) throw new Error("The workspace id is missing");
 
       await db.query('insert into doc (id, "workspaceId") values ($1, $2)', [
         randomUUID(),
-        boardId,
+        workspaceId,
       ]);
       await db.query(
         'insert into canvas (id, "workspaceId") values ($1, $2)',
-        [randomUUID(), boardId],
+        [randomUUID(), workspaceId],
       );
 
       await page.reload();
@@ -267,19 +267,19 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       ).toHaveCount(3);
     });
 
-    await test.step("the Free plan blocks a fourth board", async () => {
-      await createBoard(page, { name: `Second ${id}` });
-      await createBoard(page, { name: `Third ${id}` });
+    await test.step("the Free plan blocks a fourth workspace", async () => {
+      await createWorkspace(page, { name: `Second ${id}` });
+      await createWorkspace(page, { name: `Third ${id}` });
 
       await expect(page.getByText("3 / 3")).toBeVisible();
 
       await openDialog(
         page,
-        page.getByRole("button", { name: "Create new board" }).first(),
+        page.getByRole("button", { name: "Create new workspace" }).first(),
       );
 
       const dialog = page.getByRole("dialog");
-      await dialog.getByLabel("Board name").fill(`Fourth ${id}`);
+      await dialog.getByLabel("Workspace name").fill(`Fourth ${id}`);
       await dialog.getByRole("button", { name: "Save" }).click();
 
       await expect(
@@ -311,14 +311,14 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
   }
 });
 
-test("an organization board records the creating member and opens from /workspaces", async ({
+test("an organization workspace records the creating member and opens from /workspaces", async ({
   page,
 }) => {
   const id = randomUUID().slice(0, 8);
-  const email = `e2e-org-boards-${id}@example.com`;
+  const email = `e2e-org-workspaces-${id}@example.com`;
   const password = `e2e-pass-${id}`;
-  const teamName = `Boards Team ${id}`;
-  const boardName = `Team roadmap ${id}`;
+  const teamName = `Workspaces Team ${id}`;
+  const workspaceName = `Team roadmap ${id}`;
 
   const db = new Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
@@ -327,7 +327,7 @@ test("an organization board records the creating member and opens from /workspac
   let organizationId: string | null = null;
 
   try {
-    await signUp(page, { name: "Org Board Tester", email, password });
+    await signUp(page, { name: "Org Workspace Tester", email, password });
     userId = await findUserId(db, email);
 
     await page.goto("/dashboard/organization");
@@ -342,20 +342,20 @@ test("an organization board records the creating member and opens from /workspac
     await page.goto("/dashboard");
     // The team's fresh dashboard is empty; the helper's visibility check would
     // race the revalidation, so the row is asserted below instead.
-    await createBoard(page, { name: boardName, verify: false });
+    await createWorkspace(page, { name: workspaceName, verify: false });
 
     const { rows } = await db.query<{
       creatorId: string;
       orgId: string | null;
     }>('select "creatorId", "orgId" from workspace where name = $1', [
-      boardName,
+      workspaceName,
     ]);
 
     expect(rows[0]).toEqual({ creatorId: userId, orgId: organizationId });
 
     await page.goto("/workspaces");
-    await expect(page.getByRole("heading", { name: "All boards" })).toBeVisible();
-    await expect(page.getByText(boardName).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "All workspaces" })).toBeVisible();
+    await expect(page.getByText(workspaceName).first()).toBeVisible();
   } finally {
     if (userId) {
       await db

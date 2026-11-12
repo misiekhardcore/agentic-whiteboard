@@ -4,22 +4,22 @@ import { Folder } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { BoardCard } from "@/app/dashboard/_components/BoardCard";
-import { CreateNewBoardDialog } from "@/app/dashboard/_components/CreateNewBoardDialog";
+import { WorkspaceCard } from "@/app/dashboard/_components/WorkspaceCard";
+import { CreateWorkspaceDialog } from "@/app/dashboard/_components/CreateWorkspaceDialog";
 import { getSessionAccount } from "@/lib/account";
 import { listAccountWorkspaces } from "@/lib/workspaces";
 
 export const metadata = {
-  title: "All boards",
+  title: "All workspaces",
 };
 
 // The list depends on the signed-in account, so it renders per request.
 export const instant = false;
 
 /**
- * Every active board in the selected account. The dashboard only shows the
- * latest handful of boards, docs and canvases; this page is the full list, and
- * mutations revalidate both paths.
+ * Every active workspace in the selected account. The dashboard only shows the
+ * latest handful of workspaces, docs and canvases; this page is the full list,
+ * and mutations revalidate both paths.
  */
 export default async function WorkspacesPage() {
   const account = await getSessionAccount();
@@ -27,7 +27,7 @@ export default async function WorkspacesPage() {
 
   const { activeTeam, session } = account;
   const accountName = activeTeam?.name ?? "Personal account";
-  const boards = await listAccountWorkspaces(
+  const workspaces = await listAccountWorkspaces(
     session.user.id,
     activeTeam?.id ?? null,
   );
@@ -36,35 +36,36 @@ export default async function WorkspacesPage() {
     <div className="stack">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">All boards</h1>
+          <h1 className="text-2xl font-bold">All workspaces</h1>
           <p className="text-sm text-muted-foreground">
-            Every active board in {accountName}. The dashboard shows the
-            latest five boards, docs and canvases.
+            Every active workspace in {accountName}. The dashboard shows the
+            latest five workspaces, docs and canvases.
           </p>
         </div>
-        <CreateNewBoardDialog size="sm" variant="outline" />
+        <CreateWorkspaceDialog size="sm" variant="outline" />
       </div>
 
-      {boards.length === 0 ? (
+      {workspaces.length === 0 ? (
         <EmptyState
           icon={<Folder height={64} width={64} className="text-primary" />}
-          title={`No boards in ${accountName}`}
+          title={`No workspaces in ${accountName}`}
           description={
             activeTeam
-              ? `Boards shared with ${activeTeam.name} will appear here.`
-              : "You haven't created any personal boards yet."
+              ? `Workspaces shared with ${activeTeam.name} will appear here.`
+              : "You haven't created any personal workspaces yet."
           }
-          action={<CreateNewBoardDialog size="sm" variant="outline" />}
+          action={<CreateWorkspaceDialog size="sm" variant="outline" />}
         />
       ) : (
         <div className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">
-            {boards.length} {boards.length === 1 ? "board" : "boards"} in
-            this account.
+            {workspaces.length}{" "}
+            {workspaces.length === 1 ? "workspace" : "workspaces"} in this
+            account.
           </p>
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {boards.map((board) => (
-              <BoardCard key={board.id} board={board} />
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {workspaces.map((workspace) => (
+              <WorkspaceCard key={workspace.id} workspace={workspace} />
             ))}
           </ul>
         </div>

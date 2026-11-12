@@ -40,7 +40,7 @@ export const workspaces = pgTable(
     shareToken: text("shareToken").unique(),
 
     /**
-     * Soft delete: archived boards disappear from the dashboard and stop
+     * Soft delete: archived workspaces disappear from the dashboard and stop
      * counting against the plan, but keep their stage, documents and agent
      * history so restoring them puts everything back.
      */

@@ -11,8 +11,8 @@ import { FileText, Frame, Folder } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { CreateNewBoardDialog } from "./CreateNewBoardDialog";
-import { BoardCard } from "./BoardCard";
+import { CreateWorkspaceDialog } from "./CreateWorkspaceDialog";
+import { WorkspaceCard } from "./WorkspaceCard";
 
 const RECENT_LIMIT = 5;
 
@@ -43,14 +43,14 @@ async function ProjectsListInner() {
         icon={
           <Folder height={64} width={64} className="text-primary" />
         }
-        title={`No boards in ${accountName}`}
+        title={`No workspaces in ${accountName}`}
         description={
           activeTeam
-            ? `Boards shared with ${activeTeam.name} will appear here.`
-            : "You haven't created any personal boards yet."
+            ? `Workspaces shared with ${activeTeam.name} will appear here.`
+            : "You haven't created any personal workspaces yet."
         }
         action={
-          <CreateNewBoardDialog size="sm" variant="outline" />
+          <CreateWorkspaceDialog size="sm" variant="outline" />
         }
       />
     );
@@ -62,17 +62,20 @@ async function ProjectsListInner() {
         <h2 className="text-2xl font-bold">Latest in {accountName}</h2>
         <p className="text-sm text-muted-foreground">
           The {items.length} most recently updated{" "}
-          {items.length === 1 ? "item" : "items"} across boards, docs and
+          {items.length === 1 ? "item" : "items"} across workspaces, docs and
           canvases.
         </p>
       </div>
 
-      <ul aria-label="Latest items" className="flex flex-col gap-3">
+      <ul
+        aria-label="Latest items"
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+      >
         {items.map((item) =>
           item.type === "workspace" ? (
-            <BoardCard
+            <WorkspaceCard
               key={item.key}
-              board={{
+              workspace={{
                 id: item.id,
                 name: item.workspaceName,
                 description: item.description,
@@ -90,8 +93,8 @@ async function ProjectsListInner() {
 }
 
 /**
- * A doc or canvas is shown through the board that owns it: the surface has no
- * name of its own, and opening the row lands on the board.
+ * A doc or canvas is shown through the workspace that owns it: the surface has
+ * no name of its own, and opening the card lands on the workspace.
  */
 function SurfaceCard({ item }: { item: RecentWorkspaceItem }) {
   const isDoc = item.type === "doc";
@@ -99,21 +102,20 @@ function SurfaceCard({ item }: { item: RecentWorkspaceItem }) {
   const label = isDoc ? "Doc" : "Canvas";
 
   return (
-    <li className="card flex flex-wrap items-center justify-between gap-3 p-4 transition-colors hover:border-primary/40">
+    <li className="card flex flex-col gap-2 p-3 transition-colors hover:border-primary/40">
       <Link
         href={`/workspace/${item.workspaceId}`}
-        className="flex min-w-0 items-center gap-3"
+        className="flex min-w-0 items-center gap-2"
       >
         <Icon className="size-4 shrink-0 text-muted-foreground" />
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate font-medium">{item.workspaceName}</span>
-          <span className="text-sm text-muted-foreground">
-            {label} · updated {formatDay(item.updatedAt)}
-          </span>
-        </span>
+        <span className="truncate font-medium">{item.workspaceName}</span>
       </Link>
 
-      <span className="font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+      <p className="text-sm text-muted-foreground">
+        {label} · updated {formatDay(item.updatedAt)}
+      </p>
+
+      <span className="mt-auto font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
         {WORKSPACE_STATUS_LABELS[item.status]}
       </span>
     </li>

@@ -71,9 +71,9 @@ async function findOrganizationId(
   return rows[0].id;
 }
 
-async function insertBoard(
+async function insertWorkspace(
   db: Client,
-  board: {
+  workspace: {
     id: string;
     name: string;
     userId: string;
@@ -82,7 +82,7 @@ async function insertBoard(
 ) {
   await db.query(
     'insert into workspace (id, name, "creatorId", "orgId") values ($1, $2, $3, $4)',
-    [board.id, board.name, board.userId, board.organizationId],
+    [workspace.id, workspace.name, workspace.userId, workspace.organizationId],
   );
 }
 
@@ -94,10 +94,10 @@ test("personal and organization accounts stay separate", async ({
   const password = `e2e-pass-${id}`;
   const userName = "Scope Tester";
   const teamName = `Orbit Scope ${id}`;
-  const personalBoard = `Personal board ${id}`;
-  const organizationBoard = `Organization board ${id}`;
-  const personalBoardId = randomUUID();
-  const organizationBoardId = randomUUID();
+  const personalWorkspace = `Personal workspace ${id}`;
+  const organizationWorkspace = `Organization workspace ${id}`;
+  const personalWorkspaceId = randomUUID();
+  const organizationWorkspaceId = randomUUID();
 
   const db = new Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
@@ -111,15 +111,15 @@ test("personal and organization accounts stay separate", async ({
 
       await expect(page.getByText("Personal account.")).toBeVisible();
       await expect(
-        page.getByText("No boards in Personal account"),
+        page.getByText("No workspaces in Personal account"),
       ).toBeVisible();
     });
 
-    await test.step("personal boards appear only in the personal account", async () => {
+    await test.step("personal workspaces appear only in the personal account", async () => {
       userId = await findUserId(db, email);
-      await insertBoard(db, {
-        id: personalBoardId,
-        name: personalBoard,
+      await insertWorkspace(db, {
+        id: personalWorkspaceId,
+        name: personalWorkspace,
         userId,
         organizationId: null,
       });
@@ -129,10 +129,10 @@ test("personal and organization accounts stay separate", async ({
       await expect(
         page.getByRole("heading", { name: "Latest in Personal account" }),
       ).toBeVisible();
-      await expect(page.getByText(personalBoard)).toBeVisible();
+      await expect(page.getByText(personalWorkspace)).toBeVisible();
     });
 
-    await test.step("creating an organization activates it and scopes its boards", async () => {
+    await test.step("creating an organization activates it and scopes its workspaces", async () => {
       await page.goto("/dashboard/organization");
       await page.getByLabel("Organization name").fill(teamName);
       await page
@@ -146,9 +146,9 @@ test("personal and organization accounts stay separate", async ({
 
       if (!userId) throw new Error("The test user is missing");
       organizationId = await findOrganizationId(db, userId);
-      await insertBoard(db, {
-        id: organizationBoardId,
-        name: organizationBoard,
+      await insertWorkspace(db, {
+        id: organizationWorkspaceId,
+        name: organizationWorkspace,
         userId,
         organizationId,
       });
@@ -161,8 +161,8 @@ test("personal and organization accounts stay separate", async ({
       await expect(
         page.getByRole("heading", { name: `Latest in ${teamName}` }),
       ).toBeVisible();
-      await expect(page.getByText(organizationBoard)).toBeVisible();
-      await expect(page.getByText(personalBoard)).toHaveCount(0);
+      await expect(page.getByText(organizationWorkspace)).toBeVisible();
+      await expect(page.getByText(personalWorkspace)).toHaveCount(0);
     });
 
     await test.step("the organization page has no selector; the account menu switches", async () => {
@@ -188,8 +188,8 @@ test("personal and organization accounts stay separate", async ({
       await expect(
         page.getByRole("heading", { name: "Latest in Personal account" }),
       ).toBeVisible();
-      await expect(page.getByText(personalBoard)).toBeVisible();
-      await expect(page.getByText(organizationBoard)).toHaveCount(0);
+      await expect(page.getByText(personalWorkspace)).toBeVisible();
+      await expect(page.getByText(organizationWorkspace)).toHaveCount(0);
     });
 
     await test.step("team checkout requires an explicit organization on personal", async () => {
@@ -257,7 +257,7 @@ test("personal and organization accounts stay separate", async ({
     // Clean up the rows this test created, even when an assertion failed.
     await db
       .query("delete from workspace where id = any($1)", [
-        [personalBoardId, organizationBoardId],
+        [personalWorkspaceId, organizationWorkspaceId],
       ])
       .catch(() => undefined);
 

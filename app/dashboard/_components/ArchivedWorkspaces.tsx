@@ -14,54 +14,54 @@ import { listArchivedWorkspaces } from "@/lib/workspaces";
 import { Suspense } from "react";
 
 /**
- * Archived boards stay restorable without cluttering the dashboard. Only the
- * active account's boards are listed, and the card disappears entirely when
- * there is nothing archived.
+ * Archived workspaces stay restorable without cluttering the dashboard. Only
+ * the active account's workspaces are listed, and the card disappears entirely
+ * when there is nothing archived.
  */
-export function ArchivedBoards() {
+export function ArchivedWorkspaces() {
   return (
     <Suspense fallback={<Loading />}>
-      <ArchivedBoardsInner />
+      <ArchivedWorkspacesInner />
     </Suspense>
   );
 }
 
-async function ArchivedBoardsInner() {
+async function ArchivedWorkspacesInner() {
   const account = await getSessionAccount();
 
   if (!account) return null;
 
   const { activeTeam, session } = account;
-  const boards = await listArchivedWorkspaces(
+  const workspaces = await listArchivedWorkspaces(
     session.user.id,
     activeTeam?.id ?? null,
   );
 
-  if (boards.length === 0) return null;
+  if (workspaces.length === 0) return null;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Archived boards</CardTitle>
+        <CardTitle>Archived workspaces</CardTitle>
         <CardDescription>
-          Restore a board to bring it back to the dashboard.
+          Restore a workspace to bring it back to the dashboard.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <ul className="flex flex-col divide-y">
-          {boards.map((board) => (
+          {workspaces.map((workspace) => (
             <li
-              key={board.id}
+              key={workspace.id}
               className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{board.name}</p>
+                <p className="truncate text-sm font-medium">{workspace.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  Archived {formatDay(board.archivedAt)}
+                  Archived {formatDay(workspace.archivedAt)}
                 </p>
               </div>
               <form action={restoreWorkspaceAction}>
-                <input type="hidden" name="id" value={board.id} />
+                <input type="hidden" name="id" value={workspace.id} />
                 <Button type="submit" variant="outline" size="sm">
                   Restore
                 </Button>

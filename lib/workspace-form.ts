@@ -1,5 +1,5 @@
 /**
- * State shared by the board forms that use `useActionState`. No server imports,
+ * State shared by the workspace forms that use `useActionState`. No server imports,
  * so the dialogs can read it and the server actions can return it.
  */
 export type WorkspaceFieldErrors = {

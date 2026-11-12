@@ -22,9 +22,9 @@ export type ArchivedWorkspace = {
 };
 
 /**
- * One row of the dashboard's latest-items list. A board, its document and its
+ * One row of the dashboard's latest-items list. A workspace, its document and its
  * canvas are separate entries, so the list reads as "what changed recently"
- * rather than one card per board.
+ * rather than one card per workspace.
  */
 export type RecentWorkspaceItem = {
   key: string;
@@ -32,16 +32,16 @@ export type RecentWorkspaceItem = {
   id: string;
   workspaceId: string;
   workspaceName: string;
-  /** Only a board carries a description; its doc and canvas inherit the border. */
+  /** Only a workspace carries a description; its doc and canvas inherit the border. */
   description: string | null;
   status: Workspace["status"];
   updatedAt: Date;
 };
 
 /**
- * Who is looking at a board and what their account lets them do. `role` is the
- * organization role for a shared board and `"owner"` for a personal one; it is
- * carried here so per-board RBAC can narrow {@link workspacePermission} without
+ * Who is looking at a workspace and what their account lets them do. `role` is the
+ * organization role for a shared workspace and `"owner"` for a personal one; it is
+ * carried here so per-workspace RBAC can narrow {@link workspacePermission} without
  * changing any caller.
  */
 export type WorkspaceAccess = {
@@ -52,8 +52,8 @@ export type WorkspaceAccess = {
 };
 
 /**
- * Which workspaces belong to the selected account: an organization's boards, or
- * the personal boards its owner created outside any organization. The dashboard
+ * Which workspaces belong to the selected account: an organization's workspaces, or
+ * the personal workspaces its owner created outside any organization. The dashboard
  * never mixes the two.
  */
 function accountScopeWhere(userId: string, organizationId: string | null): SQL {
@@ -64,9 +64,9 @@ function accountScopeWhere(userId: string, organizationId: string | null): SQL {
 }
 
 /**
- * The boards that count against the account: everything it owns that has not
+ * The workspaces that count against the account: everything it owns that has not
  * been archived. The list, the usage meter and the create-quota check all scope
- * by this predicate, so a board the dashboard shows is always a board the meter
+ * by this predicate, so a workspace the dashboard shows is always a workspace the meter
  * counted, and archiving one frees its slot.
  */
 export function accountWorkspacesWhere(
@@ -80,7 +80,7 @@ export function accountWorkspacesWhere(
 }
 
 /**
- * The boards that belong to the selected account, newest first.
+ * The workspaces that belong to the selected account, newest first.
  */
 export async function listAccountWorkspaces(
   userId: string,
@@ -100,7 +100,7 @@ export async function listAccountWorkspaces(
 }
 
 /**
- * The archived boards of the selected account, most recently archived first.
+ * The archived workspaces of the selected account, most recently archived first.
  * These are hidden from the dashboard list and from the plan meter until they
  * are restored.
  */
@@ -132,7 +132,7 @@ export async function listArchivedWorkspaces(
 /**
  * Newest first, capped at `limit`. Sorting and the cap live here instead of in
  * SQL so the three queries can run in parallel and the dashboard and the
- * all-boards page share one ordering rule.
+ * all-workspaces page share one ordering rule.
  */
 export function mergeRecentItems(
   items: RecentWorkspaceItem[],
@@ -148,9 +148,9 @@ export function mergeRecentItems(
 }
 
 /**
- * The account's latest boards, docs and canvases in one list, newest first.
- * Archived boards are excluded by the same predicate the plan meter uses, so an
- * archived board's doc and canvas drop out of the list with it.
+ * The account's latest workspaces, docs and canvases in one list, newest first.
+ * Archived workspaces are excluded by the same predicate the plan meter uses, so an
+ * archived workspace's doc and canvas drop out of the list with it.
  */
 export async function listRecentWorkspaceItems(
   userId: string,
@@ -159,7 +159,7 @@ export async function listRecentWorkspaceItems(
 ): Promise<RecentWorkspaceItem[]> {
   const scope = accountWorkspacesWhere(userId, organizationId);
 
-  const [boardRows, docRows, canvasRows] = await Promise.all([
+  const [workspaceRows, docRows, canvasRows] = await Promise.all([
     db
       .select({
         id: workspaces.id,
@@ -195,7 +195,7 @@ export async function listRecentWorkspaceItems(
   ]);
 
   const items: RecentWorkspaceItem[] = [
-    ...boardRows.map((row) => ({
+    ...workspaceRows.map((row) => ({
       key: `workspace:${row.id}`,
       type: "workspace" as const,
       id: row.id,
@@ -223,12 +223,12 @@ export async function listRecentWorkspaceItems(
 }
 
 /**
- * A single board together with the access the signed-in person has to it.
+ * A single workspace together with the access the signed-in person has to it.
  *
- * Authorization comes from the board's own account, not from the account the
- * dashboard happens to be showing: a personal board is visible only to its
- * creator, and an organization board to that organization's members. Anything
- * else resolves to `null`, so callers cannot tell a missing board from a
+ * Authorization comes from the workspace's own account, not from the account the
+ * dashboard happens to be showing: a personal workspace is visible only to its
+ * creator, and an organization workspace to that organization's members. Anything
+ * else resolves to `null`, so callers cannot tell a missing workspace from a
  * forbidden one.
  */
 export async function getWorkspaceForUser(
@@ -274,7 +274,7 @@ export async function getWorkspaceForUser(
 const VIEW_ONLY_ROLES: readonly string[] = [];
 
 /**
- * What an accessible board permits. Every member of the board's account may
+ * What an accessible workspace permits. Every member of the workspace's account may
  * edit today, so this only distinguishes a reader from an editor once
  * per-workspace RBAC introduces read-only roles; keep the decision here so
  * actions and future collaboration tokens share it.

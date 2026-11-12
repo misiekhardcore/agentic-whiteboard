@@ -20,8 +20,8 @@ import { getWorkspaceForUser } from "@/lib/workspaces";
 export const instant = false;
 
 /**
- * A board is only reachable through the account that owns it: the creator for a
- * personal board, a member of the organization for a shared one. Anything else
+ * A workspace is only reachable through the account that owns it: the creator for a
+ * personal workspace, a member of the organization for a shared one. Anything else
  * is a 404, so the route never confirms that an id exists.
  *
  * The editor is not built yet; this page is the gate the editor will render
@@ -74,15 +74,15 @@ export default async function WorkspacePage({
 
         <Card>
           <CardHeader>
-            <CardTitle>The board editor is on its way</CardTitle>
+            <CardTitle>The workspace editor is on its way</CardTitle>
             <CardDescription>
-              This board is ready. Documents, the canvas and the agent will
+              This workspace is ready. Documents, the canvas and the agent will
               open here once collaboration lands.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" size="sm">
-              <Link href="/dashboard">Manage your boards</Link>
+              <Link href="/dashboard">Manage your workspaces</Link>
             </Button>
           </CardContent>
         </Card>

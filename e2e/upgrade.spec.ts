@@ -62,7 +62,7 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
       ).toHaveCount(0);
     });
 
-    await test.step("seed an organization, its boards and per-member prompts", async () => {
+    await test.step("seed an organization, its workspaces and per-member prompts", async () => {
       const ownerId = await findUserId(db, email);
       organizationId = randomUUID();
       secondUserId = randomUUID();
@@ -85,11 +85,11 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
         [memberIds[1], organizationId, secondUserId, "member"],
       );
 
-      const boardIds = [randomUUID(), randomUUID(), randomUUID()];
-      for (const [index, boardId] of boardIds.entries()) {
+      const workspaceIds = [randomUUID(), randomUUID(), randomUUID()];
+      for (const [index, workspaceId] of workspaceIds.entries()) {
         await db.query(
           'insert into workspace (id, name, "creatorId", "orgId") values ($1, $2, $3, $4)',
-          [boardId, `Team board ${index + 1}`, ownerId, organizationId],
+          [workspaceId, `Team workspace ${index + 1}`, ownerId, organizationId],
         );
       }
 
@@ -102,14 +102,14 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
             randomUUID(),
             organizationId,
             ownerId,
-            boardIds[index % boardIds.length],
+            workspaceIds[index % workspaceIds.length],
           ],
         );
       }
       for (let index = 0; index < 5; index += 1) {
         await db.query(
           'insert into "AgentPrompt" (id, "ownerId", "userId", "workspaceId") values ($1, $2, $3, $4)',
-          [randomUUID(), organizationId, secondUserId, boardIds[0]],
+          [randomUUID(), organizationId, secondUserId, workspaceIds[0]],
         );
       }
     });
@@ -124,7 +124,7 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
 
       await expect(page.getByText("20 / 20")).toBeVisible();
       await expect(page.getByText("3 / 3")).toBeVisible();
-      await expect(page.getByText("Team board 1")).toBeVisible();
+      await expect(page.getByText("Team workspace 1")).toBeVisible();
     });
 
     await test.step("the upgrade dialog explains both limits and offers the team plans", async () => {

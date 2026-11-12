@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { DashboardSidebar } from "@/components/Sidebar/Sidebar";
 
 /**
- * The sidebar shell shared by every signed-in board surface. The wrapper from
+ * The sidebar shell shared by every signed-in workspace surface. The wrapper from
  * the design system is `min-h-svh`, which is taller than the room the shell
  * leaves under the header; `min-h-0!` lets it take the remaining height so the
  * page inside can scroll instead of pushing rows past the viewport.

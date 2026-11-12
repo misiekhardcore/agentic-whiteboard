@@ -23,7 +23,7 @@ export type PromptUsage = LimitUsage & {
 export type AccountUsage = {
   /** Per member, inside the active account: one row per prompt, not per run. */
   agentPrompts: PromptUsage;
-  /** Per account: an organization's boards, or the personal account's own. */
+  /** Per account: an organization's workspaces, or the personal account's own. */
   workspaces: LimitUsage;
 };
 
@@ -63,7 +63,7 @@ export function usageWindow(
 /**
  * Counts the active account's usage from the rows that already record it:
  * `AgentPrompt` for the per-member prompt ledger, `workspace` for the account's
- * boards. Both queries mirror the predicates the rest of the app scopes by, so
+ * workspaces. Both queries mirror the predicates the rest of the app scopes by, so
  * the meter can never disagree with what the dashboard shows.
  */
 export async function getAccountUsage({

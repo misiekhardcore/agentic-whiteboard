@@ -16,7 +16,7 @@ import {
   SidebarMenu,
 } from "@konopskidev/ui/components/sidebar";
 import { Suspense } from "react";
-import { CreateNewBoardDialog } from "@/app/dashboard/_components/CreateNewBoardDialog";
+import { CreateWorkspaceDialog } from "@/app/dashboard/_components/CreateWorkspaceDialog";
 import { WorkspaceUsage } from "./WorkspaceUsage";
 import { SidebarMenuLink } from "./SidebarMenuLink";
 import { Loading } from "../Loading/Loading";
@@ -33,16 +33,16 @@ export function DashboardSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <CreateNewBoardDialog size="sm" className="w-full" />
+            <CreateWorkspaceDialog size="sm" className="w-full" />
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>My boards</SidebarGroupLabel>
+          <SidebarGroupLabel>My workspaces</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuLink href="/workspaces">
                 <LayoutGrid />
-                All boards
+                All workspaces
               </SidebarMenuLink>
               <SidebarMenuLink href="/dashboard/shared">
                 <Users />

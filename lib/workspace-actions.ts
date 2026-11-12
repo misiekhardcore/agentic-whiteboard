@@ -67,7 +67,7 @@ async function activeAccount(
 }
 
 function validateName(name: string): WorkspaceFieldErrors {
-  if (!name) return { name: "Name your board." };
+  if (!name) return { name: "Name your workspace." };
   if (name.length > WORKSPACE_NAME_MAX_LENGTH) {
     return {
       name: `Keep the name under ${WORKSPACE_NAME_MAX_LENGTH} characters.`,
@@ -77,7 +77,7 @@ function validateName(name: string): WorkspaceFieldErrors {
 }
 
 /**
- * Creates a board in the active account. The count and the insert share a
+ * Creates a workspace in the active account. The count and the insert share a
  * transaction with an advisory lock on the account, so two requests cannot both
  * take the last slot on a capped plan.
  */
@@ -162,8 +162,8 @@ export async function createWorkspaceAction(
 }
 
 /**
- * Renames a board and moves it between stages. Authorization is resolved from
- * the board's own account, so a stale active-account id cannot reach another
+ * Renames a workspace and moves it between stages. Authorization is resolved from
+ * the workspace's own account, so a stale active-account id cannot reach another
  * tenant's rows.
  */
 export async function updateWorkspaceAction(
@@ -174,12 +174,12 @@ export async function updateWorkspaceAction(
 
   const id = String(formData.get("id") ?? "");
   if (!id) {
-    return { ...EMPTY_WORKSPACE_FORM_STATE, error: "That board could not be found." };
+    return { ...EMPTY_WORKSPACE_FORM_STATE, error: "That workspace could not be found." };
   }
 
   const access = await getWorkspaceForUser(id, session.user.id);
   if (!access || workspacePermission(access) !== "edit") {
-    return { ...EMPTY_WORKSPACE_FORM_STATE, error: "You cannot edit that board." };
+    return { ...EMPTY_WORKSPACE_FORM_STATE, error: "You cannot edit that workspace." };
   }
 
   const name = String(formData.get("name") ?? "").trim();
@@ -201,7 +201,7 @@ export async function updateWorkspaceAction(
   if (!isWorkspaceStatus(status)) {
     return {
       ...EMPTY_WORKSPACE_FORM_STATE,
-      fieldErrors: { status: "Choose a stage for the board." },
+      fieldErrors: { status: "Choose a stage for the workspace." },
     };
   }
 
@@ -225,7 +225,7 @@ export async function updateWorkspaceAction(
   };
 }
 
-/** Soft delete: the board is hidden and stops counting against the plan. */
+/** Soft delete: the workspace is hidden and stops counting against the plan. */
 export async function archiveWorkspaceAction(formData: FormData): Promise<void> {
   const session = await requireSession();
   const id = String(formData.get("id") ?? "");
@@ -244,7 +244,7 @@ export async function archiveWorkspaceAction(formData: FormData): Promise<void> 
   revalidatePath(`/workspace/${id}`);
 }
 
-/** Puts an archived board back on the dashboard and into the plan meter. */
+/** Puts an archived workspace back on the dashboard and into the plan meter. */
 export async function restoreWorkspaceAction(formData: FormData): Promise<void> {
   const session = await requireSession();
   const id = String(formData.get("id") ?? "");

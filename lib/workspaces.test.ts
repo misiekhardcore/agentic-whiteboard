@@ -18,7 +18,7 @@ function access(overrides: Partial<WorkspaceAccess> = {}): WorkspaceAccess {
   return {
     workspace: {
       id: "ws_1",
-      name: "Board",
+      name: "Workspace",
       description: null,
       creatorId: "user_1",
       orgId: null,
@@ -37,7 +37,7 @@ function access(overrides: Partial<WorkspaceAccess> = {}): WorkspaceAccess {
 }
 
 describe("workspace permission", () => {
-  it("lets a personal board's owner edit", () => {
+  it("lets a personal workspace's owner edit", () => {
     expect(workspacePermission(access())).toBe("edit");
   });
 
@@ -64,7 +64,7 @@ function recentItem(
     type: "workspace",
     id: "ws_1",
     workspaceId: "ws_1",
-    workspaceName: "Board",
+    workspaceName: "Workspace",
     description: null,
     status: "PLANNING",
     updatedAt: new Date("2026-11-01T00:00:00Z"),
@@ -73,7 +73,7 @@ function recentItem(
 }
 
 describe("recent workspace items", () => {
-  it("orders boards, docs and canvases together, newest first", () => {
+  it("orders workspaces, docs and canvases together, newest first", () => {
     const items = mergeRecentItems(
       [
         recentItem({ key: "workspace:ws_1", updatedAt: new Date("2026-11-01T00:00:00Z") }),
