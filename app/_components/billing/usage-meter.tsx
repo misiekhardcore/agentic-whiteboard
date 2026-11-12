@@ -1,4 +1,5 @@
 import { Progress } from "@konopskidev/ui/components/progress";
+import type { ReactNode } from "react";
 
 import type { LimitUsage } from "@/lib/billing/usage";
 import { cn } from "@/lib/utils";
@@ -18,12 +19,18 @@ export function UsageMeter({
   used,
   limit,
   title,
+  prefix,
   className,
 }: {
   label: string;
   used: number;
   limit: LimitUsage["limit"];
   title?: string;
+  /**
+   * Content shown before the label, e.g. the plan name in the header, where the
+   * meter is also the way into billing details.
+   */
+  prefix?: ReactNode;
   className?: string;
 }) {
   const unlimited = limit === null;
@@ -38,8 +45,9 @@ export function UsageMeter({
       title={title}
     >
       <div className="flex items-baseline justify-between gap-3">
-        <span className="truncate text-xs font-medium text-muted-foreground">
-          {label}
+        <span className="flex min-w-0 items-baseline gap-1.5 text-xs font-medium text-muted-foreground">
+          {prefix}
+          <span className="truncate">{label}</span>
         </span>
         <span
           className={cn(

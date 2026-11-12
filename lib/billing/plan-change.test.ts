@@ -43,6 +43,8 @@ function localSubscription(): SubscriptionRow {
     stripeSubscriptionId: "sub_1",
     stripePriceId: "price_team",
     currency: "usd",
+    billingInterval: "month",
+    startedAt: new Date("2026-10-01T00:00:00Z"),
     currentPeriodStart: new Date("2026-11-17T00:00:00Z"),
     currentPeriodEnd: new Date("2026-12-17T00:00:00Z"),
     cancelAtPeriodEnd: false,

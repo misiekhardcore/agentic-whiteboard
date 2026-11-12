@@ -47,13 +47,13 @@ export async function POST(request: Request) {
 
       if (!membership) {
         return Response.json(
-          { error: "You are not a member of that team." },
+          { error: "You are not a member of that organization." },
           { status: 403 },
         );
       }
       if (membership.role !== "owner" && membership.role !== "admin") {
         return Response.json(
-          { error: "Only team owners and admins can manage billing." },
+          { error: "Only organization owners and admins can manage billing." },
           { status: 403 },
         );
       }
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         .where(eq(organization.id, organizationId))
         .limit(1);
       if (!team) {
-        return Response.json({ error: "That team no longer exists." }, { status: 404 });
+        return Response.json({ error: "That organization no longer exists." }, { status: 404 });
       }
 
       customerId = await ensureStripeCustomer({
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
 
     const portal = await getStripe().billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${appUrl()}${organizationId ? "/dashboard/team" : "/dashboard"}`,
+      return_url: `${appUrl()}/dashboard/billing`,
     });
 
     return Response.json(

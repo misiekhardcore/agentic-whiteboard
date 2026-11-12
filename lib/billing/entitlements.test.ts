@@ -20,6 +20,8 @@ function subscription(overrides: Partial<SubscriptionRow> = {}): SubscriptionRow
     stripeSubscriptionId: "sub_1",
     stripePriceId: "price_pro",
     currency: "usd",
+    billingInterval: "month",
+    startedAt: null,
     currentPeriodStart: null,
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,

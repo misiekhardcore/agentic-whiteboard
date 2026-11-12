@@ -32,16 +32,16 @@ async function signUp(
 async function openTeamPlanSheet(page: Page) {
   await expect(async () => {
     await page.getByRole("tab", { name: "Team" }).click();
-    await expect(page.getByRole("tab", { name: "Team" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-      { timeout: 2_000 },
-    );
+    await expect(
+      page.getByRole("tab", { name: "Team" }),
+    ).toHaveAttribute("aria-selected", "true", { timeout: 2_000 });
   }).toPass({ timeout: 30_000 });
 
   await expect(async () => {
     await page.getByRole("button", { name: /choose team/i }).click();
-    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 2_000 });
+    await expect(page.getByRole("dialog")).toBeVisible({
+      timeout: 2_000,
+    });
   }).toPass({ timeout: 30_000 });
 }
 
@@ -86,7 +86,9 @@ async function insertBoard(
   );
 }
 
-test("personal and organization accounts stay separate", async ({ page }) => {
+test("personal and organization accounts stay separate", async ({
+  page,
+}) => {
   const id = randomUUID().slice(0, 8);
   const email = `e2e-account-${id}@example.com`;
   const password = `e2e-pass-${id}`;
@@ -130,10 +132,12 @@ test("personal and organization accounts stay separate", async ({ page }) => {
       await expect(page.getByText(personalBoard)).toBeVisible();
     });
 
-    await test.step("creating a team activates it and scopes its boards", async () => {
-      await page.goto("/dashboard/team");
-      await page.getByLabel("Team name").fill(teamName);
-      await page.getByRole("button", { name: "Create team" }).click();
+    await test.step("creating an organization activates it and scopes its boards", async () => {
+      await page.goto("/dashboard/organization");
+      await page.getByLabel("Organization name").fill(teamName);
+      await page
+        .getByRole("button", { name: "Create organization" })
+        .click();
 
       // Wait for the server action to finish before reading the new row.
       await expect(page.getByText(teamName).first()).toBeVisible({
@@ -151,7 +155,9 @@ test("personal and organization accounts stay separate", async ({ page }) => {
 
       await page.goto("/dashboard");
 
-      await expect(page.getByText(`Working in ${teamName}.`)).toBeVisible();
+      await expect(
+        page.getByText(`Working in ${teamName}.`),
+      ).toBeVisible();
       await expect(
         page.getByRole("heading", { name: `${teamName} boards` }),
       ).toBeVisible();
@@ -159,16 +165,19 @@ test("personal and organization accounts stay separate", async ({ page }) => {
       await expect(page.getByText(personalBoard)).toHaveCount(0);
     });
 
-    await test.step("the team page can switch back to personal", async () => {
-      await page.goto("/dashboard/team");
-      await expect(async () => {
-        await page.getByLabel("Active account").click();
-        await expect(
-          page.getByRole("option", { name: "Personal account" }),
-        ).toBeVisible({ timeout: 2_000 });
-      }).toPass({ timeout: 30_000 });
-      await page.getByRole("option", { name: "Personal account" }).click();
-      await page.getByRole("button", { name: "Switch" }).click();
+    await test.step("the organization page has no selector; the account menu switches", async () => {
+      await page.goto("/dashboard/organization");
+      await expect(
+        page.getByRole("heading", { name: teamName }),
+      ).toBeVisible();
+      await expect(page.getByLabel("Active account")).toHaveCount(0);
+
+      await page
+        .getByRole("button", { name: /Account menu for/ })
+        .click();
+      await page
+        .getByRole("button", { name: /Personal account/ })
+        .click();
 
       await expect(page.getByText("Your organizations")).toBeVisible();
       await expect(
@@ -183,16 +192,20 @@ test("personal and organization accounts stay separate", async ({ page }) => {
       await expect(page.getByText(organizationBoard)).toHaveCount(0);
     });
 
-    await test.step("team checkout requires an explicit team on personal", async () => {
+    await test.step("team checkout requires an explicit organization on personal", async () => {
       await page.goto("/#pricing");
       await openTeamPlanSheet(page);
 
       const sheet = page.getByRole("dialog");
-      await expect(sheet.getByLabel("Team")).toContainText("Choose a team");
+      await expect(sheet.getByLabel("Organization")).toContainText(
+        "Choose an organization",
+      );
       await sheet
         .getByRole("button", { name: /continue to secure checkout/i })
         .click();
-      await expect(sheet.getByText("Choose a team to continue.")).toBeVisible();
+      await expect(
+        sheet.getByText("Choose an organization to continue."),
+      ).toBeVisible();
 
       // The API must not silently fall back to the first organization either.
       const refused = await page.request.post("/api/billing/checkout", {
@@ -200,22 +213,42 @@ test("personal and organization accounts stay separate", async ({ page }) => {
       });
       expect(refused.status()).toBe(400);
       await expect(refused.json()).resolves.toMatchObject({
-        error: "Choose a team before starting a team plan.",
+        error: "Choose an organization before starting a team plan.",
       });
 
       await page.keyboard.press("Escape");
     });
 
     await test.step("opening the organization defaults team checkout to it", async () => {
-      await page.goto("/dashboard/team");
-      await page.getByRole("button", { name: "Manage" }).click();
-      await expect(page.getByText("Plan", { exact: true })).toBeVisible();
+      await page.goto("/dashboard/organization");
+      await expect(page.getByText("Your organizations")).toBeVisible();
+      await page
+        .getByRole("button", { name: /Account menu for/ })
+        .click();
+      await page
+        .getByRole("button", { name: new RegExp(teamName) })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: teamName }),
+      ).toBeVisible();
+
+      // The organization's plan lives on the billing page, which now owns it
+      // rather than the members page.
+      await page.goto("/dashboard/billing");
+      await expect(
+        page.getByText("Plan", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(`Plan, usage and invoices for ${teamName}`),
+      ).toBeVisible();
 
       await page.goto("/#pricing");
       await openTeamPlanSheet(page);
 
       const sheet = page.getByRole("dialog");
-      await expect(sheet.getByLabel("Team")).toContainText(teamName);
+      await expect(sheet.getByLabel("Organization")).toContainText(
+        teamName,
+      );
       await expect(sheet.getByLabel("Seats")).toHaveValue("1");
 
       await page.keyboard.press("Escape");
@@ -230,7 +263,9 @@ test("personal and organization accounts stay separate", async ({ page }) => {
 
     if (organizationId) {
       await db
-        .query("delete from organization where id = $1", [organizationId])
+        .query("delete from organization where id = $1", [
+          organizationId,
+        ])
         .catch(() => undefined);
     }
 

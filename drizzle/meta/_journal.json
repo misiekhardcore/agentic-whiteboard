@@ -43,6 +43,13 @@
       "when": 1794402407272,
       "tag": "0005_reflective_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794510707358,
+      "tag": "0006_perfect_scream",
+      "breakpoints": true
     }
   ]
 }

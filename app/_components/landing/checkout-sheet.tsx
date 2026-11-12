@@ -94,7 +94,12 @@ export function CheckoutSheet({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(
+    null,
+  );
   const [complete, setComplete] = useState(false);
+  const [activating, setActivating] = useState(false);
+  const [activationPending, setActivationPending] = useState(false);
 
   const seatCount = Math.min(
     500,
@@ -109,12 +114,12 @@ export function CheckoutSheet({
     setError(null);
 
     if (isTeamPlan && hasTeams && !organizationId) {
-      setError("Choose a team to continue.");
+      setError("Choose an organization to continue.");
       return;
     }
 
     if (isTeamPlan && !hasTeams && !organizationName.trim()) {
-      setError("Name your team to continue.");
+      setError("Name your organization to continue.");
       return;
     }
 
@@ -137,6 +142,7 @@ export function CheckoutSheet({
 
       const data = (await response.json()) as {
         clientSecret?: string;
+        sessionId?: string;
         changed?: boolean;
         error?: string;
       };
@@ -164,6 +170,7 @@ export function CheckoutSheet({
       }
 
       setClientSecret(data.clientSecret);
+      setCheckoutSessionId(data.sessionId ?? null);
     } catch {
       setError(
         "Could not reach the server. Check your connection and try again.",
@@ -171,6 +178,45 @@ export function CheckoutSheet({
     } finally {
       setLoading(false);
     }
+  }
+
+  /**
+   * Stripe's checkout reports completion in the browser, but the plan itself
+   * is read from the database by the server. Asking the server to pull the just
+   * finished subscription from Stripe makes the new plan show up immediately,
+   * without waiting for a webhook delivery. The retries cover the moment Stripe
+   * is still settling the subscription; the webhook is the backstop after them.
+   */
+  async function reconcileCheckout(sessionId: string | null) {
+    if (!sessionId) return false;
+
+    let confirmed = false;
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      try {
+        const response = await fetch("/api/billing/checkout/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        });
+
+        if (response.ok) {
+          confirmed = true;
+          break;
+        }
+        if (response.status !== 202) break;
+      } catch {
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+    }
+
+    // The header reads the plan on the server, so it has to be re-rendered
+    // once the mirror exists — otherwise the success sheet sits in front of a
+    // header that still says Free.
+    router.refresh();
+    return confirmed;
   }
 
   return (
@@ -189,9 +235,9 @@ export function CheckoutSheet({
             {complete
               ? "Your subscription is active. Manage seats, invoices and cancellation from your dashboard."
               : changeMode
-                ? "Your plan changes immediately and the difference is prorated on your next invoice. Seats stay in sync with your team."
+                ? "Your plan changes immediately and the difference is prorated on your next invoice. Seats stay in sync with your members."
                 : isTeamPlan
-                  ? "Billed per member, every month. Seats follow your team size."
+                  ? "Billed per member, every month. Seats follow your member count."
                   : "Billed every month. Cancel any time from the billing portal."}
           </SheetDescription>
         </SheetHeader>
@@ -199,6 +245,19 @@ export function CheckoutSheet({
         <div className="flex flex-col gap-6 px-4 pb-6">
           {complete ? (
             <div className="flex flex-col gap-4">
+              {activating && (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="animate-spin" aria-hidden="true" />
+                  Activating your plan…
+                </p>
+              )}
+              {!activating && activationPending && (
+                <p className="text-xs text-muted-foreground">
+                  Stripe is still finalizing this subscription. Its webhook
+                  will switch the plan over within a moment — reload the
+                  dashboard if it still shows the old one.
+                </p>
+              )}
               <ul className="flex flex-col gap-3">
                 {plan.features.map((feature) => (
                   <li
@@ -214,9 +273,16 @@ export function CheckoutSheet({
                   </li>
                 ))}
               </ul>
-              <Button asChild variant="primary" className="w-full">
+              <Button
+                asChild
+                variant="primary"
+                className="w-full"
+                aria-busy={activating}
+              >
                 <Link
-                  href={isTeamPlan ? "/dashboard/team" : "/dashboard"}
+                  href={isTeamPlan ? "/dashboard/billing" : "/dashboard"}
+                  aria-disabled={activating}
+                  className={activating ? "pointer-events-none opacity-50" : undefined}
                 >
                   Go to dashboard
                 </Link>
@@ -228,7 +294,16 @@ export function CheckoutSheet({
                 stripe={stripe}
                 options={{
                   clientSecret,
-                  onComplete: () => setComplete(true),
+                  onComplete: () => {
+                    setComplete(true);
+                    setActivating(true);
+                    void reconcileCheckout(checkoutSessionId).then(
+                      (confirmed) => {
+                        setActivationPending(!confirmed);
+                        setActivating(false);
+                      },
+                    );
+                  },
                 }}
               >
                 <EmbeddedCheckout />
@@ -263,7 +338,7 @@ export function CheckoutSheet({
                 !changeMode &&
                 (hasTeams ? (
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="checkout-team">Team</Label>
+                    <Label htmlFor="checkout-team">Organization</Label>
                     <Select
                       value={organizationId || undefined}
                       onValueChange={(value) => {
@@ -279,7 +354,7 @@ export function CheckoutSheet({
                         id="checkout-team"
                         className="w-full"
                       >
-                        <SelectValue placeholder="Choose a team" />
+                        <SelectValue placeholder="Choose an organization" />
                       </SelectTrigger>
                       <SelectContent>
                         {teams.map((team) => (
@@ -295,13 +370,13 @@ export function CheckoutSheet({
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Only team owners and admins can change billing.
+                      Only organization owners and admins can change billing.
                     </p>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="checkout-team-name">
-                      Team name
+                      Organization name
                     </Label>
                     <Input
                       id="checkout-team-name"
@@ -313,7 +388,7 @@ export function CheckoutSheet({
                       autoComplete="organization"
                     />
                     <p className="text-xs text-muted-foreground">
-                      We’ll create the team and make you its owner.
+                      We’ll create the organization and make you its owner.
                     </p>
                   </div>
                 ))}
