@@ -26,7 +26,7 @@ export function DashboardSidebar() {
     // The sidebar is `fixed` to the viewport, so it starts below the header and
     // gives up that height; otherwise the footer is pushed past the bottom edge.
     <Sidebar
-      className="top-(--app-header-height) h-[calc(100svh-var(--app-header-height))] min-h-0"
+      className="top-(--app-header-height) h-[calc(100svh-var(--app-header-height))]"
       variant="sidebar"
     >
       <SidebarHeader>Dashboard</SidebarHeader>
