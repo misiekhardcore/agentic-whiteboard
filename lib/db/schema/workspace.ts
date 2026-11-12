@@ -8,6 +8,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 import { relations } from "drizzle-orm";
+import { WORKSPACE_STATUSES } from "../../workspace-status";
 import { user } from "./auth";
 import { docs } from "./doc";
 import { canvases } from "./canvas";
@@ -15,12 +16,10 @@ import { agentPrompts } from "./agentPrompt";
 import { agentRuns } from "./agentRun";
 import { agentMessages } from "./agentMessage";
 
-export const workspaceStatusEnum = pgEnum("WorkspaceStatus", [
-  "PLANNING",
-  "IN_PROGRESS",
-  "IN_REVIEW",
-  "DONE",
-]);
+export const workspaceStatusEnum = pgEnum(
+  "WorkspaceStatus",
+  WORKSPACE_STATUSES,
+);
 
 export const workspaces = pgTable(
   "workspace",
@@ -39,6 +38,13 @@ export const workspaces = pgTable(
     position: doublePrecision("position").default(0).notNull(),
 
     shareToken: text("shareToken").unique(),
+
+    /**
+     * Soft delete: archived workspaces disappear from the dashboard and stop
+     * counting against the plan, but keep their stage, documents and agent
+     * history so restoring them puts everything back.
+     */
+    archivedAt: timestamp("archivedAt", { precision: 3, mode: "date" }),
 
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" })
       .defaultNow()

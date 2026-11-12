@@ -10,7 +10,7 @@ import {
 } from "@konopskidev/ui/components/card";
 import { Sparkles } from "lucide-react";
 import { Suspense } from "react";
-import { CreateNewBoardDialog } from "./CreateNewBoardDialog";
+import { CreateWorkspaceDialog } from "./CreateWorkspaceDialog";
 
 export function WelcomeBanner() {
   return (
@@ -44,7 +44,7 @@ async function WelcomeBannerInner() {
         </CardDescription>
       </CardHeader>
       <CardFooter className="flex gap-4">
-        <CreateNewBoardDialog variant="secondary" className="shadow" />
+        <CreateWorkspaceDialog variant="secondary" className="shadow" />
         <Button variant="primary" className="shadow">
           <Sparkles />
           Create with AI

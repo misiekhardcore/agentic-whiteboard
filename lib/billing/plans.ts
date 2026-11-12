@@ -221,6 +221,6 @@ export const upgradeMessages = {
   workspaces: {
     title: "Your workspaces are full",
     description:
-      "{account} has used all {limit} workspaces on the {plan} plan. Upgrade to keep every board in one place.",
+      "{account} has used all {limit} workspaces on the {plan} plan. Upgrade to keep every workspace in one place.",
   },
 } as const satisfies Record<keyof PlanLimits, UpgradeReason>;

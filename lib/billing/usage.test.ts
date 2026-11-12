@@ -8,6 +8,7 @@ import {
   fillUpgradeCopy,
   reachedLimits,
   usageWindow,
+  workspaceLimitMessage,
   type AccountUsage,
 } from "./usage";
 
@@ -172,5 +173,25 @@ describe("upgrade copy", () => {
 
   it("leaves unknown placeholders for the catalog author to see", () => {
     expect(fillUpgradeCopy("Hi {name}", { used: 1 })).toBe("Hi {name}");
+  });
+});
+
+describe("workspace limit message", () => {
+  const base = { limit: 3, plan: "Free", accountName: "Acme" } as const;
+
+  it("allows creation while the account has a slot left", () => {
+    expect(workspaceLimitMessage({ ...base, used: 2 })).toBeNull();
+  });
+
+  it("explains the limit at exactly the allowance", () => {
+    expect(workspaceLimitMessage({ ...base, used: 3 })).toBe(
+      "Acme has used all 3 workspaces on the Free plan. Upgrade to keep every workspace in one place.",
+    );
+  });
+
+  it("never blocks an unlimited plan", () => {
+    expect(
+      workspaceLimitMessage({ ...base, used: 500, limit: null }),
+    ).toBeNull();
   });
 });

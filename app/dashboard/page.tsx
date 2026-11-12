@@ -1,3 +1,4 @@
+import { ArchivedWorkspaces } from "./_components/ArchivedWorkspaces";
 import { ProjectsList } from "./_components/ProjectsList";
 import { WelcomeBanner } from "./_components/WelcomeBanner";
 
@@ -6,6 +7,7 @@ export default function DashboardPage() {
     <div className="stack">
       <WelcomeBanner />
       <ProjectsList />
+      <ArchivedWorkspaces />
     </div>
   );
 }
