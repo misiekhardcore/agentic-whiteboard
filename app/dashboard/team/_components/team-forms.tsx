@@ -1,6 +1,9 @@
 "use client";
 
-import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
+import {
+  Alert,
+  AlertDescription,
+} from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import { Input } from "@konopskidev/ui/components/input";
 import { Label } from "@konopskidev/ui/components/label";
@@ -41,11 +44,11 @@ export function CreateTeamForm() {
           required
         />
       </div>
-      {state.error ? (
+      {state.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
-      ) : null}
+      )}
       <Button type="submit" disabled={pending} className="self-start">
         {pending ? "Creating…" : "Create team"}
       </Button>
@@ -103,7 +106,11 @@ export function InviteMemberForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <input type="hidden" name="organizationId" value={organizationId} />
+      <input
+        type="hidden"
+        name="organizationId"
+        value={organizationId}
+      />
 
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_9rem_auto] sm:items-end">
         <div className="flex flex-col gap-2">
@@ -138,16 +145,16 @@ export function InviteMemberForm({
         </Button>
       </div>
 
-      {state.error ? (
+      {state.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
-      ) : null}
-      {state.notice ? (
+      )}
+      {state.notice && (
         <Alert>
           <AlertDescription>{state.notice}</AlertDescription>
         </Alert>
-      ) : null}
+      )}
     </form>
   );
 }
@@ -184,7 +191,11 @@ export function MemberRoleForm({
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <Select defaultValue={role} onValueChange={change} disabled={pending}>
+      <Select
+        defaultValue={role}
+        onValueChange={change}
+        disabled={pending}
+      >
         <SelectTrigger
           aria-label="Role"
           className="h-9 w-28 data-[size=default]:h-9"
@@ -196,7 +207,7 @@ export function MemberRoleForm({
           <SelectItem value="admin">Admin</SelectItem>
         </SelectContent>
       </Select>
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }
@@ -225,7 +236,10 @@ export function ManageBillingButton({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(organizationId ? { organizationId } : {}),
       });
-      const data = (await response.json()) as { url?: string; error?: string };
+      const data = (await response.json()) as {
+        url?: string;
+        error?: string;
+      };
 
       if (!response.ok || !data.url) {
         setError(data.error ?? "Could not open the billing portal.");
@@ -245,7 +259,7 @@ export function ManageBillingButton({
       <Button variant="outline" onClick={openPortal} disabled={loading}>
         {loading ? "Opening…" : label}
       </Button>
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

@@ -1,5 +1,3 @@
-"use client";
-
 import {
   Archive,
   Building2,
@@ -8,7 +6,6 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
-import Link from "next/link";
 import { Button } from "@konopskidev/ui/components/button";
 import {
   Sidebar,
@@ -21,12 +18,19 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@konopskidev/ui/components/sidebar";
-import { usePathname } from "next/navigation";
-import { ReactNode } from "react";
+import { Suspense } from "react";
+import { WorkspaceUsage } from "./WorkspaceUsage";
+import { SidebarMenuLink } from "./SidebarMenuLink";
+import { Loading } from "../Loading/Loading";
 
 export function DashboardSidebar() {
   return (
-    <Sidebar className="top-14.5 min-h-0" variant="sidebar">
+    // The sidebar is `fixed` to the viewport, so it starts below the header and
+    // gives up that height; otherwise the footer is pushed past the bottom edge.
+    <Sidebar
+      className="top-(--app-header-height) h-[calc(100svh-var(--app-header-height))] min-h-0"
+      variant="sidebar"
+    >
       <SidebarHeader>Dashboard</SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -80,25 +84,12 @@ export function DashboardSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        <SidebarGroup>
+          <Suspense fallback={<Loading />}>
+            <WorkspaceUsage />
+          </Suspense>
+        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
-  );
-}
-
-function SidebarMenuLink({
-  children,
-  href,
-}: {
-  href: string;
-  children: ReactNode;
-}) {
-  const pathname = usePathname();
-
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={pathname.startsWith(href)}>
-        <Link href={href}>{children}</Link>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
   );
 }

@@ -1,11 +1,9 @@
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Loading } from "@/components/Loading/Loading";
-import { auth } from "@/lib/auth";
-import { getAccountContext } from "@/lib/organizations";
+import { getSessionAccount } from "@/lib/account";
 import { listAccountWorkspaces } from "@/lib/workspaces";
 import { Button } from "@konopskidev/ui/components/button";
 import { Folder } from "lucide-react";
-import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -18,13 +16,11 @@ export function ProjectsList() {
 }
 
 async function ProjectsListInner() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const account = await getSessionAccount();
 
-  if (!session) return null;
+  if (!account) return null;
 
-  const { activeTeam } = await getAccountContext(session);
+  const { activeTeam, session } = account;
   const accountName = activeTeam?.name ?? "Personal account";
   const boards = await listAccountWorkspaces(
     session.user.id,
@@ -34,7 +30,9 @@ async function ProjectsListInner() {
   if (boards.length === 0) {
     return (
       <EmptyState
-        icon={<Folder height={64} width={64} className="text-primary" />}
+        icon={
+          <Folder height={64} width={64} className="text-primary" />
+        }
         title={`No boards in ${accountName}`}
         description={
           activeTeam
@@ -51,8 +49,8 @@ async function ProjectsListInner() {
       <div>
         <h2 className="text-2xl font-bold">{accountName} boards</h2>
         <p className="text-sm text-muted-foreground">
-          {boards.length} {boards.length === 1 ? "board" : "boards"} in this
-          account.
+          {boards.length} {boards.length === 1 ? "board" : "boards"} in
+          this account.
         </p>
       </div>
 
@@ -64,11 +62,11 @@ async function ProjectsListInner() {
               className="card flex h-full flex-col gap-2 p-4 transition-colors hover:border-primary/40"
             >
               <span className="font-medium">{board.name}</span>
-              {board.description ? (
+              {board.description && (
                 <span className="line-clamp-2 text-sm text-muted-foreground">
                   {board.description}
                 </span>
-              ) : null}
+              )}
               <span className="mt-auto font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
                 {board.status.replace(/_/g, " ")}
               </span>

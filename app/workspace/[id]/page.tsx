@@ -9,7 +9,7 @@ export default async function WorkspacePage({
   const { id } = await params;
 
   return (
-    <main className="flex flex-1 items-center justify-center p-6">
+    <main className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-6">
       <Loading label={`Opening workspace ${id}…`} />
     </main>
   );

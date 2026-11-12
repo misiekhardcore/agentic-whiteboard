@@ -11,6 +11,9 @@ export const agentPrompts = pgTable(
       .primaryKey()
       .$defaultFn(() => createId()),
 
+    // The paying account: an organization id, or the user id for a personal
+    // account. `userId` below is the member whose per-person quota this prompt
+    // consumes, so the monthly count is `(ownerId, userId, createdAt)`.
     ownerId: text("ownerId").notNull(),
 
     userId: text("userId")

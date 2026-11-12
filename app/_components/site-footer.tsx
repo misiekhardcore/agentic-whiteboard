@@ -22,7 +22,7 @@ export function SiteFooter() {
 
         {columns.map((column) => (
           <nav key={column.title} aria-label={column.title}>
-            <h2 className="font-mono text-[11px] font-medium tracking-[0.2em] text-muted-foreground uppercase">
+            <h2 className="font-mono text-xs font-medium tracking-[0.2em] text-muted-foreground uppercase">
               {column.title}
             </h2>
             <ul className="mt-4 flex flex-col gap-2.5">

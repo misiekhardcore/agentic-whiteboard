@@ -12,6 +12,15 @@
  * app shell, which a component library cannot own.
  */
 @layer base {
+  /*
+   * The one number the shell is built around: the header's height. Pages are
+   * scroll containers below it, and the dashboard sidebar (which is fixed to
+   * the viewport) starts here and ends at the bottom edge.
+   */
+  :root {
+    --app-header-height: 3.625rem;
+  }
+
   html {
     @apply scroll-pt-20 scroll-smooth font-sans;
   }
@@ -30,8 +39,14 @@
    * UI chrome (header, footer, buttons, form controls, metadata) opts back
    * into Lato so small controls keep an even, upright texture.
    */
+  /*
+   * The shell owns the viewport height (`h-svh` in the root layout) and each
+   * page brings its own scroll container, so the document itself never grows.
+   * `min-h-screen` here would fight that height and overflow on mobile, where
+   * `svh` is shorter than `vh`.
+   */
   body {
-    @apply bg-background text-foreground flex min-h-screen flex-col antialiased;
+    @apply bg-background text-foreground flex flex-col antialiased;
   }
 
   @media (prefers-reduced-motion: reduce) {

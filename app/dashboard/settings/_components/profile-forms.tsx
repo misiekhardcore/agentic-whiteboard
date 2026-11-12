@@ -1,6 +1,9 @@
 "use client";
 
-import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
+import {
+  Alert,
+  AlertDescription,
+} from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import { Input } from "@konopskidev/ui/components/input";
 import { Label } from "@konopskidev/ui/components/label";
@@ -64,16 +67,16 @@ export function PersonalProfileForm({
         </p>
       </div>
 
-      {state.error ? (
+      {state.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
-      ) : null}
-      {state.notice ? (
+      )}
+      {state.notice && (
         <Alert>
           <AlertDescription>{state.notice}</AlertDescription>
         </Alert>
-      ) : null}
+      )}
 
       <Button type="submit" disabled={pending} className="self-start">
         {pending ? "Saving…" : "Save profile"}
@@ -146,21 +149,21 @@ export function OrganizationProfileForm({
           disabled={!canManage}
         />
         <p className="text-xs text-muted-foreground">
-          Shown in the account menu. Leave it empty to use the organization
-          icon.
+          Shown in the account menu. Leave it empty to use the
+          organization icon.
         </p>
       </div>
 
-      {state.error ? (
+      {state.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
-      ) : null}
-      {state.notice ? (
+      )}
+      {state.notice && (
         <Alert>
           <AlertDescription>{state.notice}</AlertDescription>
         </Alert>
-      ) : null}
+      )}
 
       {canManage ? (
         <Button type="submit" disabled={pending} className="self-start">

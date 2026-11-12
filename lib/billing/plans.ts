@@ -121,7 +121,7 @@ export const plans = {
       "Unlimited workspaces",
       "Public share links",
       "PDF export",
-      "500 agent prompts per month",
+      "500 agent prompts per member / month",
     ],
     limits: { agentPromptsPerMonth: 500, workspaces: null },
     capabilities: {
@@ -140,7 +140,7 @@ export const plans = {
     audience: ["team"],
     features: [
       "Unlimited seats",
-      "2,000 agent prompts per month",
+      "2,000 agent prompts per member / month",
       "Unlimited workspaces",
       "Public share links",
       "PDF export",
@@ -167,6 +167,21 @@ export function isPaidPlan(plan: Plan): boolean {
   return plan.priceUsd > 0;
 }
 
+/** Whether this plan can be sold to this kind of account. */
+export function planServesAudience(
+  plan: Plan,
+  audience: BillingAudience,
+): boolean {
+  return (plan.audience as readonly BillingAudience[]).includes(audience);
+}
+
+/** Every plan offered to this kind of account, in catalog order. */
+export function plansForAudience(audience: BillingAudience): Plan[] {
+  return Object.values(plans).filter((plan) =>
+    planServesAudience(plan, audience),
+  );
+}
+
 export function formatPlanPrice(plan: Plan): string {
   return `$${plan.priceUsd}`;
 }
@@ -175,3 +190,37 @@ export function formatPlanPeriod(plan: Plan): string {
   if (!isPaidPlan(plan)) return "forever";
   return plan.perSeat ? "/ month per member" : "/ month";
 }
+
+/** The copy a dialog shows for each limit that has run out. */
+export type UpgradeReason = {
+  title: string;
+  description: string;
+};
+
+/** Short names for a limit, used by the usage meters. */
+export const limitLabels = {
+  agentPromptsPerMonth: "Agent prompts",
+  workspaces: "Workspaces",
+} as const satisfies Record<keyof PlanLimits, string>;
+
+/**
+ * What the upgrade dialog says when a limit is reached. Prompts are counted per
+ * member and workspaces per account, so the copy names the account without
+ * implying the prompt allowance is shared.
+ *
+ * `{used}`, `{limit}`, `{plan}`, `{period}` and `{account}` are filled in by
+ * `fillUpgradeCopy` in `usage.ts`; keep the placeholders instead of formatting
+ * numbers here so the catalog stays pure data.
+ */
+export const upgradeMessages = {
+  agentPromptsPerMonth: {
+    title: "You’ve hit your agent prompt limit",
+    description:
+      "You’ve used {used} of {limit} prompts {period} in {account}. Upgrade to keep building with the agent.",
+  },
+  workspaces: {
+    title: "Your workspaces are full",
+    description:
+      "{account} has used all {limit} workspaces on the {plan} plan. Upgrade to keep every board in one place.",
+  },
+} as const satisfies Record<keyof PlanLimits, UpgradeReason>;

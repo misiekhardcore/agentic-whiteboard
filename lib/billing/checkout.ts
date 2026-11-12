@@ -5,7 +5,14 @@ import { db } from "@/lib/db";
 import { member, organization } from "@/lib/db/schema";
 
 import { ensureStripeCustomer } from "./customers";
-import { getPlan, isPlanId, type BillingOwnerType } from "./plans";
+import { changeSubscriptionPlan } from "./plan-change";
+import {
+  getPlan,
+  isPlanId,
+  planServesAudience,
+  type BillingOwnerType,
+  type Plan,
+} from "./plans";
 import {
   appUrl,
   BillingRequestError,
@@ -24,6 +31,15 @@ export type CheckoutUser = {
   name: string;
   email: string;
 };
+
+/**
+ * Either a Stripe embedded-checkout secret, or the outcome of repricing the
+ * account's existing subscription. The browser renders the first and toasts the
+ * second.
+ */
+export type CheckoutResult =
+  | { clientSecret: string }
+  | { changed: true; planId: Plan["id"] };
 
 function clampSeats(value: unknown): number {
   const seats = Math.floor(Number(value));
@@ -131,7 +147,7 @@ export async function startCheckout({
   organizationId?: unknown;
   organizationName?: unknown;
   headers: Headers;
-}): Promise<{ clientSecret: string }> {
+}): Promise<CheckoutResult> {
   if (!isPlanId(planId)) {
     throw new BillingRequestError("Choose a plan to continue.");
   }
@@ -141,7 +157,7 @@ export async function startCheckout({
     throw new BillingRequestError("The free plan does not need checkout.");
   }
 
-  const isTeamPlan = plan.audience.includes("team");
+  const isTeamPlan = planServesAudience(plan, "team");
   const quantity = plan.perSeat ? clampSeats(seats) : 1;
 
   let ownerType: BillingOwnerType = "USER";
@@ -170,10 +186,18 @@ export async function startCheckout({
 
   const existing = await getActiveSubscription(ownerType, ownerId);
   if (existing) {
-    throw new BillingRequestError(
-      "This account already has a subscription. Manage it from the billing portal.",
-      409,
-    );
+    // An account has one subscription. Moving it to a different plan is a
+    // repricing, not a checkout: creating a second subscription would bill the
+    // customer twice.
+    if (existing.plan === plan.id) {
+      throw new BillingRequestError(
+        `This account is already on ${plan.name}.`,
+        409,
+      );
+    }
+
+    await changeSubscriptionPlan(existing, plan);
+    return { changed: true, planId: plan.id };
   }
 
   const customerId = await ensureStripeCustomer({
