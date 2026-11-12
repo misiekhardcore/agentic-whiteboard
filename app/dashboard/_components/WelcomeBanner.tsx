@@ -32,7 +32,7 @@ async function WelcomeBannerInner() {
   const { activeTeam } = await getAccountContext(session);
 
   return (
-    <Card className="p-4 bg-radial-[at_25%_25%] from-blue-200 to-purple-200 border-border shadow">
+    <Card className="topo-bg">
       <CardHeader>
         <CardTitle className="text-h1 font-bold">
           Welcome back,{" "}
