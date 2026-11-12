@@ -4,8 +4,10 @@ import type { LimitUsage } from "@/lib/billing/usage";
 import { cn } from "@/lib/utils";
 
 /**
- * A labelled usage bar. `limit: null` is an unlimited plan, which shows the
- * word instead of a bar: an always-full track would read as "used up".
+ * A labelled usage bar. `limit: null` is an unlimited plan, which reports the
+ * count without a bar: an always-full track would read as "used up", and a
+ * bar with no denominator says nothing. The count still shows, so the meter
+ * never looks empty on a plan whose other limits are finite.
  *
  * The tones live on the root as arbitrary variants because the design system's
  * Progress pins its indicator to `bg-primary`; overriding it here keeps the
@@ -46,7 +48,7 @@ export function UsageMeter({
           )}
         >
           {unlimited
-            ? "Unlimited"
+            ? `${used.toLocaleString("en-US")} used · unlimited`
             : `${used.toLocaleString("en-US")} / ${limit.toLocaleString("en-US")}`}
         </span>
       </div>
