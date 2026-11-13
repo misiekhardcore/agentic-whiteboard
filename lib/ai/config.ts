@@ -7,7 +7,11 @@
  * call time so hot reload picks up edits without a server restart.
  */
 
-export const AI_PROVIDER_IDS = ["lmstudio", "openai-compatible"] as const;
+export const AI_PROVIDER_IDS = [
+  "lmstudio",
+  "openai-compatible",
+  "stub",
+] as const;
 
 export type AiProviderId = (typeof AI_PROVIDER_IDS)[number];
 
@@ -51,6 +55,13 @@ const PROVIDER_DEFAULTS = {
     baseURL: null,
     apiKey: "not-needed",
     maxRetries: 2,
+  },
+  stub: {
+    // The scripted provider never makes a request; the URL only satisfies the
+    // shared config shape.
+    baseURL: "stub://local",
+    apiKey: "stub",
+    maxRetries: 0,
   },
 } satisfies Record<AiProviderId, ProviderDefaults>;
 

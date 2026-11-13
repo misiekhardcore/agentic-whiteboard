@@ -57,6 +57,13 @@
       "when": 1794518166945,
       "tag": "0007_lean_pretty_boy",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794568773895,
+      "tag": "0008_glorious_spyke",
+      "breakpoints": true
     }
   ]
 }

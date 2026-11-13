@@ -1,11 +1,11 @@
 import { ArchivedWorkspaces } from "./_components/ArchivedWorkspaces";
 import { ProjectsList } from "./_components/ProjectsList";
-import { PromptComposer } from "./_components/PromptComposer";
+import { PromptSection } from "./_components/PromptSection";
 
 export default function DashboardPage() {
   return (
     <div className="stack">
-      <PromptComposer />
+      <PromptSection />
       <ProjectsList />
       <ArchivedWorkspaces />
     </div>

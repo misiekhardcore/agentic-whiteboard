@@ -1,12 +1,14 @@
 import { randomUUID } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
+import { Client } from "pg";
 
 /**
- * The dashboard opens with a prompt composer for the agent. It is the first
- * thing a signed-in person sees, so its keyboard contract matters: Enter sends,
- * Shift+Enter keeps a line break, and the example prompts populate the field.
- * Sending has no agent run behind it yet, so the composer keeps the draft.
+ * The dashboard opens with a prompt composer for the agent: Enter sends,
+ * Shift+Enter keeps a line break, and sending runs a real request through
+ * `/api/agent/prompts`. Playwright starts the app with `AI_PROVIDER=stub`, so
+ * the scripted provider answers deterministically and can call the
+ * createWorkspace tool.
  */
 
 async function signUp(page: Page, email: string, password: string) {
@@ -18,47 +20,114 @@ async function signUp(page: Page, email: string, password: string) {
   await page.waitForURL("**/dashboard");
 }
 
-test("the dashboard prompt composer sends on Enter and keeps Shift+Enter for new lines", async ({
+async function deleteAccount(email: string) {
+  const db = new Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  try {
+    // Workspaces have no foreign key on their creator, and the agent creates
+    // one in these tests, so remove them before the user row cascades prompts.
+    await db
+      .query(
+        `delete from workspace
+          where "creatorId" = (select id from "user" where email = $1)`,
+        [email],
+      )
+      .catch(() => undefined);
+    await db
+      .query('delete from "user" where email = $1', [email])
+      .catch(() => undefined);
+  } finally {
+    await db.end();
+  }
+}
+
+test("the composer sends on Enter, keeps Shift+Enter for new lines and streams a reply", async ({
   page,
 }) => {
   const id = randomUUID().slice(0, 8);
+  const email = `e2e-prompt-${id}@example.com`;
 
-  await signUp(page, `e2e-prompt-${id}@example.com`, `e2e-pass-${id}`);
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
 
-  const composer = page.getByRole("textbox", { name: "Prompt" });
-  const send = page.getByRole("button", { name: "Send prompt" });
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    const send = page.getByRole("button", { name: "Send prompt" });
 
-  await expect(
-    page.getByRole("heading", { name: "What are we planning today?" }),
-  ).toBeVisible();
-  await expect(
-    page.getByText(
-      "Describe it, and the agent drafts the doc and the canvas for you.",
-    ),
-  ).toBeVisible();
-  await expect(composer).toBeVisible();
-  await expect(page.getByText("Shift + Enter for a new line")).toBeVisible();
-  await expect(send).toBeDisabled();
+    await expect(
+      page.getByRole("heading", { name: "What are we planning today?" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        "Describe it, and the agent drafts the doc and the canvas for you.",
+      ),
+    ).toBeVisible();
+    await expect(composer).toBeVisible();
+    await expect(page.getByText("Shift + Enter for a new line")).toBeVisible();
+    await expect(send).toBeDisabled();
 
-  await composer.fill("Plan the schema");
-  await composer.press("Shift+Enter");
-  await composer.pressSequentially("and the API");
+    await composer.fill("Plan the schema");
+    await composer.press("Shift+Enter");
+    await composer.pressSequentially("and the API");
 
-  await expect(composer).toHaveValue("Plan the schema\nand the API");
-  await expect(send).toBeEnabled();
+    await expect(composer).toHaveValue("Plan the schema\nand the API");
+    await expect(send).toBeEnabled();
 
-  // Enter submits instead of adding another line. The run flow is not wired
-  // yet, so the draft stays in place.
-  await composer.press("Enter");
-  await expect(composer).toHaveValue("Plan the schema\nand the API");
+    // Enter sends instead of adding another line.
+    await composer.press("Enter");
 
-  await composer.fill("   ");
-  await expect(send).toBeDisabled();
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+    await expect(thread).toContainText("Plan the schema");
+    await expect(thread).toContainText("and the API");
+    await expect(thread).toContainText("Stub agent: Plan the schema");
+    await expect(composer).toHaveValue("");
 
-  await page
-    .getByRole("button", { name: "Map out a user onboarding flow" })
-    .click();
-  await expect(composer).toHaveValue("Map out a user onboarding flow");
-  await expect(composer).toBeFocused();
-  await expect(send).toBeEnabled();
+    // The thread is stored, so a reload replays it from the database.
+    await page.reload();
+    await expect(
+      page.getByRole("list", { name: "Agent conversation" }),
+    ).toContainText("Stub agent: Plan the schema");
+    await expect(composer).toHaveValue("");
+
+    await composer.fill("   ");
+    await expect(send).toBeDisabled();
+
+    await page
+      .getByRole("button", { name: "Map out a user onboarding flow" })
+      .click();
+    await expect(composer).toHaveValue("Map out a user onboarding flow");
+    await expect(composer).toBeFocused();
+    await expect(send).toBeEnabled();
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("the agent can create a workspace from a dashboard prompt", async ({
+  page,
+}) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-workspace-tool-${id}@example.com`;
+  const workspaceName = `E2E Workspace ${id}`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    await composer.fill(`Create a workspace called "${workspaceName}"`);
+    await composer.press("Enter");
+
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+    await expect(thread).toContainText("The workspace is ready.");
+
+    // `onFinish` refreshes the server components, so the new workspace joins
+    // the account's latest list without a reload.
+    await expect(
+      page.getByRole("heading", { name: "Latest in Personal account" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: workspaceName }),
+    ).toBeVisible();
+  } finally {
+    await deleteAccount(email);
+  }
 });
