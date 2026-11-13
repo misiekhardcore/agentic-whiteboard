@@ -10,7 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { workspaces } from "./workspace";
-import { agentRuns } from "./agentRun";
+import { agentPrompts } from "./agentPrompt";
 import {
   AGENT_ACTOR_TYPES,
   AGENT_MESSAGE_ROLES,
@@ -27,8 +27,11 @@ export const agentActorTypeEnum = pgEnum(
 );
 
 /**
- * The shared chat thread for a workspace. Messages are persisted before they
- * are broadcast so a collaborator who joins late can load the same history.
+ * The chat thread of a prompt. Messages are persisted before they are broadcast
+ * so a collaborator who joins late can load the same history.
+ *
+ * `workspaceId` always mirrors the prompt's: null for the dashboard planning
+ * thread, set for a workspace conversation.
  */
 export const agentMessages = pgTable(
   "agentMessage",
@@ -37,13 +40,13 @@ export const agentMessages = pgTable(
       .primaryKey()
       .$defaultFn(() => createId()),
 
-    workspaceId: text("workspaceId")
-      .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
+    workspaceId: text("workspaceId").references(() => workspaces.id, {
+      onDelete: "cascade",
+    }),
 
-    runId: text("runId")
+    promptId: text("promptId")
       .notNull()
-      .references(() => agentRuns.id, { onDelete: "cascade" }),
+      .references(() => agentPrompts.id, { onDelete: "cascade" }),
 
     role: agentMessageRoleEnum("role").notNull(),
 
@@ -68,7 +71,7 @@ export const agentMessages = pgTable(
       table.workspaceId,
       table.createdAt,
     ),
-    index("AgentMessage_runId_idx").on(table.runId),
+    index("AgentMessage_promptId_idx").on(table.promptId),
   ],
 );
 
@@ -79,9 +82,9 @@ export const agentMessagesRelations = relations(
       fields: [agentMessages.workspaceId],
       references: [workspaces.id],
     }),
-    run: one(agentRuns, {
-      fields: [agentMessages.runId],
-      references: [agentRuns.id],
+    prompt: one(agentPrompts, {
+      fields: [agentMessages.promptId],
+      references: [agentPrompts.id],
     }),
     author: one(user, {
       fields: [agentMessages.userId],

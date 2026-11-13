@@ -88,6 +88,9 @@ jobs:
       SMTP_HOST: 127.0.0.1
       SMTP_PORT: "2500"
       SMTP_FROM: Agentic Whiteboard <no-reply@localhost>
+      # The prompt e2e drives the agent; the scripted provider needs no model.
+      AI_PROVIDER: stub
+      AI_MODEL: stub-model
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
 

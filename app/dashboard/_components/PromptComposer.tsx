@@ -1,14 +1,24 @@
 "use client";
 
+import { useChat } from "@ai-sdk/react";
+import {
+  Alert,
+  AlertDescription,
+} from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import { Textarea } from "@konopskidev/ui/components/textarea";
-import { ArrowUp } from "lucide-react";
+import { DefaultChatTransport, type UIMessage } from "ai";
+import { ArrowUp, Square } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
+  useMemo,
   useRef,
   useState,
   type FormEvent,
   type KeyboardEvent,
 } from "react";
+import { toast } from "sonner";
 
 import {
   composerKeyIntent,
@@ -16,30 +26,114 @@ import {
   submittedPrompt,
 } from "@/lib/ai/prompt-composer";
 
+type PromptFailure = {
+  message: string;
+  limitReached: boolean;
+};
+
+/**
+ * The API answers refusals with `{ error, limitReached? }`, and the transport
+ * throws that body verbatim as the error message.
+ */
+function promptFailure(error: Error): PromptFailure {
+  try {
+    const parsed = JSON.parse(error.message) as {
+      error?: unknown;
+      limitReached?: unknown;
+    };
+    if (typeof parsed.error === "string") {
+      return {
+        message: parsed.error,
+        limitReached: parsed.limitReached === true,
+      };
+    }
+  } catch {
+    // Not a JSON body: fall through to the generic message.
+  }
+
+  return {
+    message: "The agent could not answer that prompt. Try again.",
+    limitReached: false,
+  };
+}
+
+function messageText(message: UIMessage): string {
+  return message.parts
+    .flatMap((part) => (part.type === "text" ? [part.text] : []))
+    .join("\n");
+}
+
+function ThreadMessage({ message }: { message: UIMessage }) {
+  const text = messageText(message).trim();
+  if (!text) return null;
+
+  if (message.role === "user") {
+    return (
+      <li className="ml-auto max-w-[85%] rounded-2xl bg-muted px-3 py-2 text-sm whitespace-pre-wrap">
+        {text}
+      </li>
+    );
+  }
+
+  return (
+    <li className="card max-w-[85%] px-3 py-2 text-sm whitespace-pre-wrap">
+      {text}
+    </li>
+  );
+}
+
 type PromptComposerProps = {
-  /**
-   * Receives the trimmed prompt when the user sends it. The agent run is not
-   * wired yet, so the dashboard omits it today; this is the seam the run flow
-   * will connect to.
-   */
-  onSubmit?: (prompt: string) => void;
+  /** The person's dashboard thread, loaded on the server. */
+  initialMessages: UIMessage[];
 };
 
 /**
  * The dashboard's starting point for an agent session: a prompt box that sends
  * on Enter, keeps Shift+Enter for line breaks, and offers curated examples that
- * fill the field so they stay editable before sending.
+ * fill the field so they stay editable before sending. Replies stream in above
+ * the box, and the thread survives a reload because the route stores it.
  */
-export function PromptComposer({ onSubmit }: PromptComposerProps) {
+export function PromptComposer({ initialMessages }: PromptComposerProps) {
   const [draft, setDraft] = useState("");
+  const [failure, setFailure] = useState<PromptFailure | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const router = useRouter();
 
+  const transport = useMemo(
+    () => new DefaultChatTransport({ api: "/api/agent/prompts" }),
+    [],
+  );
+
+  const { messages, sendMessage, status, stop, clearError } = useChat({
+    messages: initialMessages,
+    transport,
+    onError: (error) => {
+      const next = promptFailure(error);
+      setFailure(next);
+      toast.error(next.message);
+    },
+    onFinish: () => {
+      // A tool may have created a workspace; the latest list is server-rendered.
+      router.refresh();
+    },
+  });
+
+  const isBusy = status === "submitted" || status === "streaming";
   const promptToSend = submittedPrompt(draft);
+  // A reasoning model streams reasoning parts before any visible text, so the
+  // thread would look empty even though the agent is working.
+  const lastMessage = messages[messages.length - 1];
+  const awaitingText =
+    isBusy && (!lastMessage || messageText(lastMessage).trim().length === 0);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!promptToSend) return;
-    onSubmit?.(promptToSend);
+    if (!promptToSend || isBusy) return;
+
+    setFailure(null);
+    clearError();
+    sendMessage({ text: promptToSend });
+    setDraft("");
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -80,6 +174,23 @@ export function PromptComposer({ onSubmit }: PromptComposerProps) {
           </p>
         </div>
 
+        {messages.length > 0 && (
+          <ol
+            aria-label="Agent conversation"
+            className="flex flex-col gap-3"
+            aria-live="polite"
+          >
+            {messages.map((message) => (
+              <ThreadMessage key={message.id} message={message} />
+            ))}
+            {awaitingText && (
+              <li className="text-sm text-muted-foreground">
+                The agent is drafting…
+              </li>
+            )}
+          </ol>
+        )}
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="card flex flex-col p-1.5">
             <Textarea
@@ -100,18 +211,47 @@ export function PromptComposer({ onSubmit }: PromptComposerProps) {
               >
                 Shift + Enter for a new line
               </p>
-              <Button
-                type="submit"
-                variant="primary"
-                size="icon-lg"
-                className="rounded-full shadow"
-                aria-label="Send prompt"
-                disabled={!promptToSend}
-              >
-                <ArrowUp />
-              </Button>
+              {isBusy ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-lg"
+                  className="rounded-full shadow"
+                  aria-label="Stop prompt"
+                  onClick={() => stop()}
+                >
+                  <Square />
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="icon-lg"
+                  className="rounded-full shadow"
+                  aria-label="Send prompt"
+                  disabled={!promptToSend}
+                >
+                  <ArrowUp />
+                </Button>
+              )}
             </div>
           </div>
+
+          {failure && (
+            <Alert variant="destructive">
+              <AlertDescription className="flex flex-wrap items-center gap-2">
+                <span>{failure.message}</span>
+                {failure.limitReached && (
+                  <Link
+                    href="/dashboard/billing"
+                    className="font-medium underline underline-offset-4"
+                  >
+                    View plans
+                  </Link>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
 
           <ul aria-label="Example prompts" className="flex flex-wrap gap-2">
             {EXAMPLE_PROMPTS.map((prompt) => (
