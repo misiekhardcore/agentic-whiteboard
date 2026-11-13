@@ -13,7 +13,8 @@ import { MockLanguageModelV4 } from "ai/test";
 
 export const STUB_MODEL_ID = "stub-model";
 export const STUB_REPLY_PREFIX = "Stub agent:";
-export const STUB_TOOL_REPLY = "The workspace is ready.";
+export const STUB_TOOL_REPLY =
+  "**The workspace is ready.**\n\n- It is listed under the latest workspaces below.";
 
 // Kept in sync with `CREATE_WORKSPACE_TOOL`; the tool list is checked before the
 // scripted model offers the call, so a run without that tool never emits one.
@@ -98,6 +99,14 @@ function workspaceToolChunks(text: string) {
   ];
 }
 
+/**
+ * Both scripted replies are markdown, like a real reply, so the rendered thread
+ * is what the e2e suite sees rather than the raw syntax.
+ */
+function stubPlainReply(userText: string): string {
+  return `**${STUB_REPLY_PREFIX}** ${userText}`;
+}
+
 export function createStubModel(): LanguageModel {
   return new MockLanguageModelV4({
     modelId: STUB_MODEL_ID,
@@ -124,9 +133,7 @@ export function createStubModel(): LanguageModel {
       return {
         stream: simulateReadableStream({
           chunks: textChunks(
-            alreadyCalledTool
-              ? STUB_TOOL_REPLY
-              : `${STUB_REPLY_PREFIX} ${userText}`,
+            alreadyCalledTool ? STUB_TOOL_REPLY : stubPlainReply(userText),
           ),
         }),
       };

@@ -25,6 +25,9 @@ import {
   EXAMPLE_PROMPTS,
   submittedPrompt,
 } from "@/lib/ai/prompt-composer";
+import { threadText } from "@/lib/ai/thread-parts";
+
+import { PromptThread } from "./PromptThread";
 
 type PromptFailure = {
   message: string;
@@ -55,31 +58,6 @@ function promptFailure(error: Error): PromptFailure {
     message: "The agent could not answer that prompt. Try again.",
     limitReached: false,
   };
-}
-
-function messageText(message: UIMessage): string {
-  return message.parts
-    .flatMap((part) => (part.type === "text" ? [part.text] : []))
-    .join("\n");
-}
-
-function ThreadMessage({ message }: { message: UIMessage }) {
-  const text = messageText(message).trim();
-  if (!text) return null;
-
-  if (message.role === "user") {
-    return (
-      <li className="ml-auto max-w-[85%] rounded-2xl bg-muted px-3 py-2 text-sm whitespace-pre-wrap">
-        {text}
-      </li>
-    );
-  }
-
-  return (
-    <li className="card max-w-[85%] px-3 py-2 text-sm whitespace-pre-wrap">
-      {text}
-    </li>
-  );
 }
 
 type PromptComposerProps = {
@@ -124,7 +102,7 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
   // thread would look empty even though the agent is working.
   const lastMessage = messages[messages.length - 1];
   const awaitingText =
-    isBusy && (!lastMessage || messageText(lastMessage).trim().length === 0);
+    isBusy && (!lastMessage || threadText(lastMessage).trim().length === 0);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -174,22 +152,7 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
           </p>
         </div>
 
-        {messages.length > 0 && (
-          <ol
-            aria-label="Agent conversation"
-            className="flex flex-col gap-3"
-            aria-live="polite"
-          >
-            {messages.map((message) => (
-              <ThreadMessage key={message.id} message={message} />
-            ))}
-            {awaitingText && (
-              <li className="text-sm text-muted-foreground">
-                The agent is drafting…
-              </li>
-            )}
-          </ol>
-        )}
+        <PromptThread messages={messages} isDrafting={awaitingText} />
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="card flex flex-col p-1.5">
