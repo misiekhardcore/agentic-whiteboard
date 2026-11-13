@@ -41,15 +41,10 @@ const CYCLE_LABELS: Record<string, string> = {
   year: "Yearly",
 };
 
-export function planFacts(
-  plan: Plan,
-  subscription: SubscriptionRow | null,
-): PlanFacts {
+export function planFacts(plan: Plan, subscription: SubscriptionRow | null): PlanFacts {
   const seats = Math.max(1, subscription?.seats ?? 1);
   const amount = plan.perSeat ? plan.priceUsd * seats : plan.priceUsd;
-  const charges = Boolean(
-    subscription && isPaidPlan(plan) && !subscription.cancelAtPeriodEnd,
-  );
+  const charges = Boolean(subscription && isPaidPlan(plan) && !subscription.cancelAtPeriodEnd);
   const renewsAt = formatDay(subscription?.currentPeriodEnd);
 
   return {
@@ -57,9 +52,7 @@ export function planFacts(
     period: formatPlanPeriod(plan),
     subscribedOn: formatDay(subscription?.startedAt ?? subscription?.createdAt),
     renewsAt,
-    billingCycle: subscription
-      ? (CYCLE_LABELS[subscription.billingInterval] ?? null)
-      : null,
+    billingCycle: subscription ? (CYCLE_LABELS[subscription.billingInterval] ?? null) : null,
     nextPaymentOn: charges ? renewsAt : null,
     nextPaymentAmount: charges
       ? formatMoney(amount, subscription?.currency ?? BILLING_CURRENCY)

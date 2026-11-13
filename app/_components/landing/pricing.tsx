@@ -6,20 +6,14 @@ import { getPlan, isPaidPlan } from "@/lib/billing/plans";
 
 import { PricingTabs } from "./pricing-tabs";
 
-type LandingSearchParams = Promise<
-  Record<string, string | string[] | undefined>
->;
+type LandingSearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 /**
  * The plan cards render from the static catalog; who is signed in only changes
  * the CTA, so the session is read in a streamed child instead of making the
  * whole landing page dynamic.
  */
-export function Pricing({
-  searchParams,
-}: {
-  searchParams: LandingSearchParams;
-}) {
+export function Pricing({ searchParams }: { searchParams: LandingSearchParams }) {
   const { id, eyebrow, title, lead, note } = landing.pricing;
 
   return (
@@ -30,12 +24,10 @@ export function Pricing({
             <span aria-hidden="true" className="size-1.5 rotate-45 bg-primary" />
             {eyebrow}
           </p>
-          <h2 id="pricing-heading" className="section-title mt-4 text-balance">
+          <h2 id="pricing-heading" className="mt-4 section-title text-balance">
             {title}
           </h2>
-          <p className="mt-4 font-serif text-lead text-pretty text-muted-foreground">
-            {lead}
-          </p>
+          <p className="mt-4 font-serif text-lead text-pretty text-muted-foreground">{lead}</p>
         </header>
 
         <Suspense
@@ -60,15 +52,8 @@ export function Pricing({
   );
 }
 
-async function PricingForSession({
-  searchParams,
-}: {
-  searchParams: LandingSearchParams;
-}) {
-  const [account, params] = await Promise.all([
-    getSessionAccount(),
-    searchParams,
-  ]);
+async function PricingForSession({ searchParams }: { searchParams: LandingSearchParams }) {
+  const [account, params] = await Promise.all([getSessionAccount(), searchParams]);
   const billing = typeof params.billing === "string" ? params.billing : null;
   const requested = getPlan(billing);
   const requestedPlanId = requested && isPaidPlan(requested) ? requested.id : null;

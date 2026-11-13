@@ -11,11 +11,7 @@ import { UpgradeButton } from "./upgrade-button";
  * The overview is `cache`d per request, so calling this from a second place
  * reuses the header's resolution instead of re-reading the session.
  */
-export async function UpgradeControl({
-  className,
-}: {
-  className?: string;
-}) {
+export async function UpgradeControl({ className }: { className?: string }) {
   const overview = await getSessionBillingOverview();
   if (!overview || overview.reasons.length === 0) return null;
 

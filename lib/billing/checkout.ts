@@ -6,19 +6,8 @@ import { member, organization } from "@/lib/db/schema";
 
 import { ensureStripeCustomer } from "./customers";
 import { changeSubscriptionPlan } from "./plan-change";
-import {
-  getPlan,
-  isPlanId,
-  planServesAudience,
-  type BillingOwnerType,
-  type Plan,
-} from "./plans";
-import {
-  appUrl,
-  BillingRequestError,
-  getStripe,
-  lineItemForPlan,
-} from "./stripe";
+import { type BillingOwnerType, getPlan, isPlanId, type Plan, planServesAudience } from "./plans";
+import { appUrl, BillingRequestError, getStripe, lineItemForPlan } from "./stripe";
 import { getActiveSubscription } from "./subscriptions";
 
 const MAX_SEATS = 500;
@@ -38,8 +27,7 @@ export type CheckoutUser = {
  * second.
  */
 export type CheckoutResult =
-  | { clientSecret: string; sessionId: string }
-  | { changed: true; planId: Plan["id"] };
+  { clientSecret: string; sessionId: string } | { changed: true; planId: Plan["id"] };
 
 function clampSeats(value: unknown): number {
   const seats = Math.floor(Number(value));
@@ -82,32 +70,20 @@ async function resolveTeamOrganization({
     const [membership] = await db
       .select({ role: member.role })
       .from(member)
-      .where(
-        and(
-          eq(member.organizationId, organizationId),
-          eq(member.userId, userId),
-        ),
-      )
+      .where(and(eq(member.organizationId, organizationId), eq(member.userId, userId)))
       .limit(1);
 
     if (!membership) {
-      throw new BillingRequestError(
-        "You are not a member of that organization.",
-        403,
-      );
+      throw new BillingRequestError("You are not a member of that organization.", 403);
     }
     if (!BILLING_ROLES.includes(membership.role as (typeof BILLING_ROLES)[number])) {
-      throw new BillingRequestError(
-        "Only organization owners and admins can manage billing.",
-        403,
-      );
+      throw new BillingRequestError("Only organization owners and admins can manage billing.", 403);
     }
 
     return organizationId;
   }
 
-  const name =
-    typeof organizationName === "string" ? organizationName.trim() : "";
+  const name = typeof organizationName === "string" ? organizationName.trim() : "";
   if (name) {
     const created = await auth.api.createOrganization({
       body: {
@@ -123,10 +99,7 @@ async function resolveTeamOrganization({
     return created.id;
   }
 
-  throw new BillingRequestError(
-    "Choose an organization before starting a team plan.",
-    400,
-  );
+  throw new BillingRequestError("Choose an organization before starting a team plan.", 400);
 }
 
 /**
@@ -190,10 +163,7 @@ export async function startCheckout({
     // repricing, not a checkout: creating a second subscription would bill the
     // customer twice.
     if (existing.plan === plan.id) {
-      throw new BillingRequestError(
-        `This account is already on ${plan.name}.`,
-        409,
-      );
+      throw new BillingRequestError(`This account is already on ${plan.name}.`, 409);
     }
 
     await changeSubscriptionPlan(existing, plan);
@@ -225,10 +195,7 @@ export async function startCheckout({
   });
 
   if (!session.client_secret) {
-    throw new BillingRequestError(
-      "Stripe did not return a checkout session.",
-      502,
-    );
+    throw new BillingRequestError("Stripe did not return a checkout session.", 502);
   }
 
   // The id travels with the secret so the browser can ask the server to pull

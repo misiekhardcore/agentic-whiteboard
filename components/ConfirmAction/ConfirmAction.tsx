@@ -64,11 +64,7 @@ export function ConfirmAction({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button
-          variant={triggerVariant}
-          size={triggerSize}
-          className={triggerClassName}
-        >
+        <Button variant={triggerVariant} size={triggerSize} className={triggerClassName}>
           {triggerIcon}
           {triggerLabel}
         </Button>

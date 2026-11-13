@@ -46,7 +46,7 @@
    * `svh` is shorter than `vh`.
    */
   body {
-    @apply bg-background text-foreground flex flex-col antialiased;
+    @apply flex flex-col bg-background text-foreground antialiased;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -89,11 +89,7 @@
     );
     mask-image:
       url("/textures/topo.svg"),
-      radial-gradient(
-        ellipse 75% 70% at 50% 45%,
-        black 30%,
-        transparent 85%
-      );
+      radial-gradient(ellipse 75% 70% at 50% 45%, black 30%, transparent 85%);
     mask-size:
       cover,
       100% 100%;
@@ -117,22 +113,14 @@
     inset: -8px;
     pointer-events: none;
     background:
-      linear-gradient(var(--mark), var(--mark)) top left / var(--size)
-        1px,
-      linear-gradient(var(--mark), var(--mark)) top left / 1px
-        var(--size),
-      linear-gradient(var(--mark), var(--mark)) top right / var(--size)
-        1px,
-      linear-gradient(var(--mark), var(--mark)) top right / 1px
-        var(--size),
-      linear-gradient(var(--mark), var(--mark)) bottom left /
-        var(--size) 1px,
-      linear-gradient(var(--mark), var(--mark)) bottom left / 1px
-        var(--size),
-      linear-gradient(var(--mark), var(--mark)) bottom right /
-        var(--size) 1px,
-      linear-gradient(var(--mark), var(--mark)) bottom right / 1px
-        var(--size);
+      linear-gradient(var(--mark), var(--mark)) top left / var(--size) 1px,
+      linear-gradient(var(--mark), var(--mark)) top left / 1px var(--size),
+      linear-gradient(var(--mark), var(--mark)) top right / var(--size) 1px,
+      linear-gradient(var(--mark), var(--mark)) top right / 1px var(--size),
+      linear-gradient(var(--mark), var(--mark)) bottom left / var(--size) 1px,
+      linear-gradient(var(--mark), var(--mark)) bottom left / 1px var(--size),
+      linear-gradient(var(--mark), var(--mark)) bottom right / var(--size) 1px,
+      linear-gradient(var(--mark), var(--mark)) bottom right / 1px var(--size);
     background-repeat: no-repeat;
   }
 }
@@ -144,8 +132,7 @@
    anyone who prefers reduced motion, just see it flat. */
 @keyframes scroll-tilt {
   from {
-    transform: perspective(1400px) translateY(-70px) rotateX(22deg)
-      scale(0.96);
+    transform: perspective(1400px) translateY(-70px) rotateX(22deg) scale(0.96);
   }
 
   to {

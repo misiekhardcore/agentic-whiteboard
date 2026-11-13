@@ -18,16 +18,14 @@ export function ClosingCta() {
 
         <h2
           id="closing-heading"
-          className="font-display text-display mt-2 max-w-3xl font-bold text-balance"
+          className="mt-2 max-w-3xl font-display text-display font-bold text-balance"
         >
           {title.lead}
           <span className="text-primary">{title.accent}</span>
           {title.trail}
         </h2>
 
-        <p className="max-w-xl font-serif text-lead text-pretty text-muted-foreground">
-          {lead}
-        </p>
+        <p className="max-w-xl font-serif text-lead text-pretty text-muted-foreground">{lead}</p>
 
         <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
           <Button asChild variant="primary" size="lg">

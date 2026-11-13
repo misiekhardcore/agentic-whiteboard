@@ -1,6 +1,5 @@
+import { expect, type Frame, type Page, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-
-import { expect, test, type Frame, type Page } from "@playwright/test";
 import { Client } from "pg";
 import Stripe from "stripe";
 
@@ -78,9 +77,7 @@ async function findPersonalSubscription(email: string) {
 }
 
 test.describe("pricing", () => {
-  test("shows the personal and team plans with the catalog prices", async ({
-    page,
-  }) => {
+  test("shows the personal and team plans with the catalog prices", async ({ page }) => {
     await page.goto("/#pricing");
 
     await expect(page.getByRole("tab", { name: "Personal" })).toHaveAttribute(
@@ -90,9 +87,7 @@ test.describe("pricing", () => {
     const personal = page.getByRole("tabpanel", { name: "Personal" });
     await expect(personal.getByText("$0")).toBeVisible();
     await expect(personal.getByText("$12", { exact: true })).toBeVisible();
-    await expect(
-      personal.getByRole("button", { name: /choose pro/i }),
-    ).toBeVisible();
+    await expect(personal.getByRole("button", { name: /choose pro/i })).toBeVisible();
 
     await page.getByRole("tab", { name: "Team" }).click();
 
@@ -100,16 +95,11 @@ test.describe("pricing", () => {
     await expect(team.getByText("$12", { exact: true })).toBeVisible();
     await expect(team.getByText("$20", { exact: true })).toBeVisible();
     await expect(team.getByRole("button", { name: /choose team/i })).toBeVisible();
-    await expect(
-      team.getByRole("button", { name: /choose enterprise/i }),
-    ).toBeVisible();
+    await expect(team.getByRole("button", { name: /choose enterprise/i })).toBeVisible();
   });
 
   test("buys Pro and mirrors the subscription from Stripe", async ({ page }) => {
-    test.skip(
-      !stripeConfigured,
-      "Needs STRIPE_SECRET_KEY and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
-    );
+    test.skip(!stripeConfigured, "Needs STRIPE_SECRET_KEY and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY");
 
     const id = randomUUID().slice(0, 8);
     const email = `e2e-billing-${id}@example.com`;
@@ -127,16 +117,12 @@ test.describe("pricing", () => {
 
     const sheet = page.getByRole("dialog");
     await expect(sheet).toContainText("Choose Pro");
-    await sheet
-      .getByRole("button", { name: /continue to secure checkout/i })
-      .click();
+    await sheet.getByRole("button", { name: /continue to secure checkout/i }).click();
 
     // This is the payment step a human would type into Stripe's form.
     const cardForm = await waitForCardFrame(page);
 
-    await cardForm
-      .locator('input[name="cardNumber"]')
-      .fill("4242 4242 4242 4242");
+    await cardForm.locator('input[name="cardNumber"]').fill("4242 4242 4242 4242");
     await cardForm.locator('input[name="cardExpiry"]').fill("12 / 34");
     await cardForm.locator('input[name="cardCvc"]').fill("123");
     await cardForm.locator('input[name="billingName"]').fill("E2E Buyer");
@@ -152,9 +138,7 @@ test.describe("pricing", () => {
       await postalCode.first().fill("94107");
     }
 
-    await cardForm
-      .getByRole("button", { name: /pay and subscribe/i })
-      .click();
+    await cardForm.getByRole("button", { name: /pay and subscribe/i }).click();
 
     await expect(page.getByRole("dialog")).toContainText(/You.re on Pro/, {
       timeout: 90_000,
@@ -177,8 +161,8 @@ test.describe("pricing", () => {
 
     const subscription = await findPersonalSubscription(email);
     if (subscription?.stripeSubscriptionId) {
-      await new Stripe(process.env.STRIPE_SECRET_KEY!)
-        .subscriptions.cancel(subscription.stripeSubscriptionId)
+      await new Stripe(process.env.STRIPE_SECRET_KEY).subscriptions
+        .cancel(subscription.stripeSubscriptionId)
         .catch(() => undefined);
     }
   });

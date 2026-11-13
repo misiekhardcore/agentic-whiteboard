@@ -21,13 +21,13 @@ export default function Home({ searchParams }: PageProps<"/">) {
             {hero.eyebrow}
           </p>
 
-          <h1 className="font-display text-display max-w-4xl font-bold text-balance">
+          <h1 className="max-w-4xl font-display text-display font-bold text-balance">
             {hero.title.lead}
             <span className="text-primary">{hero.title.accent}</span>
             {hero.title.trail}
           </h1>
 
-          <p className="font-serif text-lead max-w-2xl text-pretty text-muted-foreground">
+          <p className="max-w-2xl font-serif text-lead text-pretty text-muted-foreground">
             {hero.lead}
           </p>
 
@@ -36,14 +36,12 @@ export default function Home({ searchParams }: PageProps<"/">) {
               <Link href={hero.primaryCta.href}>{hero.primaryCta.label}</Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link href={hero.secondaryCta.href}>
-                {hero.secondaryCta.label}
-              </Link>
+              <Link href={hero.secondaryCta.href}>{hero.secondaryCta.label}</Link>
             </Button>
           </div>
 
-          <div className="survey-frame scroll-tilt mt-10 w-full max-w-5xl">
-            <div className="card overflow-hidden p-1.5">
+          <div className="survey-frame mt-10 w-full max-w-5xl scroll-tilt">
+            <div className="overflow-hidden card p-1.5">
               <video
                 className="aspect-video w-full rounded-sm bg-muted object-cover"
                 poster={hero.video.poster}

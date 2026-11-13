@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  Alert,
-  AlertDescription,
-} from "@konopskidev/ui/components/alert";
+import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import { Input } from "@konopskidev/ui/components/input";
 import { Label } from "@konopskidev/ui/components/label";
@@ -22,10 +19,7 @@ import {
   SheetTitle,
 } from "@konopskidev/ui/components/sheet";
 import { toast } from "@konopskidev/ui/components/sonner";
-import {
-  EmbeddedCheckout,
-  EmbeddedCheckoutProvider,
-} from "@stripe/react-stripe-js";
+import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Check, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -35,8 +29,8 @@ import { useState } from "react";
 import {
   formatPlanPeriod,
   formatPlanPrice,
-  planServesAudience,
   type Plan,
+  planServesAudience,
 } from "@/lib/billing/plans";
 import type { TeamOption } from "@/lib/organizations";
 
@@ -86,28 +80,19 @@ export function CheckoutSheet({
   const [organizationId, setOrganizationId] = useState(initialTeamId);
   const [organizationName, setOrganizationName] = useState("");
   const [seats, setSeats] = useState(() =>
-    String(
-      teams.find((team) => team.id === initialTeamId)?.memberCount ?? 1,
-    ),
+    String(teams.find((team) => team.id === initialTeamId)?.memberCount ?? 1),
   );
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(
-    null,
-  );
+  const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
   const [complete, setComplete] = useState(false);
   const [activating, setActivating] = useState(false);
   const [activationPending, setActivationPending] = useState(false);
 
-  const seatCount = Math.min(
-    500,
-    Math.max(1, Math.floor(Number(seats) || 1)),
-  );
-  const total = plan.perSeat
-    ? plan.priceUsd * seatCount
-    : plan.priceUsd;
+  const seatCount = Math.min(500, Math.max(1, Math.floor(Number(seats) || 1)));
+  const total = plan.perSeat ? plan.priceUsd * seatCount : plan.priceUsd;
   const stripe = getStripePromise();
 
   async function startCheckout() {
@@ -131,12 +116,8 @@ export function CheckoutSheet({
         body: JSON.stringify({
           planId: plan.id,
           seats: plan.perSeat ? seatCount : 1,
-          organizationId:
-            isTeamPlan && hasTeams ? organizationId : undefined,
-          organizationName:
-            isTeamPlan && !hasTeams
-              ? organizationName.trim()
-              : undefined,
+          organizationId: isTeamPlan && hasTeams ? organizationId : undefined,
+          organizationName: isTeamPlan && !hasTeams ? organizationName.trim() : undefined,
         }),
       });
 
@@ -172,9 +153,7 @@ export function CheckoutSheet({
       setClientSecret(data.clientSecret);
       setCheckoutSessionId(data.sessionId ?? null);
     } catch {
-      setError(
-        "Could not reach the server. Check your connection and try again.",
-      );
+      setError("Could not reach the server. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -221,16 +200,9 @@ export function CheckoutSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full gap-0 overflow-y-auto sm:max-w-lg"
-      >
+      <SheetContent side="right" className="w-full gap-0 overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>
-            {complete
-              ? `You’re on ${plan.name}`
-              : `Choose ${plan.name}`}
-          </SheetTitle>
+          <SheetTitle>{complete ? `You’re on ${plan.name}` : `Choose ${plan.name}`}</SheetTitle>
           <SheetDescription>
             {complete
               ? "Your subscription is active. Manage seats, invoices and cancellation from your dashboard."
@@ -253,32 +225,21 @@ export function CheckoutSheet({
               )}
               {!activating && activationPending && (
                 <p className="text-xs text-muted-foreground">
-                  Stripe is still finalizing this subscription. Its webhook
-                  will switch the plan over within a moment — reload the
-                  dashboard if it still shows the old one.
+                  Stripe is still finalizing this subscription. Its webhook will switch the plan
+                  over within a moment — reload the dashboard if it still shows the old one.
                 </p>
               )}
               <ul className="flex flex-col gap-3">
                 {plan.features.map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-start gap-2.5 text-sm leading-relaxed"
-                  >
+                  <li key={feature} className="flex items-start gap-2.5 text-sm leading-relaxed">
                     <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border border-primary/30 bg-primary/5 text-primary">
                       <Check className="size-2.5" aria-hidden="true" />
                     </span>
-                    <span className="text-foreground/90">
-                      {feature}
-                    </span>
+                    <span className="text-foreground/90">{feature}</span>
                   </li>
                 ))}
               </ul>
-              <Button
-                asChild
-                variant="primary"
-                className="w-full"
-                aria-busy={activating}
-              >
+              <Button asChild variant="primary" className="w-full" aria-busy={activating}>
                 <Link
                   href={isTeamPlan ? "/dashboard/billing" : "/dashboard"}
                   aria-disabled={activating}
@@ -297,12 +258,10 @@ export function CheckoutSheet({
                   onComplete: () => {
                     setComplete(true);
                     setActivating(true);
-                    void reconcileCheckout(checkoutSessionId).then(
-                      (confirmed) => {
-                        setActivationPending(!confirmed);
-                        setActivating(false);
-                      },
-                    );
+                    void reconcileCheckout(checkoutSessionId).then((confirmed) => {
+                      setActivationPending(!confirmed);
+                      setActivating(false);
+                    });
                   },
                 }}
               >
@@ -311,8 +270,7 @@ export function CheckoutSheet({
             ) : (
               <Alert variant="destructive">
                 <AlertDescription>
-                  Stripe is not configured:
-                  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is missing.
+                  Stripe is not configured: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is missing.
                 </AlertDescription>
               </Alert>
             )
@@ -320,14 +278,10 @@ export function CheckoutSheet({
             <div className="flex flex-col gap-6">
               <div className="flex items-baseline justify-between gap-4 border-y py-4">
                 <span className="text-sm text-muted-foreground">
-                  {plan.perSeat
-                    ? `${seatCount} × ${formatPlanPrice(plan)}`
-                    : plan.name}
+                  {plan.perSeat ? `${seatCount} × ${formatPlanPrice(plan)}` : plan.name}
                 </span>
                 <span className="flex items-baseline gap-1.5">
-                  <span className="font-display text-h3 font-semibold">
-                    ${total}
-                  </span>
+                  <span className="font-display text-h3 font-semibold">${total}</span>
                   <span className="text-xs font-medium text-muted-foreground">
                     {formatPlanPeriod(plan)}
                   </span>
@@ -343,17 +297,11 @@ export function CheckoutSheet({
                       value={organizationId || undefined}
                       onValueChange={(value) => {
                         setOrganizationId(value);
-                        const selected = teams.find(
-                          (team) => team.id === value,
-                        );
-                        if (selected)
-                          setSeats(String(selected.memberCount));
+                        const selected = teams.find((team) => team.id === value);
+                        if (selected) setSeats(String(selected.memberCount));
                       }}
                     >
-                      <SelectTrigger
-                        id="checkout-team"
-                        className="w-full"
-                      >
+                      <SelectTrigger id="checkout-team" className="w-full">
                         <SelectValue placeholder="Choose an organization" />
                       </SelectTrigger>
                       <SelectContent>
@@ -375,15 +323,11 @@ export function CheckoutSheet({
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="checkout-team-name">
-                      Organization name
-                    </Label>
+                    <Label htmlFor="checkout-team-name">Organization name</Label>
                     <Input
                       id="checkout-team-name"
                       value={organizationName}
-                      onChange={(event) =>
-                        setOrganizationName(event.target.value)
-                      }
+                      onChange={(event) => setOrganizationName(event.target.value)}
                       placeholder="Product design"
                       autoComplete="organization"
                     />
@@ -405,8 +349,7 @@ export function CheckoutSheet({
                     onChange={(event) => setSeats(event.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Seats stay in sync with your member count as people
-                    join or leave.
+                    Seats stay in sync with your member count as people join or leave.
                   </p>
                 </div>
               )}
@@ -421,14 +364,11 @@ export function CheckoutSheet({
                 variant="primary"
                 className="w-full"
                 disabled={loading}
-                onClick={startCheckout}
+                onClick={() => void startCheckout()}
               >
                 {loading ? (
                   <>
-                    <Loader2
-                      className="animate-spin"
-                      aria-hidden="true"
-                    />
+                    <Loader2 className="animate-spin" aria-hidden="true" />
                     Starting secure checkout…
                   </>
                 ) : changeMode ? (

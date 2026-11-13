@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +22,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={cn("h-full", "antialiased", FONT_CLASSNAMES)}
       suppressHydrationWarning
     >
-      <body className="h-svh flex flex-col overflow-hidden">
+      <body className="flex h-svh flex-col overflow-hidden">
         <Providers>
           <SiteHeader />
           {children}

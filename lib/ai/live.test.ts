@@ -3,7 +3,7 @@ import { config as loadEnv } from "dotenv";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { createAgent } from "./agent";
-import { getAiConfig, type AiConfig } from "./config";
+import { type AiConfig, getAiConfig } from "./config";
 import { getLanguageModel } from "./provider";
 
 /**
@@ -32,53 +32,44 @@ describe.skipIf(!live)("live AI provider", () => {
     }
   });
 
-  it(
-    "answers a prompt through the configured provider",
-    async () => {
-      const result = await generateText({
-        model: getLanguageModel(config),
-        prompt: "Reply with exactly one word: pong",
-        maxRetries: 0,
-      });
+  it("answers a prompt through the configured provider", async () => {
+    const result = await generateText({
+      model: getLanguageModel(config),
+      prompt: "Reply with exactly one word: pong",
+      maxRetries: 0,
+    });
 
-      expect(result.text.trim().length).toBeGreaterThan(0);
-    },
-    180_000,
-  );
+    expect(result.text.trim().length).toBeGreaterThan(0);
+  }, 180_000);
 
-  it(
-    "runs a tool through the agent loop",
-    async () => {
-      let toolRan = false;
+  it("runs a tool through the agent loop", async () => {
+    let toolRan = false;
 
-      const agent = createAgent({
-        tools: {
-          add: tool({
-            description: "Add two numbers and return their sum.",
-            inputSchema: jsonSchema<{ a: number; b: number }>({
-              type: "object",
-              properties: { a: { type: "number" }, b: { type: "number" } },
-              required: ["a", "b"],
-              additionalProperties: false,
-            }),
-            execute: async ({ a, b }) => {
-              toolRan = true;
-              return { sum: a + b };
-            },
+    const agent = createAgent({
+      tools: {
+        add: tool({
+          description: "Add two numbers and return their sum.",
+          inputSchema: jsonSchema<{ a: number; b: number }>({
+            type: "object",
+            properties: { a: { type: "number" }, b: { type: "number" } },
+            required: ["a", "b"],
+            additionalProperties: false,
           }),
-        },
-        maxSteps: 3,
-        maxRetries: 0,
-      });
+          execute: ({ a, b }) => {
+            toolRan = true;
+            return { sum: a + b };
+          },
+        }),
+      },
+      maxSteps: 3,
+      maxRetries: 0,
+    });
 
-      const result = await agent.generate({
-        prompt:
-          "Call the add tool with a=19 and b=23, then reply with only the sum.",
-      });
+    const result = await agent.generate({
+      prompt: "Call the add tool with a=19 and b=23, then reply with only the sum.",
+    });
 
-      expect(toolRan).toBe(true);
-      expect(result.text).toContain("42");
-    },
-    180_000,
-  );
+    expect(toolRan).toBe(true);
+    expect(result.text).toContain("42");
+  }, 180_000);
 });

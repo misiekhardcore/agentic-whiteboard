@@ -1,20 +1,11 @@
 "use client";
 
-import {
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@konopskidev/ui/components/sidebar";
+import { SidebarMenuButton, SidebarMenuItem } from "@konopskidev/ui/components/sidebar";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
-export function SidebarMenuLink({
-  children,
-  href,
-}: {
-  href: string;
-  children: ReactNode;
-}) {
+export function SidebarMenuLink({ children, href }: { href: string; children: ReactNode }) {
   const pathname = usePathname();
 
   return (

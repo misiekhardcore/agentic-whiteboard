@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  Alert,
-  AlertDescription,
-} from "@konopskidev/ui/components/alert";
+import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import { Input } from "@konopskidev/ui/components/input";
 import { Label } from "@konopskidev/ui/components/label";
@@ -14,8 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@konopskidev/ui/components/select";
-import { useState, useTransition } from "react";
-import { useActionState } from "react";
+import { useActionState, useState, useTransition } from "react";
 
 import {
   createOrganizationAction,
@@ -59,15 +55,8 @@ export function CreateOrganizationForm() {
   );
 }
 
-export function InviteMemberForm({
-  organizationId,
-}: {
-  organizationId: string;
-}) {
-  const [state, formAction, pending] = useActionState(
-    inviteMemberAction,
-    EMPTY_TEAM_FORM_STATE,
-  );
+export function InviteMemberForm({ organizationId }: { organizationId: string }) {
+  const [state, formAction, pending] = useActionState(inviteMemberAction, EMPTY_TEAM_FORM_STATE);
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
@@ -89,10 +78,7 @@ export function InviteMemberForm({
         <div className="flex flex-col gap-2">
           <Label htmlFor="invite-role">Role</Label>
           <Select name="role" defaultValue="member">
-            <SelectTrigger
-              id="invite-role"
-              className="h-9 w-full data-[size=default]:h-9"
-            >
+            <SelectTrigger id="invite-role" className="h-9 w-full data-[size=default]:h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -153,10 +139,7 @@ export function MemberRoleForm({
   return (
     <div className="flex flex-col items-end gap-1">
       <Select defaultValue={role} onValueChange={change} disabled={pending}>
-        <SelectTrigger
-          aria-label="Role"
-          className="h-9 w-28 data-[size=default]:h-9"
-        >
+        <SelectTrigger aria-label="Role" className="h-9 w-28 data-[size=default]:h-9">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

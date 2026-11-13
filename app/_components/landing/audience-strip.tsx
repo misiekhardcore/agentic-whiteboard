@@ -18,17 +18,12 @@ export function AudienceStrip() {
             <span aria-hidden="true" className="size-1.5 rotate-45 bg-primary" />
             {eyebrow}
           </h2>
-          <p className="mt-2 font-serif text-sm text-pretty text-muted-foreground">
-            {headline}
-          </p>
+          <p className="mt-2 font-serif text-sm text-pretty text-muted-foreground">{headline}</p>
         </div>
 
         <ul className="flex flex-wrap items-center gap-x-6 gap-y-2.5">
           {groups.map((group) => (
-            <li
-              key={group}
-              className="flex items-center gap-2 text-sm font-medium text-foreground"
-            >
+            <li key={group} className="flex items-center gap-2 text-sm font-medium text-foreground">
               <span
                 aria-hidden="true"
                 className="size-1 rotate-45 border border-primary/50 bg-primary/10"

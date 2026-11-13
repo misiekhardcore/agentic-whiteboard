@@ -1,14 +1,10 @@
 import { and, eq } from "drizzle-orm";
 
 import { auth } from "@/lib/auth";
+import { BillingConfigurationError, BillingRequestError, getStripe } from "@/lib/billing/stripe";
+import { applyStripeSubscription } from "@/lib/billing/subscriptions";
 import { db } from "@/lib/db";
 import { member } from "@/lib/db/schema";
-import {
-  BillingConfigurationError,
-  BillingRequestError,
-  getStripe,
-} from "@/lib/billing/stripe";
-import { applyStripeSubscription } from "@/lib/billing/subscriptions";
 
 /**
  * Reconciles a finished embedded checkout with the database.
@@ -34,21 +30,14 @@ export async function POST(request: Request) {
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    body = (await request.json()) as Record<string, unknown>;
   } catch {
-    return Response.json(
-      { error: "Expected a JSON body." },
-      { status: 400 },
-    );
+    return Response.json({ error: "Expected a JSON body." }, { status: 400 });
   }
 
-  const sessionId =
-    typeof body.sessionId === "string" ? body.sessionId : "";
+  const sessionId = typeof body.sessionId === "string" ? body.sessionId : "";
   if (!sessionId) {
-    return Response.json(
-      { error: "Missing checkout session." },
-      { status: 400 },
-    );
+    return Response.json({ error: "Missing checkout session." }, { status: 400 });
   }
 
   try {
@@ -56,10 +45,7 @@ export async function POST(request: Request) {
     const checkout = await stripe.checkout.sessions.retrieve(sessionId);
 
     const { ownerType, ownerId } = checkout.metadata ?? {};
-    if (
-      (ownerType !== "USER" && ownerType !== "ORGANIZATION") ||
-      !ownerId
-    ) {
+    if ((ownerType !== "USER" && ownerType !== "ORGANIZATION") || !ownerId) {
       return Response.json(
         { error: "That checkout is not for an account we recognise." },
         { status: 403 },
@@ -77,19 +63,11 @@ export async function POST(request: Request) {
       const [membership] = await db
         .select({ role: member.role })
         .from(member)
-        .where(
-          and(
-            eq(member.organizationId, ownerId),
-            eq(member.userId, session.user.id),
-          ),
-        )
+        .where(and(eq(member.organizationId, ownerId), eq(member.userId, session.user.id)))
         .limit(1);
 
       if (!membership) {
-        return Response.json(
-          { error: "You are not a member of that team." },
-          { status: 403 },
-        );
+        return Response.json({ error: "You are not a member of that team." }, { status: 403 });
       }
     }
 
@@ -115,26 +93,14 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     if (error instanceof BillingRequestError) {
-      return Response.json(
-        { error: error.message },
-        { status: error.status },
-      );
+      return Response.json({ error: error.message }, { status: error.status });
     }
     if (error instanceof BillingConfigurationError) {
-      console.error(
-        "[billing] checkout reconciliation is not configured:",
-        error.message,
-      );
-      return Response.json(
-        { error: "Payments are not configured yet." },
-        { status: 503 },
-      );
+      console.error("[billing] checkout reconciliation is not configured:", error.message);
+      return Response.json({ error: "Payments are not configured yet." }, { status: 503 });
     }
 
     console.error("[billing] checkout reconciliation failed:", error);
-    return Response.json(
-      { error: "Could not confirm the subscription." },
-      { status: 500 },
-    );
+    return Response.json({ error: "Could not confirm the subscription." }, { status: 500 });
   }
 }

@@ -22,11 +22,7 @@ export function BrandMark({ className }: { className?: string }) {
           className="fill-primary/5 stroke-primary"
         />
         <circle cx="12" cy="12" r="1.6" className="fill-primary" />
-        <path
-          d="M12 1v2M12 21v2M1 12h2M21 12h2"
-          strokeWidth="1.25"
-          className="stroke-primary/50"
-        />
+        <path d="M12 1v2M12 21v2M1 12h2M21 12h2" strokeWidth="1.25" className="stroke-primary/50" />
       </svg>
     </span>
   );
@@ -51,10 +47,7 @@ export function BrandLockup({
     <>
       <BrandMark className={markClassName} />
       <span
-        className={cn(
-          "font-display font-semibold tracking-tight text-foreground",
-          textClassName,
-        )}
+        className={cn("font-display font-semibold tracking-tight text-foreground", textClassName)}
       >
         Agentic Whiteboard
       </span>

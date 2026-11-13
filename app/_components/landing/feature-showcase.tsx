@@ -27,12 +27,10 @@ export function FeatureShowcase() {
           <span aria-hidden="true" className="size-1.5 rotate-45 bg-primary" />
           {eyebrow}
         </p>
-        <h2 id="surfaces-heading" className="section-title mt-4 text-balance">
+        <h2 id="surfaces-heading" className="mt-4 section-title text-balance">
           {title}
         </h2>
-        <p className="mt-4 font-serif text-lead text-pretty text-muted-foreground">
-          {lead}
-        </p>
+        <p className="mt-4 font-serif text-lead text-pretty text-muted-foreground">{lead}</p>
       </header>
 
       <div className="mt-16 flex flex-col gap-16 lg:mt-20 lg:gap-24">
@@ -41,23 +39,13 @@ export function FeatureShowcase() {
           const reversed = index % 2 === 1;
 
           return (
-            <article
-              key={item.id}
-              className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16"
-            >
-              <div
-                className={cn(
-                  "lg:order-1",
-                  reversed && "lg:order-2",
-                )}
-              >
+            <article key={item.id} className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
+              <div className={cn("lg:order-1", reversed && "lg:order-2")}>
                 <div className="flex items-center gap-3">
                   <span className="grid size-10 shrink-0 place-items-center rounded-sm border bg-card text-primary shadow-xs">
                     <Icon className="size-4.5" aria-hidden="true" />
                   </span>
-                  <h3 className="font-display text-h3 font-semibold">
-                    {item.title}
-                  </h3>
+                  <h3 className="font-display text-h3 font-semibold">{item.title}</h3>
                 </div>
 
                 <p className="mt-4 font-serif text-lg leading-relaxed text-pretty text-muted-foreground">
@@ -66,10 +54,7 @@ export function FeatureShowcase() {
 
                 <ul className="mt-6 flex flex-col gap-3">
                   {item.bullets.map((bullet) => (
-                    <li
-                      key={bullet}
-                      className="flex items-start gap-2.5 text-sm leading-relaxed"
-                    >
+                    <li key={bullet} className="flex items-start gap-2.5 text-sm leading-relaxed">
                       <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border border-primary/30 bg-primary/5 text-primary">
                         <Check className="size-2.5" aria-hidden="true" />
                       </span>

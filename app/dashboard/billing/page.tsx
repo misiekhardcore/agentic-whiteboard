@@ -1,6 +1,3 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
-
 import { Badge } from "@konopskidev/ui/components/badge";
 import { Button } from "@konopskidev/ui/components/button";
 import {
@@ -10,6 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@konopskidev/ui/components/card";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { CancelSubscriptionButton } from "@/app/_components/billing/cancel-subscription-button";
 import { ManageBillingButton } from "@/app/_components/billing/manage-billing-button";
@@ -51,19 +50,14 @@ export default async function BillingPage() {
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-h2 font-semibold">
-            Billing
-          </h1>
+          <h1 className="font-display text-h2 font-semibold">Billing</h1>
           <Badge variant="outline">
-            {overview.organizationId
-              ? "Organization"
-              : "Personal account"}
+            {overview.organizationId ? "Organization" : "Personal account"}
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          Plan, usage and invoices for {overview.accountName}. Switch
-          accounts from the avatar menu to see another account&rsquo;s
-          billing.
+          Plan, usage and invoices for {overview.accountName}. Switch accounts from the avatar menu
+          to see another account&rsquo;s billing.
         </p>
       </header>
 
@@ -89,13 +83,7 @@ export default async function BillingPage() {
           <div className="flex gap-2">
             {!paid && (
               <Button asChild variant="primary" size="sm">
-                <Link
-                  href={
-                    overview.organizationId
-                      ? "/?billing=team#pricing"
-                      : "/#pricing"
-                  }
-                >
+                <Link href={overview.organizationId ? "/?billing=team#pricing" : "/#pricing"}>
                   Upgrade
                 </Link>
               </Button>
@@ -103,12 +91,8 @@ export default async function BillingPage() {
 
             {paid && overview.canManageBilling && (
               <>
-                <ManageBillingButton
-                  organizationId={overview.organizationId ?? undefined}
-                />
-                <CancelSubscriptionButton
-                  organizationId={overview.organizationId}
-                />
+                <ManageBillingButton organizationId={overview.organizationId ?? undefined} />
+                <CancelSubscriptionButton organizationId={overview.organizationId} />
               </>
             )}
 
@@ -125,9 +109,8 @@ export default async function BillingPage() {
         <CardHeader>
           <CardTitle>Usage</CardTitle>
           <CardDescription>
-            Agent prompts are counted per member for{" "}
-            {agentPrompts.periodLabel}; workspaces are counted for the
-            whole account.
+            Agent prompts are counted per member for {agentPrompts.periodLabel}; workspaces are
+            counted for the whole account.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">

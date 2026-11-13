@@ -115,24 +115,28 @@ Write the failing test before the production code, for every behaviour change.
 
 ## Project map
 
-| Path | Contents |
-| --- | --- |
-| `app/` | App Router routes, layouts, server actions, route handlers (`app/api`). |
-| `lib/` | Domain + adapters, one folder per bounded context (`ai`, `billing`, `collab`, `db`). |
-| `components/` | Shared client UI; `components/ui` are shadcn-style primitives. |
-| `lib/db/` | Drizzle schema, connection, column helpers. |
-| `drizzle/` | Generated migrations — never hand-edit applied files. |
-| `e2e/` | Playwright specs. |
-| `docs/architecture/` | Architecture records and decisions. |
-| `scripts/` | Local tooling (SMTP sink, etc.). |
-| `.agents/skills/` | Vendored skill docs for Supabase, Stripe, etc. Read the relevant `SKILL.md` before using that service. |
+| Path                 | Contents                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------ |
+| `app/`               | App Router routes, layouts, server actions, route handlers (`app/api`).                                |
+| `lib/`               | Domain + adapters, one folder per bounded context (`ai`, `billing`, `collab`, `db`).                   |
+| `components/`        | Shared client UI; `components/ui` are shadcn-style primitives.                                         |
+| `lib/db/`            | Drizzle schema, connection, column helpers.                                                            |
+| `drizzle/`           | Generated migrations — never hand-edit applied files.                                                  |
+| `e2e/`               | Playwright specs.                                                                                      |
+| `docs/architecture/` | Architecture records and decisions.                                                                    |
+| `scripts/`           | Local tooling (SMTP sink, etc.).                                                                       |
+| `.agents/skills/`    | Vendored skill docs for Supabase, Stripe, etc. Read the relevant `SKILL.md` before using that service. |
 
 ## Commands
 
 ```bash
 pnpm install            # pnpm@12, Node >= 22 (see package.json engines)
 pnpm dev                # Next dev server on :3000
-pnpm lint               # ESLint
+pnpm lint               # ESLint (type-aware, zero warnings)
+pnpm lint:fix           # ESLint with automatic fixes
+pnpm format             # Prettier write
+pnpm format:check       # Prettier check (CI gate)
+pnpm tsc                # Typecheck without emitting
 pnpm test               # Vitest unit suite
 pnpm test:ai            # Live model check (needs AI_LIVE=1 + a reachable provider)
 pnpm build              # Production build
@@ -154,7 +158,7 @@ pnpm test:e2e:smtp      # Local SMTP sink used by the invitation flows
   documents the required keys — do not commit real values.
 - Log with the existing `[context] message` prefix; never log secrets, tokens or
   raw provider payloads.
-- Comments explain *why* a non-obvious decision was made, not what the next line
+- Comments explain _why_ a non-obvious decision was made, not what the next line
   does. Match the surrounding style.
 
 ## Definition of done
@@ -162,7 +166,8 @@ pnpm test:e2e:smtp      # Local SMTP sink used by the invitation flows
 - The behaviour is described as a domain rule with a name, and that rule lives in
   `lib/<context>`.
 - A test failed first, then passed; new rules and edge cases have coverage.
-- `pnpm lint`, `pnpm test` and `pnpm build` pass (plus `pnpm test:e2e` when a
-  user-visible flow changed). Report anything that could not run.
+- `pnpm format:check`, `pnpm lint`, `pnpm tsc`, `pnpm test` and `pnpm build` pass
+  (plus `pnpm test:e2e` when a user-visible flow changed). Report anything that
+  could not run.
 - Architecture-level decisions are written down in `docs/architecture/`.
 - No duplicated business rules, no unused options, no skipped or weakened tests.

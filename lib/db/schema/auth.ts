@@ -1,15 +1,10 @@
 import { relations } from "drizzle-orm";
-import {
-  pgTable,
-  text,
-  timestamp,
-  boolean,
-  index,
-} from "drizzle-orm/pg-core";
-import { workspaces } from "./workspace";
+import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+
+import { agentMessages } from "./agentMessage";
 import { agentPrompts } from "./agentPrompt";
 import { agentRuns } from "./agentRun";
-import { agentMessages } from "./agentMessage";
+import { workspaces } from "./workspace";
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -82,9 +77,7 @@ export const verification = pgTable(
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
   },
-  (table) => [
-    index("verification_identifier_idx").on(table.identifier),
-  ],
+  (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
 export const organization = pgTable("organization", {
@@ -164,13 +157,10 @@ export const accountRelations = relations(account, ({ one }) => ({
   }),
 }));
 
-export const organizationRelations = relations(
-  organization,
-  ({ many }) => ({
-    members: many(member),
-    invitations: many(invitation),
-  }),
-);
+export const organizationRelations = relations(organization, ({ many }) => ({
+  members: many(member),
+  invitations: many(invitation),
+}));
 
 export const memberRelations = relations(member, ({ one }) => ({
   organization: one(organization, {

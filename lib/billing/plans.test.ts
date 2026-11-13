@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  formatPlanPeriod,
-  formatPlanPrice,
-  getPlan,
-  isPaidPlan,
-  isPlanId,
-  plans,
-} from "./plans";
+import { formatPlanPeriod, formatPlanPrice, getPlan, isPaidPlan, isPlanId, plans } from "./plans";
 
 describe("plan catalog", () => {
   it("maps every key to a plan with the same id", () => {
@@ -55,13 +48,15 @@ describe("plan catalog", () => {
   });
 
   it("prices every paid plan in whole dollars, with none for free", () => {
+    const paidPlans = Object.values(plans).filter((plan) => plan.id !== "free");
+
     for (const plan of Object.values(plans)) {
       expect(Number.isInteger(plan.priceUsd)).toBe(true);
-      if (plan.id === "free") {
-        expect(plan.priceUsd).toBe(0);
-      } else {
-        expect(plan.priceUsd).toBeGreaterThan(0);
-      }
+    }
+
+    expect(plans.free.priceUsd).toBe(0);
+    for (const plan of paidPlans) {
+      expect(plan.priceUsd).toBeGreaterThan(0);
     }
   });
 });

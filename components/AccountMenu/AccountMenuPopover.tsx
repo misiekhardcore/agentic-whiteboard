@@ -1,26 +1,10 @@
 "use client";
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@konopskidev/ui/components/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@konopskidev/ui/components/avatar";
 import { Button } from "@konopskidev/ui/components/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@konopskidev/ui/components/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@konopskidev/ui/components/popover";
 import { Separator } from "@konopskidev/ui/components/separator";
-import {
-  Building2,
-  Check,
-  CreditCard,
-  Loader2,
-  LogOut,
-  Settings,
-  Users,
-} from "lucide-react";
+import { Building2, Check, CreditCard, Loader2, LogOut, Settings, Users } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import type { ReactNode } from "react";
@@ -45,13 +29,10 @@ export function AccountMenuPopover({
 }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pendingOrganizationId, setPendingOrganizationId] = useState<
-    string | null
-  >(null);
+  const [pendingOrganizationId, setPendingOrganizationId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const activeTeam =
-    teams.find((team) => team.id === activeOrganizationId) ?? null;
+  const activeTeam = teams.find((team) => team.id === activeOrganizationId) ?? null;
   const currentName = activeTeam?.name ?? user.name;
   const currentDetail = activeTeam
     ? `${activeTeam.role} · ${activeTeam.memberCount} ${
@@ -97,7 +78,7 @@ export function AccountMenuPopover({
         <Button
           variant="ghost"
           type="button"
-          className="p-0 rounded-full hover:opacity-80"
+          className="rounded-full p-0 hover:opacity-80"
           aria-label={`Account menu for ${currentName}`}
           title="Switch account"
         >
@@ -119,17 +100,13 @@ export function AccountMenuPopover({
           />
           <div className="min-w-0">
             <p className="truncate font-medium">{currentName}</p>
-            <p className="truncate text-xs text-muted-foreground capitalize">
-              {currentDetail}
-            </p>
+            <p className="truncate text-xs text-muted-foreground capitalize">{currentDetail}</p>
           </div>
         </div>
 
         <Separator className="my-1" />
 
-        <p className="p-1.5 text-xs text-muted-foreground uppercase">
-          Switch account
-        </p>
+        <p className="p-1.5 text-xs text-muted-foreground uppercase">Switch account</p>
 
         <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
           <AccountOption
@@ -157,31 +134,18 @@ export function AccountMenuPopover({
           ))}
         </div>
 
-        {error && (
-          <p className="px-1.5 py-1 text-xs text-destructive">
-            {error}
-          </p>
-        )}
+        {error && <p className="px-1.5 py-1 text-xs text-destructive">{error}</p>}
 
         <Separator className="my-1" />
 
-        <MenuLink
-          href="/dashboard/settings"
-          onNavigate={() => setOpen(false)}
-        >
+        <MenuLink href="/dashboard/settings" onNavigate={() => setOpen(false)}>
           <Settings /> Account settings
         </MenuLink>
-        <MenuLink
-          href="/dashboard/organization"
-          onNavigate={() => setOpen(false)}
-        >
+        <MenuLink href="/dashboard/organization" onNavigate={() => setOpen(false)}>
           <Users />
           Organizations
         </MenuLink>
-        <MenuLink
-          href="/dashboard/billing"
-          onNavigate={() => setOpen(false)}
-        >
+        <MenuLink href="/dashboard/billing" onNavigate={() => setOpen(false)}>
           <CreditCard />
           Billing
         </MenuLink>
@@ -194,10 +158,7 @@ export function AccountMenuPopover({
             variant="ghost"
             className="h-auto w-full justify-start gap-2.5 px-1.5 py-2 text-sm font-normal"
           >
-            <LogOut
-              className="size-4 text-muted-foreground"
-              aria-hidden="true"
-            />
+            <LogOut className="size-4 text-muted-foreground" aria-hidden="true" />
             Sign out
           </Button>
         </form>
@@ -231,12 +192,7 @@ function AccountOption({
       disabled={pending}
       className={cn("px-1.5 py-2 text-left", active && "font-bold")}
     >
-      <AccountAvatar
-        name={name}
-        image={image}
-        organization={organization}
-        size="sm"
-      />
+      <AccountAvatar name={name} image={image} organization={organization} size="sm" />
       <span className="min-w-0 flex-1">
         <span className="block truncate">{name}</span>
         <span className="block truncate text-xs font-normal text-muted-foreground capitalize">
@@ -249,9 +205,7 @@ function AccountOption({
           aria-hidden="true"
         />
       ) : (
-        active && (
-          <Check className="size-4 shrink-0" aria-hidden="true" />
-        )
+        active && <Check className="size-4 shrink-0" aria-hidden="true" />
       )}
     </Button>
   );
@@ -267,12 +221,7 @@ function MenuLink({
   children: ReactNode;
 }) {
   return (
-    <Button
-      asChild
-      variant="ghost"
-      className="px-1.5 py-2 justify-start"
-      onClick={onNavigate}
-    >
+    <Button asChild variant="ghost" className="justify-start px-1.5 py-2" onClick={onNavigate}>
       <Link href={href}>{children}</Link>
     </Button>
   );
@@ -293,11 +242,7 @@ function AccountAvatar({
     <Avatar size={size} className="shrink-0">
       {image ? <AvatarImage src={image} alt={name} /> : null}
       <AvatarFallback>
-        {organization ? (
-          <Building2 className="size-3.5" aria-hidden="true" />
-        ) : (
-          initials(name)
-        )}
+        {organization ? <Building2 className="size-3.5" aria-hidden="true" /> : initials(name)}
       </AvatarFallback>
     </Avatar>
   );

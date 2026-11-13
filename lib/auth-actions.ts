@@ -7,13 +7,13 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import type { AuthFormState } from "@/lib/auth-form";
 import { DEFAULT_REDIRECT, safeRedirectTo } from "@/lib/auth-redirect";
+import { formString } from "@/lib/form-data";
 
 const MESSAGES: Record<string, string> = {
   INVALID_EMAIL: "Enter a valid email address.",
   INVALID_EMAIL_OR_PASSWORD: "Incorrect email or password.",
   USER_ALREADY_EXISTS: "An account with this email already exists.",
-  USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL:
-    "An account with this email already exists.",
+  USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: "An account with this email already exists.",
   PASSWORD_TOO_SHORT: "Password must be at least 8 characters.",
   PASSWORD_TOO_LONG: "That password is too long.",
   INVALID_TOKEN: "That link is invalid or has expired. Request a new one.",
@@ -36,8 +36,8 @@ export async function signInAction(
   _previousState: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
+  const email = formString(formData, "email").trim();
+  const password = formString(formData, "password");
   const redirectTo = safeRedirectTo(formData.get("redirectTo"));
 
   if (!email || !password) {
@@ -63,9 +63,9 @@ export async function signUpAction(
   _previousState: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
-  const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
+  const name = formString(formData, "name").trim();
+  const email = formString(formData, "email").trim();
+  const password = formString(formData, "password");
   const redirectTo = safeRedirectTo(formData.get("redirectTo"));
 
   if (!name || !email || !password) {
@@ -94,7 +94,7 @@ export async function requestPasswordResetAction(
   _previousState: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
-  const email = String(formData.get("email") ?? "").trim();
+  const email = formString(formData, "email").trim();
 
   if (!email) {
     return { error: "Enter the email address for your account." };
@@ -126,8 +126,8 @@ export async function resetPasswordAction(
   _previousState: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
-  const token = String(formData.get("token") ?? "");
-  const password = String(formData.get("password") ?? "");
+  const token = formString(formData, "token");
+  const password = formString(formData, "password");
 
   if (!token) {
     return { error: MESSAGES.INVALID_TOKEN };
@@ -159,7 +159,7 @@ function isOAuthProvider(value: string): value is OAuthProvider {
  * action has to do is send the browser there.
  */
 export async function signInWithProviderAction(formData: FormData): Promise<void> {
-  const provider = String(formData.get("provider") ?? "");
+  const provider = formString(formData, "provider");
   const redirectTo = safeRedirectTo(formData.get("redirectTo"));
 
   if (!isOAuthProvider(provider)) {

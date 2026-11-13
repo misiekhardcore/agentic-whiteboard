@@ -6,12 +6,7 @@
  * Archiving is deliberately not a status: a workspace keeps its stage while it is
  * archived, and restoring it puts it back where it was.
  */
-export const WORKSPACE_STATUSES = [
-  "PLANNING",
-  "IN_PROGRESS",
-  "IN_REVIEW",
-  "DONE",
-] as const;
+export const WORKSPACE_STATUSES = ["PLANNING", "IN_PROGRESS", "IN_REVIEW", "DONE"] as const;
 
 export type WorkspaceStatus = (typeof WORKSPACE_STATUSES)[number];
 
@@ -23,8 +18,5 @@ export const WORKSPACE_STATUS_LABELS: Record<WorkspaceStatus, string> = {
 };
 
 export function isWorkspaceStatus(value: unknown): value is WorkspaceStatus {
-  return (
-    typeof value === "string" &&
-    (WORKSPACE_STATUSES as readonly string[]).includes(value)
-  );
+  return typeof value === "string" && (WORKSPACE_STATUSES as readonly string[]).includes(value);
 }

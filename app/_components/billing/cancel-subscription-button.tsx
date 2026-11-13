@@ -52,7 +52,7 @@ export function CancelSubscriptionButton({
     <div className="flex flex-col items-start gap-1.5">
       <Button
         variant="destructive"
-        onClick={cancelSubscription}
+        onClick={() => void cancelSubscription()}
         disabled={loading}
         className={className}
       >

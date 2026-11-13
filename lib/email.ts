@@ -45,13 +45,7 @@ type EmailContent = {
   note: string;
 };
 
-function render({
-  heading,
-  intro,
-  action,
-  url,
-  note,
-}: Omit<EmailContent, "to" | "subject">) {
+function render({ heading, intro, action, url, note }: Omit<EmailContent, "to" | "subject">) {
   const safeUrl = escapeHtml(url);
 
   const html = `<!doctype html>
@@ -119,8 +113,7 @@ export async function sendVerificationEmail({
     to: user.email,
     subject: "Confirm your email address",
     heading: `Welcome, ${name}`,
-    intro:
-      "Confirm your email address to finish setting up your Agentic Whiteboard account.",
+    intro: "Confirm your email address to finish setting up your Agentic Whiteboard account.",
     action: "Confirm email",
     url,
     note: "This link expires in one hour. If you did not create an account, you can ignore this email.",
@@ -164,8 +157,7 @@ export async function sendPasswordResetEmail({
     to: user.email,
     subject: "Reset your password",
     heading: `Reset your password, ${name}`,
-    intro:
-      "Use the button below to choose a new password for your Agentic Whiteboard account.",
+    intro: "Use the button below to choose a new password for your Agentic Whiteboard account.",
     action: "Choose a new password",
     url,
     note: "This link expires in one hour and can be used once. If you did not ask for a reset, you can ignore this email.",

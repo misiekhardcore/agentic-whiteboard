@@ -1,4 +1,4 @@
-import { Loading } from "@/components/Loading/Loading";
+import { Button } from "@konopskidev/ui/components/button";
 import {
   Card,
   CardContent,
@@ -6,12 +6,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@konopskidev/ui/components/card";
-import { Button } from "@konopskidev/ui/components/button";
+import { Suspense } from "react";
+
+import { Loading } from "@/components/Loading/Loading";
 import { getSessionAccount } from "@/lib/account";
 import { formatDay } from "@/lib/formatDate";
 import { restoreWorkspaceAction } from "@/lib/workspace-actions";
 import { listArchivedWorkspaces } from "@/lib/workspaces";
-import { Suspense } from "react";
 
 /**
  * Archived workspaces stay restorable without cluttering the dashboard. Only
@@ -32,10 +33,7 @@ async function ArchivedWorkspacesInner() {
   if (!account) return null;
 
   const { activeTeam, session } = account;
-  const workspaces = await listArchivedWorkspaces(
-    session.user.id,
-    activeTeam?.id ?? null,
-  );
+  const workspaces = await listArchivedWorkspaces(session.user.id, activeTeam?.id ?? null);
 
   if (workspaces.length === 0) return null;
 
@@ -43,9 +41,7 @@ async function ArchivedWorkspacesInner() {
     <Card>
       <CardHeader>
         <CardTitle>Archived workspaces</CardTitle>
-        <CardDescription>
-          Restore a workspace to bring it back to the dashboard.
-        </CardDescription>
+        <CardDescription>Restore a workspace to bring it back to the dashboard.</CardDescription>
       </CardHeader>
       <CardContent>
         <ul className="flex flex-col divide-y">

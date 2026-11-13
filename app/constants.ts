@@ -1,9 +1,4 @@
-import {
-  JetBrains_Mono,
-  Lato,
-  Lora,
-  Playfair_Display,
-} from "next/font/google";
+import { JetBrains_Mono, Lato, Lora, Playfair_Display } from "next/font/google";
 
 import { cn } from "@/lib/utils";
 

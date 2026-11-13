@@ -7,11 +7,7 @@ import { useActionState } from "react";
 import { acceptInvitationAction } from "@/lib/organization-actions";
 import { EMPTY_TEAM_FORM_STATE } from "@/lib/organization-form";
 
-export function AcceptInvitationForm({
-  invitationId,
-}: {
-  invitationId: string;
-}) {
+export function AcceptInvitationForm({ invitationId }: { invitationId: string }) {
   const [state, formAction, pending] = useActionState(
     acceptInvitationAction,
     EMPTY_TEAM_FORM_STATE,
@@ -24,7 +20,7 @@ export function AcceptInvitationForm({
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
-      ) }
+      )}
       <Button type="submit" disabled={pending} className="w-full">
         {pending ? "Joining…" : "Accept invitation"}
       </Button>

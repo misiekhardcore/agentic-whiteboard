@@ -1,12 +1,5 @@
+import { type Browser, expect, type Locator, type Page, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-
-import {
-  expect,
-  test,
-  type Browser,
-  type Locator,
-  type Page,
-} from "@playwright/test";
 import { Client } from "pg";
 
 /**
@@ -19,11 +12,7 @@ import { Client } from "pg";
 
 async function signUp(
   page: Page,
-  {
-    name,
-    email,
-    password,
-  }: { name: string; email: string; password: string },
+  { name, email, password }: { name: string; email: string; password: string },
 ) {
   await page.goto("/sign-up");
   await page.getByLabel("Name").fill(name);
@@ -34,10 +23,9 @@ async function signUp(
 }
 
 async function findUserId(db: Client, email: string): Promise<string> {
-  const { rows } = await db.query<{ id: string }>(
-    'select id from "user" where email = $1',
-    [email],
-  );
+  const { rows } = await db.query<{ id: string }>('select id from "user" where email = $1', [
+    email,
+  ]);
   if (!rows[0]) throw new Error(`No user row for ${email}`);
   return rows[0].id;
 }
@@ -54,10 +42,7 @@ async function findWorkspaceId(
   return rows[0].id;
 }
 
-async function findOrganizationId(
-  db: Client,
-  userId: string,
-): Promise<string> {
+async function findOrganizationId(db: Client, userId: string): Promise<string> {
   const { rows } = await db.query<{ id: string }>(
     `select o.id
        from organization o
@@ -76,11 +61,7 @@ async function findOrganizationId(
  * instead of relying on a fixed wait. Once the dialog is open the assertion
  * succeeds and the callback stops.
  */
-async function openDialog(
-  page: Page,
-  trigger: Locator,
-  role: "dialog" | "alertdialog" = "dialog",
-) {
+async function openDialog(page: Page, trigger: Locator, role: "dialog" | "alertdialog" = "dialog") {
   await expect(async () => {
     await trigger.click();
     await expect(page.getByRole(role)).toBeVisible({ timeout: 2_000 });
@@ -89,16 +70,9 @@ async function openDialog(
 
 async function createWorkspace(
   page: Page,
-  {
-    name,
-    description,
-    verify = true,
-  }: { name: string; description?: string; verify?: boolean },
+  { name, description, verify = true }: { name: string; description?: string; verify?: boolean },
 ) {
-  await openDialog(
-    page,
-    page.getByRole("button", { name: "Create new workspace" }).first(),
-  );
+  await openDialog(page, page.getByRole("button", { name: "Create new workspace" }).first());
 
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Workspace name").fill(name);
@@ -156,9 +130,7 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
         description: "Where the quarter goes",
       });
 
-      await expect(
-        page.getByRole("heading", { name: "Latest in Personal account" }),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Latest in Personal account" })).toBeVisible();
       await expect(page.getByText("Where the quarter goes")).toBeVisible();
       await expect(page.getByText("1 / 3")).toBeVisible();
 
@@ -170,9 +142,7 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await page.getByRole("link", { name: workspaceName }).click();
       await page.waitForURL(`**/workspace/${workspaceId}`);
 
-      await expect(
-        page.getByRole("heading", { name: workspaceName }),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { name: workspaceName })).toBeVisible();
       await expect(page.getByText("The workspace editor is on its way")).toBeVisible();
 
       const other = await signUpInNewContext(browser, {
@@ -182,19 +152,14 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       cleanups.push(other.close);
 
       await other.page.goto(`/workspace/${workspaceId}`);
-      await expect(
-        other.page.getByText("This page could not be found."),
-      ).toBeVisible();
+      await expect(other.page.getByText("This page could not be found.")).toBeVisible();
       await expect(other.page.getByText(workspaceName)).toHaveCount(0);
     });
 
     await test.step("renaming and restaging the workspace persists", async () => {
       await page.goto("/dashboard");
 
-      const card = page
-        .getByRole("listitem")
-        .filter({ hasText: workspaceName })
-        .first();
+      const card = page.getByRole("listitem").filter({ hasText: workspaceName }).first();
       await openDialog(page, card.getByRole("button", { name: "Edit" }));
 
       const dialog = page.getByRole("dialog");
@@ -210,10 +175,7 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
     });
 
     await test.step("archiving hides the workspace and frees its plan slot", async () => {
-      const card = page
-        .getByRole("listitem")
-        .filter({ hasText: renamedWorkspace })
-        .first();
+      const card = page.getByRole("listitem").filter({ hasText: renamedWorkspace }).first();
       await openDialog(
         page,
         card.getByRole("button", { name: "Archive", exact: true }),
@@ -227,16 +189,11 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await expect(page.getByText("No workspaces in Personal account")).toBeVisible();
       await expect(page.getByText("0 / 3")).toBeVisible();
       await expect(page.getByText("Archived workspaces")).toBeVisible();
-      await expect(
-        page.getByRole("listitem").filter({ hasText: renamedWorkspace }),
-      ).toHaveCount(1);
+      await expect(page.getByRole("listitem").filter({ hasText: renamedWorkspace })).toHaveCount(1);
     });
 
     await test.step("a restored workspace comes back with its stage", async () => {
-      const archived = page
-        .getByRole("listitem")
-        .filter({ hasText: renamedWorkspace })
-        .first();
+      const archived = page.getByRole("listitem").filter({ hasText: renamedWorkspace }).first();
       await archived.getByRole("button", { name: "Restore" }).click();
 
       await expect(page.getByText("Archived workspaces")).toHaveCount(0);
@@ -251,19 +208,17 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
         randomUUID(),
         workspaceId,
       ]);
-      await db.query(
-        'insert into canvas (id, "workspaceId") values ($1, $2)',
-        [randomUUID(), workspaceId],
-      );
+      await db.query('insert into canvas (id, "workspaceId") values ($1, $2)', [
+        randomUUID(),
+        workspaceId,
+      ]);
 
       await page.reload();
 
       await expect(page.getByText(/Doc · updated/)).toBeVisible();
       await expect(page.getByText(/Canvas · updated/)).toBeVisible();
       await expect(
-        page
-          .getByRole("list", { name: "Latest items" })
-          .getByRole("listitem"),
+        page.getByRole("list", { name: "Latest items" }).getByRole("listitem"),
       ).toHaveCount(3);
     });
 
@@ -273,21 +228,14 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
 
       await expect(page.getByText("3 / 3")).toBeVisible();
 
-      await openDialog(
-        page,
-        page.getByRole("button", { name: "Create new workspace" }).first(),
-      );
+      await openDialog(page, page.getByRole("button", { name: "Create new workspace" }).first());
 
       const dialog = page.getByRole("dialog");
       await dialog.getByLabel("Workspace name").fill(`Fourth ${id}`);
       await dialog.getByRole("button", { name: "Save" }).click();
 
-      await expect(
-        dialog.getByText(/has used all 3 workspaces on the Free plan/),
-      ).toBeVisible();
-      await expect(
-        dialog.getByRole("link", { name: "View plans" }),
-      ).toBeVisible();
+      await expect(dialog.getByText(/has used all 3 workspaces on the Free plan/)).toBeVisible();
+      await expect(dialog.getByRole("link", { name: "View plans" })).toBeVisible();
 
       await dialog.getByRole("button", { name: "Cancel" }).click();
       await expect(page.getByText(`Fourth ${id}`)).toHaveCount(0);
@@ -303,9 +251,7 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
         .catch(() => undefined);
     }
     await db
-      .query('delete from "user" where email = any($1)', [
-        [email, otherEmail],
-      ])
+      .query('delete from "user" where email = any($1)', [[email, otherEmail]])
       .catch(() => undefined);
     await db.end();
   }
@@ -333,9 +279,7 @@ test("an organization workspace records the creating member and opens from /work
     await page.goto("/dashboard/organization");
     await page.getByLabel("Organization name").fill(teamName);
     await page.getByRole("button", { name: "Create organization" }).click();
-    await expect(
-      page.getByRole("heading", { name: teamName }),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: teamName })).toBeVisible({ timeout: 15_000 });
 
     organizationId = await findOrganizationId(db, userId);
 
@@ -347,9 +291,7 @@ test("an organization workspace records the creating member and opens from /work
     const { rows } = await db.query<{
       creatorId: string;
       orgId: string | null;
-    }>('select "creatorId", "orgId" from workspace where name = $1', [
-      workspaceName,
-    ]);
+    }>('select "creatorId", "orgId" from workspace where name = $1', [workspaceName]);
 
     expect(rows[0]).toEqual({ creatorId: userId, orgId: organizationId });
 
@@ -367,9 +309,7 @@ test("an organization workspace records the creating member and opens from /work
         .query("delete from organization where id = $1", [organizationId])
         .catch(() => undefined);
     }
-    await db
-      .query('delete from "user" where email = $1', [email])
-      .catch(() => undefined);
+    await db.query('delete from "user" where email = $1', [email]).catch(() => undefined);
     await db.end();
   }
 });

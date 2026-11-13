@@ -1,22 +1,11 @@
 import { createId } from "@paralleldrive/cuid2";
-import {
-  boolean,
-  index,
-  integer,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 /**
  * Who pays for a subscription. A user buys a personal plan, an organization
  * buys a team plan; `ownerId` points at the matching table's id.
  */
-export const billingOwnerTypeEnum = pgEnum("BillingOwnerType", [
-  "USER",
-  "ORGANIZATION",
-]);
+export const billingOwnerTypeEnum = pgEnum("BillingOwnerType", ["USER", "ORGANIZATION"]);
 
 /**
  * One row per Stripe subscription. A canceled subscription keeps its row and a
@@ -72,9 +61,7 @@ export const subscriptions = pgTable(
     canceledAt: timestamp("canceledAt", { precision: 3, mode: "date" }),
     endedAt: timestamp("endedAt", { precision: 3, mode: "date" }),
 
-    createdAt: timestamp("createdAt", { precision: 3, mode: "date" })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" })
       .defaultNow()
       .notNull()
@@ -94,9 +81,7 @@ export const subscriptions = pgTable(
 export const stripeEvents = pgTable("stripeEvent", {
   id: text("id").primaryKey(),
   type: text("type").notNull(),
-  createdAt: timestamp("createdAt", { precision: 3, mode: "date" })
-    .defaultNow()
-    .notNull(),
+  createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).defaultNow().notNull(),
 });
 
 export type Subscription = typeof subscriptions.$inferSelect;

@@ -1,6 +1,3 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
-
 import { Badge } from "@konopskidev/ui/components/badge";
 import { Button } from "@konopskidev/ui/components/button";
 import {
@@ -10,20 +7,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@konopskidev/ui/components/card";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
 import { getSessionAccount } from "@/lib/account";
 import { getOrganizationEntitlements } from "@/lib/billing/entitlements";
 import {
-  canManageTeam,
-  listOrganizationMembers,
-  listPendingInvitations,
-} from "@/lib/organizations";
-import {
   cancelInvitationAction,
   removeMemberAction,
   switchTeamAction,
 } from "@/lib/organization-actions";
+import {
+  canManageTeam,
+  listOrganizationMembers,
+  listPendingInvitations,
+} from "@/lib/organizations";
 
 import {
   CreateOrganizationForm,
@@ -66,13 +65,10 @@ export default async function OrganizationPage() {
     return (
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
         <header className="flex flex-col gap-1">
-          <h1 className="font-display text-h2 font-semibold">
-            Organizations
-          </h1>
+          <h1 className="font-display text-h2 font-semibold">Organizations</h1>
           <p className="text-sm text-muted-foreground">
-            You&rsquo;re using your personal account, which has no
-            members. Create an organization to invite people, or open
-            one you belong to from the account menu on your avatar.
+            You&rsquo;re using your personal account, which has no members. Create an organization
+            to invite people, or open one you belong to from the account menu on your avatar.
           </p>
         </header>
 
@@ -81,8 +77,7 @@ export default async function OrganizationPage() {
             <CardHeader>
               <CardTitle>Your organizations</CardTitle>
               <CardDescription>
-                Open one from the account menu on your avatar to manage
-                its members and billing.
+                Open one from the account menu on your avatar to manage its members and billing.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -93,22 +88,14 @@ export default async function OrganizationPage() {
                     className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {option.name}
-                      </p>
+                      <p className="truncate text-sm font-medium">{option.name}</p>
                       <p className="truncate text-xs text-muted-foreground capitalize">
                         {option.role} · {option.memberCount}{" "}
-                        {option.memberCount === 1
-                          ? "member"
-                          : "members"}
+                        {option.memberCount === 1 ? "member" : "members"}
                       </p>
                     </div>
                     <form action={switchTeamAction}>
-                      <input
-                        type="hidden"
-                        name="organizationId"
-                        value={option.id}
-                      />
+                      <input type="hidden" name="organizationId" value={option.id} />
                       <Button type="submit" variant="outline" size="sm">
                         Manage
                       </Button>
@@ -124,8 +111,7 @@ export default async function OrganizationPage() {
           <CardHeader>
             <CardTitle>New organization</CardTitle>
             <CardDescription>
-              You become its owner. It opens right away, so you can
-              invite people next.
+              You become its owner. It opens right away, so you can invite people next.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -138,13 +124,11 @@ export default async function OrganizationPage() {
 
   const organization = activeTeam;
 
-  const [members, pendingInvitations, entitlements] = await Promise.all(
-    [
-      listOrganizationMembers(organization.id),
-      listPendingInvitations(organization.id),
-      getOrganizationEntitlements(organization.id),
-    ],
-  );
+  const [members, pendingInvitations, entitlements] = await Promise.all([
+    listOrganizationMembers(organization.id),
+    listPendingInvitations(organization.id),
+    getOrganizationEntitlements(organization.id),
+  ]);
 
   const canManage = canManageTeam(organization.role);
   const { plan, limits } = entitlements;
@@ -158,17 +142,13 @@ export default async function OrganizationPage() {
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-h2 font-semibold">
-            {organization.name}
-          </h1>
+          <h1 className="font-display text-h2 font-semibold">{organization.name}</h1>
           <Badge variant="outline" className="capitalize">
             {organization.role}
           </Badge>
           <div className="ml-auto flex items-center gap-2">
             <Button asChild variant="outline" size="sm">
-              <Link href="/dashboard/settings">
-                Organization settings
-              </Link>
+              <Link href="/dashboard/settings">Organization settings</Link>
             </Button>
             <Button asChild variant="outline" size="sm">
               <Link href="/dashboard/billing">Billing</Link>
@@ -176,8 +156,7 @@ export default async function OrganizationPage() {
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
-          {members.length} {members.length === 1 ? "person" : "people"}{" "}
-          · {promptLimit}
+          {members.length} {members.length === 1 ? "person" : "people"} · {promptLimit}
         </p>
       </header>
 
@@ -200,14 +179,10 @@ export default async function OrganizationPage() {
                     {member.name}
                     {member.userId === session.user.id ? " (you)" : ""}
                   </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {member.email}
-                  </p>
+                  <p className="truncate text-xs text-muted-foreground">{member.email}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {canManage &&
-                  member.userId !== session.user.id &&
-                  member.role !== "owner" ? (
+                  {canManage && member.userId !== session.user.id && member.role !== "owner" ? (
                     <MemberRoleForm
                       memberId={member.id}
                       organizationId={organization.id}
@@ -243,14 +218,11 @@ export default async function OrganizationPage() {
               <InviteMemberForm organizationId={organization.id} />
 
               <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">
-                  Pending invitations
-                </p>
+                <p className="text-sm font-medium">Pending invitations</p>
                 {pendingInvitations.length === 0 ? (
                   <p className="text-xs text-muted-foreground">
-                    None right now. Invitations expire 48 hours after
-                    they are sent, and can be canceled here until they
-                    are accepted.
+                    None right now. Invitations expire 48 hours after they are sent, and can be
+                    canceled here until they are accepted.
                   </p>
                 ) : (
                   <ul className="flex flex-col divide-y">
@@ -260,12 +232,9 @@ export default async function OrganizationPage() {
                         className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm">
-                            {pending.email}
-                          </p>
+                          <p className="truncate text-sm">{pending.email}</p>
                           <p className="text-xs text-muted-foreground">
-                            {pending.role ?? "member"} · expires{" "}
-                            {formatDate(pending.expiresAt)}
+                            {pending.role ?? "member"} · expires {formatDate(pending.expiresAt)}
                           </p>
                         </div>
                         <ConfirmAction

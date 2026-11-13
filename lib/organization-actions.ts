@@ -10,28 +10,24 @@ import { auth } from "@/lib/auth";
 import { syncOrganizationSeats } from "@/lib/billing/subscriptions";
 import { db } from "@/lib/db";
 import { invitation, member } from "@/lib/db/schema";
-import { canManageTeam, getMemberRole } from "@/lib/organizations";
+import { formString } from "@/lib/form-data";
 import type { TeamFormState } from "@/lib/organization-form";
+import { canManageTeam, getMemberRole } from "@/lib/organizations";
 
 const MESSAGES: Record<string, string> = {
   ORGANIZATION_ALREADY_EXISTS: "An organization with that name already exists.",
   ORGANIZATION_NOT_FOUND: "That organization no longer exists.",
-  USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION:
-    "That person is already a member.",
-  USER_IS_ALREADY_INVITED_TO_THIS_ORGANIZATION:
-    "That person already has a pending invitation.",
+  USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION: "That person is already a member.",
+  USER_IS_ALREADY_INVITED_TO_THIS_ORGANIZATION: "That person already has a pending invitation.",
   YOU_ARE_NOT_ALLOWED_TO_INVITE_USERS_TO_THIS_ORGANIZATION:
     "Only organization owners and admins can invite people.",
-  YOU_ARE_NOT_ALLOWED_TO_DELETE_THIS_MEMBER:
-    "You cannot remove that member.",
-  YOU_ARE_NOT_ALLOWED_TO_CANCEL_THIS_INVITATION:
-    "You cannot cancel that invitation.",
+  YOU_ARE_NOT_ALLOWED_TO_DELETE_THIS_MEMBER: "You cannot remove that member.",
+  YOU_ARE_NOT_ALLOWED_TO_CANCEL_THIS_INVITATION: "You cannot cancel that invitation.",
   MEMBER_NOT_FOUND: "That person is no longer a member.",
   INVITATION_NOT_FOUND: "That invitation no longer exists.",
   YOU_ARE_NOT_THE_RECIPIENT_OF_THE_INVITATION:
     "That invitation was sent to a different email address.",
-  INVITATION_EXPIRED:
-    "That invitation has expired. Ask an organization admin for a new one.",
+  INVITATION_EXPIRED: "That invitation has expired. Ask an organization admin for a new one.",
   MEMBERSHIP_LIMIT_REACHED: "This organization has reached its member limit.",
 };
 
@@ -64,7 +60,7 @@ export async function createOrganizationAction(
   formData: FormData,
 ): Promise<TeamFormState> {
   await requireSession();
-  const name = String(formData.get("name") ?? "").trim();
+  const name = formString(formData, "name").trim();
 
   if (!name) return { error: "Name your organization." };
 
@@ -91,11 +87,9 @@ export async function createOrganizationAction(
  * shows organization context reads it from there. An empty organization id means the
  * personal account, which better-auth stores as a null active organization.
  */
-export async function switchAccountAction(
-  formData: FormData,
-): Promise<{ error: string | null }> {
+export async function switchAccountAction(formData: FormData): Promise<{ error: string | null }> {
   await requireSession();
-  const raw = String(formData.get("organizationId") ?? "").trim();
+  const raw = formString(formData, "organizationId").trim();
   const organizationId = raw && raw !== "personal" ? raw : null;
 
   try {
@@ -124,8 +118,8 @@ export async function inviteMemberAction(
   formData: FormData,
 ): Promise<TeamFormState> {
   const session = await requireSession();
-  const organizationId = String(formData.get("organizationId") ?? "");
-  const email = String(formData.get("email") ?? "").trim();
+  const organizationId = formString(formData, "organizationId");
+  const email = formString(formData, "email").trim();
   const role = formData.get("role") === "admin" ? "admin" : "member";
 
   if (!email) return { error: "Enter an email address." };
@@ -157,8 +151,8 @@ export async function updateMemberRoleAction(
   formData: FormData,
 ): Promise<{ error: string | null }> {
   const session = await requireSession();
-  const memberId = String(formData.get("memberId") ?? "");
-  const organizationId = String(formData.get("organizationId") ?? "");
+  const memberId = formString(formData, "memberId");
+  const organizationId = formString(formData, "organizationId");
   const role = formData.get("role") === "admin" ? "admin" : "member";
 
   if (!memberId || !organizationId) {
@@ -173,9 +167,7 @@ export async function updateMemberRoleAction(
   const [target] = await db
     .select({ role: member.role })
     .from(member)
-    .where(
-      and(eq(member.id, memberId), eq(member.organizationId, organizationId)),
-    )
+    .where(and(eq(member.id, memberId), eq(member.organizationId, organizationId)))
     .limit(1);
 
   if (!target) return { error: "That person is no longer a member." };
@@ -200,7 +192,7 @@ export async function updateMemberRoleAction(
 
 export async function cancelInvitationAction(formData: FormData): Promise<void> {
   await requireSession();
-  const invitationId = String(formData.get("invitationId") ?? "");
+  const invitationId = formString(formData, "invitationId");
   if (!invitationId) return;
 
   try {
@@ -217,8 +209,8 @@ export async function cancelInvitationAction(formData: FormData): Promise<void> 
 
 export async function removeMemberAction(formData: FormData): Promise<void> {
   await requireSession();
-  const memberIdOrEmail = String(formData.get("memberId") ?? "");
-  const organizationId = String(formData.get("organizationId") ?? "");
+  const memberIdOrEmail = formString(formData, "memberId");
+  const organizationId = formString(formData, "organizationId");
   if (!memberIdOrEmail || !organizationId) return;
 
   try {
@@ -240,7 +232,7 @@ export async function acceptInvitationAction(
   formData: FormData,
 ): Promise<TeamFormState> {
   await requireSession();
-  const invitationId = String(formData.get("invitationId") ?? "");
+  const invitationId = formString(formData, "invitationId");
   if (!invitationId) return { error: "That invitation link is incomplete." };
 
   const [row] = await db

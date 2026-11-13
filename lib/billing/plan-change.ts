@@ -1,9 +1,6 @@
 import { BILLING_CURRENCY, type Plan } from "./plans";
-import {
-  applyStripeSubscription,
-  type SubscriptionRow,
-} from "./subscriptions";
 import { BillingRequestError, getStripe } from "./stripe";
+import { applyStripeSubscription, type SubscriptionRow } from "./subscriptions";
 
 /**
  * Moves an existing subscription to another plan for the same owner.
@@ -25,22 +22,15 @@ export async function changeSubscriptionPlan(
   plan: Plan,
 ): Promise<void> {
   const stripe = getStripe();
-  const current = await stripe.subscriptions.retrieve(
-    subscription.stripeSubscriptionId,
-  );
+  const current = await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId);
 
   const item = current.items.data[0];
   if (!item) {
-    throw new BillingRequestError(
-      "This subscription has no line item to change.",
-      502,
-    );
+    throw new BillingRequestError("This subscription has no line item to change.", 502);
   }
 
   const productId =
-    typeof item.price.product === "string"
-      ? item.price.product
-      : item.price.product.id;
+    typeof item.price.product === "string" ? item.price.product : item.price.product.id;
 
   await stripe.products.update(productId, {
     name: `Agentic Whiteboard ${plan.name}`,

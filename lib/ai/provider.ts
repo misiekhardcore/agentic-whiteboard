@@ -1,7 +1,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { LanguageModel } from "ai";
 
-import { getAiConfig, type AiConfig, type AiProviderId } from "./config";
+import { type AiConfig, type AiProviderId, getAiConfig } from "./config";
 
 /**
  * The only provider capability this app relies on. Native AI SDK providers
@@ -49,9 +49,7 @@ function providerKey(config: AiConfig): string {
   return JSON.stringify([config.provider, config.baseURL, config.apiKey]);
 }
 
-export function getProvider(
-  config: AiConfig = getAiConfig(),
-): LanguageModelProvider {
+export function getProvider(config: AiConfig = getAiConfig()): LanguageModelProvider {
   const key = providerKey(config);
   const cached = providerCache.get(key);
   if (cached) return cached;
@@ -66,8 +64,6 @@ export function getProvider(
  * Passing a config explicitly is the extension point for a per-workspace model
  * selection later; callers never need to know which provider is active.
  */
-export function getLanguageModel(
-  config: AiConfig = getAiConfig(),
-): LanguageModel {
+export function getLanguageModel(config: AiConfig = getAiConfig()): LanguageModel {
   return getProvider(config).languageModel(config.model);
 }

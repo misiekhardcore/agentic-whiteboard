@@ -107,10 +107,7 @@ export function resolveAiConfig(env: AiEnvironment = process.env): AiConfig {
     );
   }
 
-  const baseURL = (readValue(env.AI_BASE_URL) ?? defaults.baseURL)?.replace(
-    /\/+$/,
-    "",
-  );
+  const baseURL = (readValue(env.AI_BASE_URL) ?? defaults.baseURL)?.replace(/\/+$/, "");
   if (!baseURL) {
     throw new AiConfigurationError(
       'AI_BASE_URL is required when AI_PROVIDER is "openai-compatible".',
@@ -122,18 +119,8 @@ export function resolveAiConfig(env: AiEnvironment = process.env): AiConfig {
     model,
     baseURL,
     apiKey: readValue(env.AI_API_KEY) ?? defaults.apiKey,
-    maxSteps: readInteger(
-      "AI_MAX_STEPS",
-      env.AI_MAX_STEPS,
-      DEFAULT_MAX_STEPS,
-      1,
-    ),
-    maxRetries: readInteger(
-      "AI_MAX_RETRIES",
-      env.AI_MAX_RETRIES,
-      defaults.maxRetries,
-      0,
-    ),
+    maxSteps: readInteger("AI_MAX_STEPS", env.AI_MAX_STEPS, DEFAULT_MAX_STEPS, 1),
+    maxRetries: readInteger("AI_MAX_RETRIES", env.AI_MAX_RETRIES, defaults.maxRetries, 0),
   };
 }
 

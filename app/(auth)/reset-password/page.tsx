@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import {
   Card,
   CardContent,
@@ -8,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@konopskidev/ui/components/card";
+import Link from "next/link";
 
 import { ResetPasswordForm } from "./reset-password-form";
 
@@ -32,8 +31,8 @@ export default async function ResetPasswordPage({
         <CardHeader>
           <CardTitle>Link expired</CardTitle>
           <CardDescription>
-            This password reset link is missing its token, so it cannot be
-            used. Reset links only work once and expire after an hour.
+            This password reset link is missing its token, so it cannot be used. Reset links only
+            work once and expire after an hour.
           </CardDescription>
         </CardHeader>
         <CardFooter className="justify-center text-sm">
@@ -52,9 +51,7 @@ export default async function ResetPasswordPage({
     <Card>
       <CardHeader>
         <CardTitle>Choose a new password</CardTitle>
-        <CardDescription>
-          Pick a password you have not used before.
-        </CardDescription>
+        <CardDescription>Pick a password you have not used before.</CardDescription>
       </CardHeader>
       <CardContent>
         <ResetPasswordForm token={token} />

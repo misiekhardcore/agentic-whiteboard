@@ -3,4 +3,4 @@ allowBuilds:
   unrs-resolver: true
   workerd: true
 minimumReleaseAgeExclude:
-  - '@konopskidev/ui@0.3.0'
+  - "@konopskidev/ui@0.3.0"

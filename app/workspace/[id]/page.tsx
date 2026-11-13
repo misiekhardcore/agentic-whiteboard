@@ -27,9 +27,7 @@ export const instant = false;
  * The editor is not built yet; this page is the gate the editor will render
  * behind, not a workspace surface of its own.
  */
-export default async function WorkspacePage({
-  params,
-}: PageProps<"/workspace/[id]">) {
+export default async function WorkspacePage({ params }: PageProps<"/workspace/[id]">) {
   const { id } = await params;
 
   const account = await getSessionAccount();
@@ -51,20 +49,12 @@ export default async function WorkspacePage({
             ← Back to dashboard
           </Link>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-display text-h2 font-semibold">
-              {workspace.name}
-            </h1>
-            <Badge variant="outline">
-              {WORKSPACE_STATUS_LABELS[workspace.status]}
-            </Badge>
-            {workspace.archivedAt && (
-              <Badge variant="secondary">Archived</Badge>
-            )}
+            <h1 className="font-display text-h2 font-semibold">{workspace.name}</h1>
+            <Badge variant="outline">{WORKSPACE_STATUS_LABELS[workspace.status]}</Badge>
+            {workspace.archivedAt && <Badge variant="secondary">Archived</Badge>}
           </div>
           {workspace.description && (
-            <p className="text-sm text-muted-foreground">
-              {workspace.description}
-            </p>
+            <p className="text-sm text-muted-foreground">{workspace.description}</p>
           )}
           <p className="text-xs text-muted-foreground">
             Last updated {formatDay(workspace.updatedAt)}
@@ -76,8 +66,8 @@ export default async function WorkspacePage({
           <CardHeader>
             <CardTitle>The workspace editor is on its way</CardTitle>
             <CardDescription>
-              This workspace is ready. Documents, the canvas and the agent will
-              open here once collaboration lands.
+              This workspace is ready. Documents, the canvas and the agent will open here once
+              collaboration lands.
             </CardDescription>
           </CardHeader>
           <CardContent>

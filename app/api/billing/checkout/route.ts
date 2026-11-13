@@ -1,9 +1,6 @@
 import { auth } from "@/lib/auth";
 import { startCheckout } from "@/lib/billing/checkout";
-import {
-  BillingConfigurationError,
-  BillingRequestError,
-} from "@/lib/billing/stripe";
+import { BillingConfigurationError, BillingRequestError } from "@/lib/billing/stripe";
 
 /**
  * Starts an embedded checkout for the signed-in user. The browser never sends
@@ -21,12 +18,9 @@ export async function POST(request: Request) {
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    body = (await request.json()) as Record<string, unknown>;
   } catch {
-    return Response.json(
-      { error: "Expected a JSON body." },
-      { status: 400 },
-    );
+    return Response.json({ error: "Expected a JSON body." }, { status: 400 });
   }
 
   try {
@@ -54,17 +48,13 @@ export async function POST(request: Request) {
       console.error("[billing] checkout is not configured:", error.message);
       return Response.json(
         {
-          error:
-            "Payments are not configured yet. Add the Stripe keys, then try again.",
+          error: "Payments are not configured yet. Add the Stripe keys, then try again.",
         },
         { status: 503 },
       );
     }
 
     console.error("[billing] checkout failed:", error);
-    return Response.json(
-      { error: "Could not start checkout. Try again." },
-      { status: 500 },
-    );
+    return Response.json({ error: "Could not start checkout. Try again." }, { status: 500 });
   }
 }

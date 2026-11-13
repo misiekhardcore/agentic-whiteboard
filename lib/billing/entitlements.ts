@@ -1,13 +1,5 @@
-import {
-  plans,
-  type Plan,
-  type PlanCapabilities,
-  type PlanLimits,
-} from "./plans";
-import {
-  getActiveSubscription,
-  type SubscriptionRow,
-} from "./subscriptions";
+import { type Plan, type PlanCapabilities, type PlanLimits, plans } from "./plans";
+import { getActiveSubscription, type SubscriptionRow } from "./subscriptions";
 
 /**
  * What an account may do right now. Quota checks are not wired into the app
@@ -50,8 +42,6 @@ export function getUserEntitlements(userId: string): Promise<Entitlements> {
   return entitlementsFor("USER", userId);
 }
 
-export function getOrganizationEntitlements(
-  organizationId: string,
-): Promise<Entitlements> {
+export function getOrganizationEntitlements(organizationId: string): Promise<Entitlements> {
   return entitlementsFor("ORGANIZATION", organizationId);
 }

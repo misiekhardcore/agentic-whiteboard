@@ -17,9 +17,7 @@ describe("workspace topics", () => {
     expect(workspaceTopic("ws_abc123")).toBe("workspace:ws_abc123");
     expect(workspaceDocName("ws_abc123")).toBe("workspace:ws_abc123:doc");
     expect(workspaceCanvasName("ws_abc123")).toBe("workspace:ws_abc123:canvas");
-    expect(organizationBoardTopic("org_abc123")).toBe(
-      "org:org_abc123:board",
-    );
+    expect(organizationBoardTopic("org_abc123")).toBe("org:org_abc123:board");
   });
 
   it("uses stable event names", () => {

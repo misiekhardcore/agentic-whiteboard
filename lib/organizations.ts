@@ -50,9 +50,7 @@ export async function listTeams(userId: string): Promise<TeamOption[]> {
     )
     .groupBy(member.organizationId);
 
-  const totals = new Map(
-    counts.map((row) => [row.organizationId, Number(row.total)]),
-  );
+  const totals = new Map(counts.map((row) => [row.organizationId, Number(row.total)]));
 
   return rows.map((row) => ({
     ...row,
@@ -85,14 +83,9 @@ export type SessionAccount = {
   session: { activeOrganizationId?: string | null };
 };
 
-export async function getAccountContext(
-  session: SessionAccount,
-): Promise<AccountContext> {
+export async function getAccountContext(session: SessionAccount): Promise<AccountContext> {
   const teams = await listTeams(session.user.id);
-  const activeTeam = resolveActiveTeam(
-    teams,
-    session.session.activeOrganizationId,
-  );
+  const activeTeam = resolveActiveTeam(teams, session.session.activeOrganizationId);
 
   return {
     teams,
@@ -110,9 +103,7 @@ export type TeamMember = {
   joinedAt: Date;
 };
 
-export async function listOrganizationMembers(
-  organizationId: string,
-): Promise<TeamMember[]> {
+export async function listOrganizationMembers(organizationId: string): Promise<TeamMember[]> {
   return db
     .select({
       id: member.id,
@@ -136,9 +127,7 @@ export type PendingInvitation = {
   createdAt: Date;
 };
 
-export async function listPendingInvitations(
-  organizationId: string,
-): Promise<PendingInvitation[]> {
+export async function listPendingInvitations(organizationId: string): Promise<PendingInvitation[]> {
   return db
     .select({
       id: invitation.id,
@@ -148,12 +137,7 @@ export async function listPendingInvitations(
       createdAt: invitation.createdAt,
     })
     .from(invitation)
-    .where(
-      and(
-        eq(invitation.organizationId, organizationId),
-        eq(invitation.status, "pending"),
-      ),
-    )
+    .where(and(eq(invitation.organizationId, organizationId), eq(invitation.status, "pending")))
     .orderBy(desc(invitation.createdAt));
 }
 
@@ -202,12 +186,7 @@ export async function getMemberRole(
   const [row] = await db
     .select({ role: member.role })
     .from(member)
-    .where(
-      and(
-        eq(member.organizationId, organizationId),
-        eq(member.userId, userId),
-      ),
-    )
+    .where(and(eq(member.organizationId, organizationId), eq(member.userId, userId)))
     .limit(1);
 
   return row?.role ?? null;

@@ -4,7 +4,7 @@ import type Stripe from "stripe";
 import { db } from "@/lib/db";
 import { member, organization, subscriptions, user } from "@/lib/db/schema";
 
-import { BILLING_CURRENCY, getPlan, type BillingOwnerType, type Plan } from "./plans";
+import { BILLING_CURRENCY, type BillingOwnerType, getPlan, type Plan } from "./plans";
 import { getStripe } from "./stripe";
 
 /**
@@ -119,9 +119,7 @@ export async function applyStripeSubscription(
 ): Promise<void> {
   const owner = await resolveOwner(stripeSubscription);
   if (!owner) {
-    console.warn(
-      `[billing] no local owner for Stripe subscription ${stripeSubscription.id}`,
-    );
+    console.warn(`[billing] no local owner for Stripe subscription ${stripeSubscription.id}`);
     return;
   }
 
@@ -136,8 +134,7 @@ export async function applyStripeSubscription(
   // monthly today.
   const billingInterval = item?.price.recurring?.interval ?? "month";
   const plan =
-    getPlan(stripeSubscription.metadata?.plan) ??
-    (await storedPlan(stripeSubscription.id));
+    getPlan(stripeSubscription.metadata?.plan) ?? (await storedPlan(stripeSubscription.id));
 
   if (!plan) {
     // Checkout stamps the plan onto the subscription, so a subscription
@@ -165,9 +162,7 @@ export async function applyStripeSubscription(
     currentPeriodStart: item?.current_period_start
       ? new Date(item.current_period_start * 1000)
       : null,
-    currentPeriodEnd: item?.current_period_end
-      ? new Date(item.current_period_end * 1000)
-      : null,
+    currentPeriodEnd: item?.current_period_end ? new Date(item.current_period_end * 1000) : null,
     cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
     canceledAt: stripeSubscription.canceled_at
       ? new Date(stripeSubscription.canceled_at * 1000)
@@ -175,13 +170,10 @@ export async function applyStripeSubscription(
     updatedAt: new Date(),
   };
 
-  await db
-    .insert(subscriptions)
-    .values(values)
-    .onConflictDoUpdate({
-      target: subscriptions.stripeSubscriptionId,
-      set: values,
-    });
+  await db.insert(subscriptions).values(values).onConflictDoUpdate({
+    target: subscriptions.stripeSubscriptionId,
+    set: values,
+  });
 
   if (owner.ownerType === "ORGANIZATION") {
     await db
@@ -217,9 +209,7 @@ export async function markSubscriptionCanceled(
  * Called after an invitation is accepted or a member removed. Prorations are
  * left as Stripe's default so seats are reflected on the next invoice.
  */
-export async function syncOrganizationSeats(
-  organizationId: string,
-): Promise<void> {
+export async function syncOrganizationSeats(organizationId: string): Promise<void> {
   const subscription = await getOrganizationSubscription(organizationId);
   if (!subscription) return;
 
@@ -250,4 +240,3 @@ export async function syncOrganizationSeats(
     .set({ seats, updatedAt: new Date() })
     .where(eq(subscriptions.id, subscription.id));
 }
-

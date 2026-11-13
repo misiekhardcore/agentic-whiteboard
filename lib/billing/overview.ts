@@ -4,17 +4,17 @@ import { getSessionAccount } from "@/lib/account";
 import { canManageTeam, type TeamOption } from "@/lib/organizations";
 
 import {
+  type Entitlements,
   getOrganizationEntitlements,
   getUserEntitlements,
-  type Entitlements,
 } from "./entitlements";
 import { upgradeMessages, type UpgradeReason } from "./plans";
 import {
+  type AccountUsage,
   fillUpgradeCopy,
   getAccountUsage,
-  reachedLimits,
-  type AccountUsage,
   type ReachedLimit,
+  reachedLimits,
 } from "./usage";
 
 export type BillingOverview = {
@@ -41,58 +41,56 @@ export type BillingOverview = {
  * the session, the account, the subscription and the two counts are read once
  * even though two separate server components ask for them.
  */
-export const getSessionBillingOverview = cache(
-  async (): Promise<BillingOverview | null> => {
-    const account = await getSessionAccount();
+export const getSessionBillingOverview = cache(async (): Promise<BillingOverview | null> => {
+  const account = await getSessionAccount();
 
-    if (!account) return null;
+  if (!account) return null;
 
-    const { session, teams, activeTeam } = account;
-    const organizationId = activeTeam?.id ?? null;
+  const { session, teams, activeTeam } = account;
+  const organizationId = activeTeam?.id ?? null;
 
-    const entitlements = activeTeam
-      ? await getOrganizationEntitlements(activeTeam.id)
-      : await getUserEntitlements(session.user.id);
+  const entitlements = activeTeam
+    ? await getOrganizationEntitlements(activeTeam.id)
+    : await getUserEntitlements(session.user.id);
 
-    const usage = await getAccountUsage({
-      userId: session.user.id,
-      organizationId,
-      subscription: entitlements.subscription,
-      limits: entitlements.limits,
-    });
+  const usage = await getAccountUsage({
+    userId: session.user.id,
+    organizationId,
+    subscription: entitlements.subscription,
+    limits: entitlements.limits,
+  });
 
-    const reached = reachedLimits(entitlements.limits, usage);
-    const accountName = activeTeam?.name ?? session.user.name;
+  const reached = reachedLimits(entitlements.limits, usage);
+  const accountName = activeTeam?.name ?? session.user.name;
 
-    const reasons = reached.map((limit) => {
-      const message = upgradeMessages[limit.id];
+  const reasons = reached.map((limit) => {
+    const message = upgradeMessages[limit.id];
 
-      const values = {
-        used: limit.used.toLocaleString("en-US"),
-        limit: limit.limit.toLocaleString("en-US"),
-        plan: entitlements.plan.name,
-        period: usage.agentPrompts.periodLabel,
-        account: accountName,
-      };
-
-      return {
-        title: fillUpgradeCopy(message.title, values),
-        description: fillUpgradeCopy(message.description, values),
-      };
-    });
+    const values = {
+      used: limit.used.toLocaleString("en-US"),
+      limit: limit.limit.toLocaleString("en-US"),
+      plan: entitlements.plan.name,
+      period: usage.agentPrompts.periodLabel,
+      account: accountName,
+    };
 
     return {
-      userId: session.user.id,
-      userName: session.user.name,
-      organizationId,
-      accountName,
-      canManageBilling: activeTeam ? canManageTeam(activeTeam.role) : true,
-      teams,
-      defaultOrganizationId: organizationId,
-      entitlements,
-      usage,
-      reached,
-      reasons,
+      title: fillUpgradeCopy(message.title, values),
+      description: fillUpgradeCopy(message.description, values),
     };
-  },
-);
+  });
+
+  return {
+    userId: session.user.id,
+    userName: session.user.name,
+    organizationId,
+    accountName,
+    canManageBilling: activeTeam ? canManageTeam(activeTeam.role) : true,
+    teams,
+    defaultOrganizationId: organizationId,
+    entitlements,
+    usage,
+    reached,
+    reasons,
+  };
+});

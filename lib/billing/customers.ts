@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { organization, user } from "@/lib/db/schema";
+
 import type { BillingOwnerType } from "./plans";
 import { getStripe } from "./stripe";
 
@@ -31,10 +32,7 @@ export async function ensureStripeCustomer({
   });
 
   if (ownerType === "USER") {
-    await db
-      .update(user)
-      .set({ stripeCustomerId: customer.id })
-      .where(eq(user.id, ownerId));
+    await db.update(user).set({ stripeCustomerId: customer.id }).where(eq(user.id, ownerId));
   } else {
     await db
       .update(organization)

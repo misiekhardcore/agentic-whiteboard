@@ -13,8 +13,7 @@ export const landing = {
       accent: "Agentic Whiteboard",
       trail: " for whatever you’re building",
     },
-    lead:
-      "An infinite canvas where you and your agents sketch, map and refine ideas together — from messy first thought to something you can ship.",
+    lead: "An infinite canvas where you and your agents sketch, map and refine ideas together — from messy first thought to something you can ship.",
     primaryCta: {
       label: "Start building for free",
       href: "/sign-up",
@@ -35,21 +34,14 @@ export const landing = {
   audience: {
     eyebrow: "Who it’s for",
     headline: "Built for the people who turn a sketch into shipped work.",
-    groups: [
-      "Product teams",
-      "Founders",
-      "Solo builders",
-      "Agencies",
-      "Consultants",
-    ],
+    groups: ["Product teams", "Founders", "Solo builders", "Agencies", "Consultants"],
   },
 
   howItWorks: {
     id: "how-it-works",
     eyebrow: "How it works",
     title: "Three waypoints from a blank canvas to a shared picture",
-    lead:
-      "You bring the idea in words. The agent draws it, and you shape it together — on the same canvas, in the same conversation.",
+    lead: "You bring the idea in words. The agent draws it, and you shape it together — on the same canvas, in the same conversation.",
     steps: [
       {
         id: "describe",
@@ -76,8 +68,7 @@ export const landing = {
     id: "surfaces",
     eyebrow: "Inside the workspace",
     title: "One agent, one workspace, your whole team",
-    lead:
-      "Every surface shares one agent and one context. Draw the flow, write the spec, put the work on the board — nothing gets copied between tabs.",
+    lead: "Every surface shares one agent and one context. Draw the flow, write the spec, put the work on the board — nothing gets copied between tabs.",
     items: [
       {
         id: "canvas",
@@ -119,8 +110,7 @@ export const landing = {
     id: "pricing",
     eyebrow: "Pricing",
     title: "Plans that grow the way your board does",
-    lead:
-      "Start free on your own canvas. Move up when you need more prompts, public share links, or a whole team around the board — every plan includes the same agent, canvas, docs and board.",
+    lead: "Start free on your own canvas. Move up when you need more prompts, public share links, or a whole team around the board — every plan includes the same agent, canvas, docs and board.",
     tabs: {
       personal: "Personal",
       team: "Team",
@@ -142,8 +132,7 @@ export const landing = {
       accent: "next idea",
       trail: " to the canvas",
     },
-    lead:
-      "Describe it, watch it take shape, and keep going until it’s something you can hand to the team.",
+    lead: "Describe it, watch it take shape, and keep going until it’s something you can hand to the team.",
     primaryCta: { label: "Start building for free", href: "/sign-up" },
     secondaryCta: { label: "See how it works", href: "#how-it-works" },
   },

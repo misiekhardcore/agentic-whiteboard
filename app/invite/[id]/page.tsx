@@ -1,7 +1,3 @@
-import Link from "next/link";
-import { headers } from "next/headers";
-import { notFound } from "next/navigation";
-
 import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import {
@@ -11,6 +7,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@konopskidev/ui/components/card";
+import { headers } from "next/headers";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { getInvitationDetails } from "@/lib/organizations";
@@ -24,9 +23,7 @@ export const metadata = {
 // The invitation is per request and must never be statically cached.
 export const instant = false;
 
-export default async function InvitationPage({
-  params,
-}: PageProps<"/invite/[id]">) {
+export default async function InvitationPage({ params }: PageProps<"/invite/[id]">) {
   const { id } = await params;
   const invitation = await getInvitationDetails(id);
 
@@ -44,8 +41,8 @@ export default async function InvitationPage({
             <CardTitle>Join {invitation.organizationName}</CardTitle>
             <CardDescription>
               {invitation.inviterName} invited{" "}
-              <span className="text-foreground">{invitation.email}</span> to
-              join as {invitation.role ?? "member"}.
+              <span className="text-foreground">{invitation.email}</span> to join as{" "}
+              {invitation.role ?? "member"}.
             </CardDescription>
           </CardHeader>
 
@@ -64,23 +61,17 @@ export default async function InvitationPage({
                   Sign in with {invitation.email} to accept the invitation.
                 </p>
                 <Button asChild className="w-full">
-                  <Link href={`/sign-in?redirectTo=${redirectTo}`}>
-                    Sign in to accept
-                  </Link>
+                  <Link href={`/sign-in?redirectTo=${redirectTo}`}>Sign in to accept</Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full">
-                  <Link href={`/sign-up?redirectTo=${redirectTo}`}>
-                    Create an account
-                  </Link>
+                  <Link href={`/sign-up?redirectTo=${redirectTo}`}>Create an account</Link>
                 </Button>
               </>
-            ) : session.user.email.toLowerCase() !==
-              invitation.email.toLowerCase() ? (
+            ) : session.user.email.toLowerCase() !== invitation.email.toLowerCase() ? (
               <Alert variant="destructive">
                 <AlertDescription>
-                  This invitation is for {invitation.email}, but you are signed
-                  in as {session.user.email}. Sign in with the invited address
-                  to accept.
+                  This invitation is for {invitation.email}, but you are signed in as{" "}
+                  {session.user.email}. Sign in with the invited address to accept.
                 </AlertDescription>
               </Alert>
             ) : (

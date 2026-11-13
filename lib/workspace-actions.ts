@@ -6,13 +6,11 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
-import {
-  getOrganizationEntitlements,
-  getUserEntitlements,
-} from "@/lib/billing/entitlements";
+import { getOrganizationEntitlements, getUserEntitlements } from "@/lib/billing/entitlements";
 import { workspaceLimitMessage } from "@/lib/billing/usage";
 import { db } from "@/lib/db";
 import { member, organization, workspaces } from "@/lib/db/schema";
+import { formString } from "@/lib/form-data";
 import {
   EMPTY_WORKSPACE_FORM_STATE,
   WORKSPACE_DESCRIPTION_MAX_LENGTH,
@@ -21,11 +19,7 @@ import {
   type WorkspaceFormState,
 } from "@/lib/workspace-form";
 import { isWorkspaceStatus } from "@/lib/workspace-status";
-import {
-  accountWorkspacesWhere,
-  getWorkspaceForUser,
-  workspacePermission,
-} from "@/lib/workspaces";
+import { accountWorkspacesWhere, getWorkspaceForUser, workspacePermission } from "@/lib/workspaces";
 
 type Session = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>;
 
@@ -53,12 +47,7 @@ async function activeAccount(
     .select({ name: organization.name })
     .from(member)
     .innerJoin(organization, eq(member.organizationId, organization.id))
-    .where(
-      and(
-        eq(member.organizationId, organizationId),
-        eq(member.userId, session.user.id),
-      ),
-    )
+    .where(and(eq(member.organizationId, organizationId), eq(member.userId, session.user.id)))
     .limit(1);
 
   if (!row) return { organizationId: null, name: session.user.name };
@@ -87,8 +76,8 @@ export async function createWorkspaceAction(
 ): Promise<WorkspaceFormState> {
   const session = await requireSession();
 
-  const name = String(formData.get("name") ?? "").trim();
-  const descriptionRaw = String(formData.get("description") ?? "").trim();
+  const name = formString(formData, "name").trim();
+  const descriptionRaw = formString(formData, "description").trim();
 
   const nameErrors = validateName(name);
   if (Object.keys(nameErrors).length > 0) {
@@ -110,8 +99,7 @@ export async function createWorkspaceAction(
     : await getUserEntitlements(session.user.id);
 
   const description = descriptionRaw || null;
-  const ownerKey =
-    account.organizationId ?? `personal:${session.user.id}`;
+  const ownerKey = account.organizationId ?? `personal:${session.user.id}`;
 
   const limitError = await db.transaction(async (tx) => {
     // Serialize creates per account so the quota cannot be exceeded by two
@@ -172,7 +160,7 @@ export async function updateWorkspaceAction(
 ): Promise<WorkspaceFormState> {
   const session = await requireSession();
 
-  const id = String(formData.get("id") ?? "");
+  const id = formString(formData, "id");
   if (!id) {
     return { ...EMPTY_WORKSPACE_FORM_STATE, error: "That workspace could not be found." };
   }
@@ -182,8 +170,8 @@ export async function updateWorkspaceAction(
     return { ...EMPTY_WORKSPACE_FORM_STATE, error: "You cannot edit that workspace." };
   }
 
-  const name = String(formData.get("name") ?? "").trim();
-  const descriptionRaw = String(formData.get("description") ?? "").trim();
+  const name = formString(formData, "name").trim();
+  const descriptionRaw = formString(formData, "description").trim();
   const status = formData.get("status");
 
   const nameErrors = validateName(name);
@@ -228,16 +216,13 @@ export async function updateWorkspaceAction(
 /** Soft delete: the workspace is hidden and stops counting against the plan. */
 export async function archiveWorkspaceAction(formData: FormData): Promise<void> {
   const session = await requireSession();
-  const id = String(formData.get("id") ?? "");
+  const id = formString(formData, "id");
   if (!id) return;
 
   const access = await getWorkspaceForUser(id, session.user.id);
   if (!access || workspacePermission(access) !== "edit") return;
 
-  await db
-    .update(workspaces)
-    .set({ archivedAt: new Date() })
-    .where(eq(workspaces.id, id));
+  await db.update(workspaces).set({ archivedAt: new Date() }).where(eq(workspaces.id, id));
 
   revalidatePath("/dashboard");
   revalidatePath("/workspaces");
@@ -247,16 +232,13 @@ export async function archiveWorkspaceAction(formData: FormData): Promise<void> 
 /** Puts an archived workspace back on the dashboard and into the plan meter. */
 export async function restoreWorkspaceAction(formData: FormData): Promise<void> {
   const session = await requireSession();
-  const id = String(formData.get("id") ?? "");
+  const id = formString(formData, "id");
   if (!id) return;
 
   const access = await getWorkspaceForUser(id, session.user.id);
   if (!access || workspacePermission(access) !== "edit") return;
 
-  await db
-    .update(workspaces)
-    .set({ archivedAt: null })
-    .where(eq(workspaces.id, id));
+  await db.update(workspaces).set({ archivedAt: null }).where(eq(workspaces.id, id));
 
   revalidatePath("/dashboard");
   revalidatePath("/workspaces");

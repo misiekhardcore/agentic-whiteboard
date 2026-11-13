@@ -1,10 +1,8 @@
 "use client";
 
-import {
-  Alert,
-  AlertDescription,
-} from "@konopskidev/ui/components/alert";
-import { Button, ButtonProps } from "@konopskidev/ui/components/button";
+import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
+import type { ButtonProps } from "@konopskidev/ui/components/button";
+import { Button } from "@konopskidev/ui/components/button";
 import {
   Dialog,
   DialogClose,
@@ -22,10 +20,7 @@ import Link from "next/link";
 import { useActionState, useCallback, useEffect, useState } from "react";
 
 import { createWorkspaceAction } from "@/lib/workspace-actions";
-import {
-  EMPTY_WORKSPACE_FORM_STATE,
-  WORKSPACE_DESCRIPTION_MAX_LENGTH,
-} from "@/lib/workspace-form";
+import { EMPTY_WORKSPACE_FORM_STATE, WORKSPACE_DESCRIPTION_MAX_LENGTH } from "@/lib/workspace-form";
 
 /**
  * Creating a workspace belongs to the account the dashboard is showing: a
@@ -85,8 +80,7 @@ function CreateWorkspaceForm({ onDone }: { onDone: () => void }) {
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="workspaceDescription">
-          Description{" "}
-          <span className="font-normal text-muted-foreground">(optional)</span>
+          Description <span className="font-normal text-muted-foreground">(optional)</span>
         </Label>
         <Textarea
           id="workspaceDescription"
@@ -97,9 +91,7 @@ function CreateWorkspaceForm({ onDone }: { onDone: () => void }) {
           aria-invalid={Boolean(state.fieldErrors?.description)}
         />
         {state.fieldErrors?.description && (
-          <p className="text-xs text-destructive">
-            {state.fieldErrors.description}
-          </p>
+          <p className="text-xs text-destructive">{state.fieldErrors.description}</p>
         )}
       </div>
 

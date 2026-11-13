@@ -1,4 +1,5 @@
 import { Spinner } from "@konopskidev/ui/components/spinner";
+
 import { cn } from "@/lib/utils";
 
 interface LoadingProps {
@@ -6,17 +7,9 @@ interface LoadingProps {
   label?: string;
 }
 
-export function Loading({
-  className,
-  label = "Loading...",
-}: LoadingProps) {
+export function Loading({ className, label = "Loading..." }: LoadingProps) {
   return (
-    <div
-      className={cn(
-        "flex items-center justify-center gap-2",
-        className,
-      )}
-    >
+    <div className={cn("flex items-center justify-center gap-2", className)}>
       <Spinner className="h-4 w-4" />
       <span>{label}</span>
     </div>
