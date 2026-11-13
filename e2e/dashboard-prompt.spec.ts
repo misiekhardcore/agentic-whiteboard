@@ -79,6 +79,9 @@ test("the composer sends on Enter, keeps Shift+Enter for new lines and streams a
     await expect(thread).toContainText("Plan the schema");
     await expect(thread).toContainText("and the API");
     await expect(thread).toContainText("Stub agent: Plan the schema");
+    // The reply is markdown: the prefix is emphasis, not a literal `**`.
+    await expect(thread.locator("strong").first()).toHaveText("Stub agent:");
+    await expect(thread).not.toContainText("**");
     await expect(composer).toHaveValue("");
 
     // The thread is stored, so a reload replays it from the database.
@@ -118,6 +121,18 @@ test("the agent can create a workspace from a dashboard prompt", async ({
 
     const thread = page.getByRole("list", { name: "Agent conversation" });
     await expect(thread).toContainText("The workspace is ready.");
+    await expect(thread.locator("ul > li")).toHaveText(
+      "It is listed under the latest workspaces below.",
+    );
+
+    // The tool call is listed in the conversation, named and with what it acted
+    // on, rather than hidden behind the reply that followed it.
+    const toolCall = thread.getByRole("button", { name: /Create workspace/ });
+    await expect(toolCall).toContainText(workspaceName);
+
+    await toolCall.click();
+    await expect(thread).toContainText(`"name": "${workspaceName}"`);
+    await expect(thread).toContainText("\"created\": true");
 
     // `onFinish` refreshes the server components, so the new workspace joins
     // the account's latest list without a reload.
@@ -127,6 +142,14 @@ test("the agent can create a workspace from a dashboard prompt", async ({
     await expect(
       page.getByRole("link", { name: workspaceName }),
     ).toBeVisible();
+
+    // The tool call was stored with the reply, so a reload still lists it.
+    await page.reload();
+    await expect(
+      page
+        .getByRole("list", { name: "Agent conversation" })
+        .getByRole("button", { name: /Create workspace/ }),
+    ).toContainText(workspaceName);
   } finally {
     await deleteAccount(email);
   }
