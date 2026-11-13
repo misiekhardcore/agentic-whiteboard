@@ -10,6 +10,7 @@ import {
 } from "@konopskidev/ui/components/card";
 
 import { safeRedirectTo } from "@/lib/auth-redirect";
+import { signInPath } from "@/lib/routes";
 
 import { SignUpForm } from "./sign-up-form";
 
@@ -39,11 +40,7 @@ export default async function SignUpPage({
       <CardFooter className="justify-center gap-1 text-sm text-muted-foreground">
         <span>Already have an account?</span>
         <Link
-          href={
-            redirectTo
-              ? `/sign-in?redirectTo=${encodeURIComponent(redirectTo)}`
-              : "/sign-in"
-          }
+          href={signInPath(redirectTo)}
           className="font-medium text-primary underline underline-offset-4 hover:no-underline"
         >
           Sign in

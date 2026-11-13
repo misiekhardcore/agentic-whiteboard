@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 
 import type { PlanFacts } from "@/lib/billing/details";
 import { isPaidPlan, type Plan } from "@/lib/billing/plans";
+import { routes } from "@/lib/routes";
 
 import { CancelSubscriptionButton } from "./cancel-subscription-button";
 import { PlanSummary } from "./plan-summary";
@@ -115,7 +116,7 @@ export function BillingDetails({
 
           <p className="text-xs text-muted-foreground">
             <Link
-              href="/dashboard/billing"
+              href={routes.dashboardBilling}
               className="underline underline-offset-4 hover:text-foreground"
             >
               Open the billing page

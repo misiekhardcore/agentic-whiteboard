@@ -26,6 +26,7 @@ import {
   submittedPrompt,
 } from "@/lib/ai/prompt-composer";
 import { threadText } from "@/lib/ai/thread-parts";
+import { routes } from "@/lib/routes";
 
 import { PromptThread } from "./PromptThread";
 
@@ -78,7 +79,7 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
   const router = useRouter();
 
   const transport = useMemo(
-    () => new DefaultChatTransport({ api: "/api/agent/prompts" }),
+    () => new DefaultChatTransport({ api: routes.agentPromptsApi }),
     [],
   );
 
@@ -206,7 +207,7 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
                 <span>{failure.message}</span>
                 {failure.limitReached && (
                   <Link
-                    href="/dashboard/billing"
+                    href={routes.dashboardBilling}
                     className="font-medium underline underline-offset-4"
                   >
                     View plans

@@ -1,5 +1,7 @@
+import { routes } from "@/lib/routes";
+
 /** Where a signed-in user goes when no destination was requested. */
-export const DEFAULT_REDIRECT = "/dashboard";
+export const DEFAULT_REDIRECT = routes.dashboard;
 
 /**
  * Accepts a same-origin absolute path and nothing else, so `?redirectTo=` can
