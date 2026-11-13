@@ -6,6 +6,7 @@ vi.mock("@/lib/db", () => ({ db: {} }));
 
 import {
   fillUpgradeCopy,
+  promptLimitMessage,
   reachedLimits,
   usageWindow,
   workspaceLimitMessage,
@@ -173,6 +174,37 @@ describe("upgrade copy", () => {
 
   it("leaves unknown placeholders for the catalog author to see", () => {
     expect(fillUpgradeCopy("Hi {name}", { used: 1 })).toBe("Hi {name}");
+  });
+});
+
+describe("prompt limit message", () => {
+  const base = {
+    used: 20,
+    limit: 20,
+    accountName: "Acme",
+    periodLabel: "this month",
+  } as const;
+
+  it("allows sending while the allowance has room", () => {
+    expect(promptLimitMessage({ ...base, used: 19 })).toBeNull();
+  });
+
+  it("names the used and allowed prompts in the billing window", () => {
+    expect(promptLimitMessage(base)).toBe(
+      "You’ve used 20 of 20 prompts this month in Acme. Upgrade to keep building with the agent.",
+    );
+  });
+
+  it("uses the subscription period once one is mirrored", () => {
+    expect(
+      promptLimitMessage({ ...base, periodLabel: "this billing period" }),
+    ).toContain("prompts this billing period in Acme");
+  });
+
+  it("never blocks an unlimited plan", () => {
+    expect(
+      promptLimitMessage({ ...base, used: 900, limit: null }),
+    ).toBeNull();
   });
 });
 

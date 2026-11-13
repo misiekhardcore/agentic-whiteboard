@@ -12,6 +12,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { getSessionAccount } from "@/lib/account";
 import { formatDay } from "@/lib/formatDate";
+import { routes, signInPath } from "@/lib/routes";
 import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace-status";
 import { getWorkspaceForUser } from "@/lib/workspaces";
 
@@ -33,7 +34,7 @@ export default async function WorkspacePage({
   const { id } = await params;
 
   const account = await getSessionAccount();
-  if (!account) redirect(`/sign-in?redirectTo=/workspace/${id}`);
+  if (!account) redirect(signInPath(routes.workspace(id)));
 
   const access = await getWorkspaceForUser(id, account.session.user.id);
   if (!access) notFound();
@@ -45,7 +46,7 @@ export default async function WorkspacePage({
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
         <div className="flex flex-col gap-2">
           <Link
-            href="/dashboard"
+            href={routes.dashboard}
             className="text-xs text-muted-foreground underline-offset-4 hover:underline"
           >
             ← Back to dashboard
@@ -82,7 +83,7 @@ export default async function WorkspacePage({
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" size="sm">
-              <Link href="/dashboard">Manage your workspaces</Link>
+              <Link href={routes.dashboard}>Manage your workspaces</Link>
             </Button>
           </CardContent>
         </Card>

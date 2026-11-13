@@ -31,10 +31,16 @@ export default defineConfig({
   // secret) and sets E2E_SKIP_WEB_SERVER. Locally this reuses a running dev
   // server, or starts one.
   webServer: process.env.E2E_SKIP_WEB_SERVER
-    ? undefined
-    : {
+    ? undefined      : {
         command: "pnpm dev",
-        env: { PORT: new URL(baseURL).port || "3000" },
+        // The prompt specs drive the agent, so they need the scripted provider
+        // rather than whatever `.env.local` points at. Running the app with
+        // your own server (`E2E_SKIP_WEB_SERVER`) means supplying these too.
+        env: {
+          PORT: new URL(baseURL).port || "3000",
+          AI_PROVIDER: "stub",
+          AI_MODEL: "stub-model",
+        },
         url: baseURL,
         reuseExistingServer: true,
         timeout: 120_000,

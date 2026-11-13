@@ -4,3 +4,9 @@ allowBuilds:
   workerd: true
 minimumReleaseAgeExclude:
   - '@konopskidev/ui@0.3.0'
+  - '@ai-sdk/gateway@4.0.145'
+  - '@ai-sdk/mcp@2.0.99'
+  - '@ai-sdk/provider-utils@5.0.81'
+  - '@ai-sdk/provider@4.0.38'
+  - '@ai-sdk/react@4.0.176'
+  - ai@7.0.172

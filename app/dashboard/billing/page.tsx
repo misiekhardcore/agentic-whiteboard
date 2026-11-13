@@ -18,6 +18,7 @@ import { UsageMeter } from "@/app/_components/billing/usage-meter";
 import { planFacts } from "@/lib/billing/details";
 import { getSessionBillingOverview } from "@/lib/billing/overview";
 import { isPaidPlan, limitLabels } from "@/lib/billing/plans";
+import { routes, signInPath } from "@/lib/routes";
 
 export const metadata = {
   title: "Billing",
@@ -33,7 +34,7 @@ export const instant = false;
  */
 export default async function BillingPage() {
   const overview = await getSessionBillingOverview();
-  if (!overview) redirect("/sign-in?redirectTo=/dashboard/billing");
+  if (!overview) redirect(signInPath(routes.dashboardBilling));
 
   const { plan, subscription } = overview.entitlements;
   const facts = planFacts(plan, subscription);

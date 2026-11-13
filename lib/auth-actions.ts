@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import type { AuthFormState } from "@/lib/auth-form";
 import { DEFAULT_REDIRECT, safeRedirectTo } from "@/lib/auth-redirect";
+import { routes } from "@/lib/routes";
 
 const MESSAGES: Record<string, string> = {
   INVALID_EMAIL: "Enter a valid email address.",
@@ -143,7 +144,7 @@ export async function resetPasswordAction(
     return { error: toMessage(error, "Could not reset your password. Try again.") };
   }
 
-  redirect("/sign-in?reset=1");
+  redirect(`${routes.signIn}?reset=1`);
 }
 
 const OAUTH_PROVIDERS = ["github", "google"] as const;
@@ -163,7 +164,7 @@ export async function signInWithProviderAction(formData: FormData): Promise<void
   const redirectTo = safeRedirectTo(formData.get("redirectTo"));
 
   if (!isOAuthProvider(provider)) {
-    redirect("/sign-in?error=invalid_provider");
+    redirect(`${routes.signIn}?error=invalid_provider`);
   }
 
   let url: string | undefined;
@@ -174,7 +175,7 @@ export async function signInWithProviderAction(formData: FormData): Promise<void
         callbackURL: redirectTo ?? DEFAULT_REDIRECT,
         // Better Auth appends ?error=<code> when the provider rejects or the
         // callback fails, so the sign-in page can explain what happened.
-        errorCallbackURL: "/sign-in",
+        errorCallbackURL: routes.signIn,
       },
       headers: await headers(),
     });
@@ -183,10 +184,10 @@ export async function signInWithProviderAction(formData: FormData): Promise<void
     console.error(`[auth] ${provider} sign-in could not start:`, error);
   }
 
-  redirect(url ?? "/sign-in?error=oauth");
+  redirect(url ?? `${routes.signIn}?error=oauth`);
 }
 
 export async function signOutAction(): Promise<void> {
   await auth.api.signOut({ headers: await headers() });
-  redirect("/sign-in");
+  redirect(routes.signIn);
 }

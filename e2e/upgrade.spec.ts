@@ -94,10 +94,13 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
       }
 
       // The owner has spent their own 20; the second member has spent 5. The
-      // header must count the owner only, never the organization total.
+      // header must count the owner only, never the organization total. The
+      // prompts are completed: a workspace allows one active prompt at a time.
       for (let index = 0; index < 20; index += 1) {
         await db.query(
-          'insert into "AgentPrompt" (id, "ownerId", "userId", "workspaceId") values ($1, $2, $3, $4)',
+          `insert into "agentPrompt"
+             (id, "ownerId", "userId", "workspaceId", status, provider, model)
+           values ($1, $2, $3, $4, 'COMPLETED', 'stub', 'stub-model')`,
           [
             randomUUID(),
             organizationId,
@@ -108,7 +111,9 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
       }
       for (let index = 0; index < 5; index += 1) {
         await db.query(
-          'insert into "AgentPrompt" (id, "ownerId", "userId", "workspaceId") values ($1, $2, $3, $4)',
+          `insert into "agentPrompt"
+             (id, "ownerId", "userId", "workspaceId", status, provider, model)
+           values ($1, $2, $3, $4, 'COMPLETED', 'stub', 'stub-model')`,
           [randomUUID(), organizationId, secondUserId, workspaceIds[0]],
         );
       }
@@ -208,7 +213,7 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
     });
   } finally {
     if (organizationId) {
-      await db.query('delete from "AgentPrompt" where "ownerId" = $1', [
+      await db.query('delete from "agentPrompt" where "ownerId" = $1', [
         organizationId,
       ]);
       await db.query('delete from workspace where "orgId" = $1', [

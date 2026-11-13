@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { canManageTeam, getMemberRole } from "@/lib/organizations";
 import type { ProfileFormState } from "@/lib/profile-form";
+import { routes, signInPath } from "@/lib/routes";
 
 const ORGANIZATION_MESSAGES: Record<string, string> = {
   ORGANIZATION_NOT_FOUND: "That organization no longer exists.",
@@ -30,7 +31,7 @@ function toMessage(error: unknown, fallback: string): string {
 
 async function requireSession() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in?redirectTo=/dashboard/settings");
+  if (!session) redirect(signInPath(routes.dashboardSettings));
   return session;
 }
 

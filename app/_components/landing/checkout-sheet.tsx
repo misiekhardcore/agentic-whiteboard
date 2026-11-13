@@ -39,6 +39,7 @@ import {
   type Plan,
 } from "@/lib/billing/plans";
 import type { TeamOption } from "@/lib/organizations";
+import { routes } from "@/lib/routes";
 
 /** Loaded once per page load; Stripe.js is cached by the browser afterwards. */
 let stripePromise: Promise<Stripe | null> | null = null;
@@ -280,7 +281,9 @@ export function CheckoutSheet({
                 aria-busy={activating}
               >
                 <Link
-                  href={isTeamPlan ? "/dashboard/billing" : "/dashboard"}
+                  href={
+                    isTeamPlan ? routes.dashboardBilling : routes.dashboard
+                  }
                   aria-disabled={activating}
                   className={activating ? "pointer-events-none opacity-50" : undefined}
                 >

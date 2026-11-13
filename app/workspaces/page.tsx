@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { WorkspaceCard } from "@/app/dashboard/_components/WorkspaceCard";
 import { CreateWorkspaceDialog } from "@/app/dashboard/_components/CreateWorkspaceDialog";
 import { getSessionAccount } from "@/lib/account";
+import { routes, signInPath } from "@/lib/routes";
 import { listAccountWorkspaces } from "@/lib/workspaces";
 
 export const metadata = {
@@ -23,7 +24,7 @@ export const instant = false;
  */
 export default async function WorkspacesPage() {
   const account = await getSessionAccount();
-  if (!account) redirect("/sign-in?redirectTo=/workspaces");
+  if (!account) redirect(signInPath(routes.workspaces));
 
   const { activeTeam, session } = account;
   const accountName = activeTeam?.name ?? "Personal account";
@@ -72,7 +73,7 @@ export default async function WorkspacesPage() {
       )}
 
       <Button asChild variant="ghost" size="sm" className="self-start">
-        <Link href="/dashboard">← Back to dashboard</Link>
+        <Link href={routes.dashboard}>← Back to dashboard</Link>
       </Button>
     </div>
   );

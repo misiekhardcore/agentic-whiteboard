@@ -3,8 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { DEFAULT_REDIRECT, safeRedirectTo } from "@/lib/auth-redirect";
+import { routes } from "@/lib/routes";
 
-const AUTH_PAGES = ["/sign-in", "/sign-up"];
+const AUTH_PAGES: readonly string[] = [routes.signIn, routes.signUp];
 
 export async function proxy(request: NextRequest) {
   // Without a cookie there is no session to validate, so skip the database.
@@ -21,7 +22,7 @@ export async function proxy(request: NextRequest) {
 
   if (!authed && !onAuthPage) {
     // Remember where they were headed, including the query string.
-    const signIn = new URL("/sign-in", request.url);
+    const signIn = new URL(routes.signIn, request.url);
     signIn.searchParams.set(
       "redirectTo",
       request.nextUrl.pathname + request.nextUrl.search,

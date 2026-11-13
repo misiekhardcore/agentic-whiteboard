@@ -8,7 +8,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspace";
 import { agentPrompts } from "./agentPrompt";
-import { agentRuns } from "./agentRun";
 import { agentMessages } from "./agentMessage";
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -144,7 +143,6 @@ export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   createdWorkspaces: many(workspaces),
   agentPrompts: many(agentPrompts),
-  agentRuns: many(agentRuns),
   agentMessages: many(agentMessages),
   members: many(member),
   invitations: many(invitation),

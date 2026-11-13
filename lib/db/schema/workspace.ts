@@ -13,7 +13,6 @@ import { user } from "./auth";
 import { docs } from "./doc";
 import { canvases } from "./canvas";
 import { agentPrompts } from "./agentPrompt";
-import { agentRuns } from "./agentRun";
 import { agentMessages } from "./agentMessage";
 
 export const workspaceStatusEnum = pgEnum(
@@ -71,7 +70,6 @@ export const workspacesRelations = relations(
     doc: one(docs),
     canvas: one(canvases),
     agentPrompts: many(agentPrompts),
-    agentRuns: many(agentRuns),
     agentMessages: many(agentMessages),
   }),
 );

@@ -21,6 +21,7 @@ import {
   type Plan,
 } from "@/lib/billing/plans";
 import type { TeamOption } from "@/lib/organizations";
+import { routes, signInPath } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 import { CheckoutSheet } from "./checkout-sheet";
@@ -87,7 +88,7 @@ export function PricingTabs({
   function choosePlan(plan: Plan) {
     if (!signedIn) {
       const next = `/?billing=${plan.id}#pricing`;
-      router.push(`/sign-in?redirectTo=${encodeURIComponent(next)}`);
+      router.push(signInPath(next));
       return;
     }
     setChosenPlanId(plan.id);
@@ -149,9 +150,7 @@ export function PricingTabs({
                             className="w-full"
                           >
                             <Link
-                              href={
-                                signedIn ? "/dashboard" : "/sign-up"
-                              }
+                              href={signedIn ? routes.dashboard : routes.signUp}
                             >
                               {signedIn
                                 ? "Open dashboard"

@@ -2,6 +2,7 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { LanguageModel } from "ai";
 
 import { getAiConfig, type AiConfig, type AiProviderId } from "./config";
+import { createStubModel } from "./stub";
 
 /**
  * The only provider capability this app relies on. Native AI SDK providers
@@ -36,6 +37,8 @@ const providerFactories = {
       baseURL: config.baseURL,
       apiKey: config.apiKey,
     }),
+  // Scripted replies for local demos and the e2e suite; see `stub.ts`.
+  stub: () => ({ languageModel: () => createStubModel() }),
 } satisfies Record<AiProviderId, ProviderFactory>;
 
 /**

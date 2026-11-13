@@ -26,7 +26,7 @@ server, or Supabase Realtime infrastructure.
 | Ephemeral events | Supabase Realtime Broadcast + Presence | Good for small status/chat/presence events and team-board invalidation; not for document bytes. |
 | Deployment | Long-running Node | A room needs one owner; `next start` plus a collab service on the same host is the simplest correct topology. |
 | Agent authority | Collaboration gateway (`snapshot` / `mutate`) | The agent computes intent; the room owner applies it to the live doc, so a stale snapshot cannot overwrite concurrent edits. |
-| Agent concurrency | One active run per workspace | Prevents two agents (or two users' runs) from fighting over the same semantic edit. |
+| Agent concurrency | One active prompt per workspace, and per person's dashboard thread | Prevents two agents (or two users' runs) from fighting over the same semantic edit, and two streams from interleaving one conversation. |
 | Agent visibility | Live co-editing | Edits broadcast as they are applied; everyone sees the agent working; the requester can cancel. |
 
 ### Why Hocuspocus for sync and Supabase Realtime for events
@@ -98,18 +98,23 @@ Rules:
 
 `canvas.yjsState` does not exist yet; it is added in Phase 1.
 
-### Agent runs and messages
+### Prompts and messages
 
-`agentRun` records the requester, provider/model snapshot, status, usage, error
-and timestamps. A partial unique index enforces one `QUEUED`/`RUNNING` run per
-workspace. `agentMessage` stores the shared workspace chat thread as AI SDK
-message parts; messages are persisted before they are broadcast.
+`agentPrompt` is one accepted prompt: the execution record and the row the plan
+allowance counts. It snapshots `ownerId` (the paying account: an organization or
+personal user), `userId` (the member whose allowance it consumes), the
+provider/model, status, usage, error and timestamps. One row per prompt means a
+queued prompt is a status, a rejected prompt writes nothing, and the quota count
+cannot disagree with what ran.
 
-`AgentPrompt` is the per-user prompt ledger used by the plan quotas: one row per
-prompt, `ownerId` for the paying account (organization or personal user),
-`userId` for the member whose allowance it consumes, and `createdAt` for the
-billing-period count. A prompt is recorded even when no run starts (queued or
-rejected), so `agentRun` is the execution record, not the quota source.
+`workspaceId` is `null` for the person's dashboard thread and set for a
+workspace conversation, so the same table serves both. Partial unique indexes
+allow one `QUEUED`/`RUNNING` prompt per workspace and one per person's dashboard
+thread. `agentMessage` stores the conversation as AI SDK message parts, before
+they are broadcast, and its `workspaceId` mirrors the prompt's.
+
+The dashboard flow that uses this model is recorded in
+[agent-prompt-thread](agent-prompt-thread.md).
 
 ## Flows
 
@@ -126,21 +131,21 @@ rejected), so `agentRun` is the execution record, not the quota source.
 
 1. A user sends a prompt; the server validates the Better Auth session and
    workspace edit permission.
-2. A run row and the user message are inserted. If the workspace already has an
-   active run, the request is queued or rejected with `409`.
+2. A prompt row and the user message are inserted. If the workspace already has
+   an active prompt, the request is queued or rejected with `409`.
 3. The server resolves the provider/model, loads a snapshot + recent messages,
    and builds tools bound to:
-   `{ type: "agent", runId, requestedByUserId }`.
+   `{ type: "agent", promptId, requestedByUserId }`.
 4. Each tool calls `gateway.mutate(...)` with an idempotency key of
-   `runId:toolCallId`. The gateway applies the batch in one Yjs transaction,
+   `promptId:toolCallId`. The gateway applies the batch in one Yjs transaction,
    persists it, and Hocuspocus broadcasts it to every editor.
 5. The requester's response streams; assistant/tool messages are persisted.
    Agent status events go to everyone through Supabase Realtime.
-6. The run is marked `COMPLETED`, `FAILED` or `CANCELLED`. Already-applied CRDT
-   edits remain valid.
+6. The prompt is marked `COMPLETED`, `FAILED` or `CANCELLED`. Already-applied
+   CRDT edits remain valid.
 
-Cancellation aborts the run and stops further gateway mutations. It does not
-rewrite document history; an explicit "undo this run" feature is future work.
+Cancellation aborts the prompt and stops further gateway mutations. It does not
+rewrite document history; an explicit "undo this prompt" feature is future work.
 
 ## Authorization and tenancy
 
@@ -168,8 +173,9 @@ rewrite document history; an explicit "undo this run" feature is future work.
   compaction; the current design keeps that additive.
 - **Gateway unavailable:** agent edits stop, but human editing and persisted Yjs
   state continue.
-- **Stale `RUNNING` run:** a reaper marks runs older than a timeout as failed so
-  the workspace is not blocked forever.
+- **Stale `RUNNING` prompt:** the next send retires prompts older than 15 minutes
+  (and a reaper will do the same for workspaces) so the thread is not blocked
+  forever.
 - **Supabase Realtime unavailable:** presence/status/chat broadcasts pause;
   document collaboration and the agent's edits still work. Clients refetch
   authoritative state on reconnect.
@@ -187,8 +193,10 @@ rewrite document history; an explicit "undo this run" feature is future work.
    endpoint, persistence hooks, two-client integration test.
 3. **Surfaces and Realtime:** doc/canvas editors, Hocuspocus awareness, restore
    self-hosted Supabase Realtime, private channels/JWT/RLS, shared chat history.
-4. **Agent tools and UI:** typed canvas/doc mutations, run API, `useChat`
-   streaming, queue, cancellation, quota enforcement.
+4. **Agent tools and UI:** the dashboard prompt thread, `createWorkspace` tool,
+   `useChat` streaming, cancellation and quota enforcement are in place
+   ([agent-prompt-thread](agent-prompt-thread.md)); typed canvas/doc mutations
+   and the workspace chat API remain.
 5. **Hardening:** update log/compaction, stale-run reaper, Redis scaling/sticky
    sessions, share links, audit, rate limits.
 
