@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
+import { routes } from "@/lib/routes";
 import { archiveWorkspaceAction } from "@/lib/workspace-actions";
 import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace-status";
 import type { AccountWorkspace } from "@/lib/workspaces";
@@ -16,7 +17,7 @@ import { EditWorkspaceDialog } from "./EditWorkspaceDialog";
 export function WorkspaceCard({ workspace }: { workspace: AccountWorkspace }) {
   return (
     <li className="flex h-full flex-col gap-2 card p-3 transition-colors hover:border-primary/40">
-      <Link href={`/workspace/${workspace.id}`} className="flex flex-col gap-1">
+      <Link href={routes.workspace(workspace.id)} className="flex flex-col gap-1">
         <span className="font-medium">{workspace.name}</span>
         {workspace.description && (
           <span className="line-clamp-2 text-sm text-muted-foreground">

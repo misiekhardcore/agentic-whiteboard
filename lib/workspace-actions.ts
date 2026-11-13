@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getSessionAccount } from "@/lib/account";
+import { routes, signInPath } from "@/lib/routes";
 import { EMPTY_WORKSPACE_FORM_STATE, type WorkspaceFormState } from "@/lib/workspace-form";
 import {
   archiveWorkspaceFor,
@@ -23,7 +24,7 @@ import {
 
 async function requireWorkspaceActor(): Promise<WorkspaceActor> {
   const account = await getSessionAccount();
-  if (!account) redirect("/sign-in?redirectTo=/dashboard");
+  if (!account) redirect(signInPath(routes.dashboard));
 
   return {
     userId: account.session.user.id,
@@ -37,9 +38,9 @@ function formValue(formData: FormData, field: string): string {
 }
 
 function revalidateWorkspace(workspaceId: string): void {
-  revalidatePath("/dashboard");
-  revalidatePath("/workspaces");
-  revalidatePath(`/workspace/${workspaceId}`);
+  revalidatePath(routes.dashboard);
+  revalidatePath(routes.workspaces);
+  revalidatePath(routes.workspace(workspaceId));
 }
 
 function formState(result: WorkspaceMutationResult, notice: string) {
@@ -71,8 +72,8 @@ export async function createWorkspaceAction(
   });
 
   if (result.ok) {
-    revalidatePath("/dashboard");
-    revalidatePath("/workspaces");
+    revalidatePath(routes.dashboard);
+    revalidatePath(routes.workspaces);
   }
 
   return formState(result, `${result.ok ? result.workspace.name : ""} created.`);

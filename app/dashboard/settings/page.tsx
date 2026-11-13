@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 
 import { getSessionAccount } from "@/lib/account";
 import { canManageTeam } from "@/lib/organizations";
+import { routes, signInPath } from "@/lib/routes";
 
 import { OrganizationProfileForm, PersonalProfileForm } from "./_components/profile-forms";
 
@@ -29,7 +30,7 @@ export const instant = false;
  */
 export default async function SettingsPage() {
   const account = await getSessionAccount();
-  if (!account) redirect("/sign-in?redirectTo=/dashboard/settings");
+  if (!account) redirect(signInPath(routes.dashboardSettings));
 
   const { activeTeam, session } = account;
 

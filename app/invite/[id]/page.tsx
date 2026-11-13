@@ -13,6 +13,7 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { getInvitationDetails } from "@/lib/organizations";
+import { routes, signInPath, signUpPath } from "@/lib/routes";
 
 import { AcceptInvitationForm } from "./accept-form";
 
@@ -31,7 +32,8 @@ export default async function InvitationPage({ params }: PageProps<"/invite/[id]
 
   const session = await auth.api.getSession({ headers: await headers() });
   const pending = invitation.status === "pending" && !invitation.expired;
-  const redirectTo = encodeURIComponent(`/invite/${id}`);
+  // Signing in or signing up from here comes back to the invitation.
+  const invitationPath = routes.invite(id);
 
   return (
     <main className="flex flex-1 items-center justify-center overflow-y-auto bg-muted px-4 py-16">
@@ -61,10 +63,10 @@ export default async function InvitationPage({ params }: PageProps<"/invite/[id]
                   Sign in with {invitation.email} to accept the invitation.
                 </p>
                 <Button asChild className="w-full">
-                  <Link href={`/sign-in?redirectTo=${redirectTo}`}>Sign in to accept</Link>
+                  <Link href={signInPath(invitationPath)}>Sign in to accept</Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full">
-                  <Link href={`/sign-up?redirectTo=${redirectTo}`}>Create an account</Link>
+                  <Link href={signUpPath(invitationPath)}>Create an account</Link>
                 </Button>
               </>
             ) : session.user.email.toLowerCase() !== invitation.email.toLowerCase() ? (

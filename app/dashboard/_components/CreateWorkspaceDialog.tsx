@@ -19,6 +19,7 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useCallback, useEffect, useState } from "react";
 
+import { routes } from "@/lib/routes";
 import { createWorkspaceAction } from "@/lib/workspace-actions";
 import { EMPTY_WORKSPACE_FORM_STATE, WORKSPACE_DESCRIPTION_MAX_LENGTH } from "@/lib/workspace-form";
 
@@ -103,7 +104,7 @@ function CreateWorkspaceForm({ onDone }: { onDone: () => void }) {
 
       {state.limitReached && (
         <Button asChild variant="outline" size="sm" className="self-start">
-          <Link href="/dashboard/billing">View plans</Link>
+          <Link href={routes.dashboardBilling}>View plans</Link>
         </Button>
       )}
 

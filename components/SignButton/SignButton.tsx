@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 
 import { auth } from "@/lib/auth";
+import { routes } from "@/lib/routes";
 
 export async function SignButton() {
   const session = await auth.api.getSession({
@@ -13,10 +14,10 @@ export async function SignButton() {
     return (
       <>
         <Button asChild variant="ghost" size="sm">
-          <Link href="/sign-in">Sign in</Link>
+          <Link href={routes.signIn}>Sign in</Link>
         </Button>
         <Button asChild variant="primary" size="sm">
-          <Link href="/sign-up">Get started</Link>
+          <Link href={routes.signUp}>Get started</Link>
         </Button>
       </>
     );

@@ -13,6 +13,7 @@ import { invitation, member } from "@/lib/db/schema";
 import { formString } from "@/lib/form-data";
 import type { TeamFormState } from "@/lib/organization-form";
 import { canManageTeam, getMemberRole } from "@/lib/organizations";
+import { routes, signInPath } from "@/lib/routes";
 
 const MESSAGES: Record<string, string> = {
   ORGANIZATION_ALREADY_EXISTS: "An organization with that name already exists.",
@@ -51,7 +52,7 @@ function slugify(value: string): string {
 
 async function requireSession() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/sign-in?redirectTo=/dashboard/organization");
+  if (!session) redirect(signInPath(routes.dashboardOrganization));
   return session;
 }
 
@@ -79,7 +80,7 @@ export async function createOrganizationAction(
   // Creating an organization makes it the active account, so the header menu
   // and every account-aware page need to render again.
   revalidatePath("/", "layout");
-  redirect("/dashboard/organization");
+  redirect(routes.dashboardOrganization);
 }
 
 /**
@@ -138,7 +139,7 @@ export async function inviteMemberAction(
     return { error: toMessage(error, "Could not send the invitation.") };
   }
 
-  revalidatePath("/dashboard/organization");
+  revalidatePath(routes.dashboardOrganization);
   return { error: null, notice: `Invitation sent to ${email}.` };
 }
 
@@ -186,7 +187,7 @@ export async function updateMemberRoleAction(
     };
   }
 
-  revalidatePath("/dashboard/organization");
+  revalidatePath(routes.dashboardOrganization);
   return { error: null };
 }
 
@@ -204,7 +205,7 @@ export async function cancelInvitationAction(formData: FormData): Promise<void> 
     console.error("[organization] could not cancel invitation:", error);
   }
 
-  revalidatePath("/dashboard/organization");
+  revalidatePath(routes.dashboardOrganization);
 }
 
 export async function removeMemberAction(formData: FormData): Promise<void> {
@@ -256,5 +257,5 @@ export async function acceptInvitationAction(
 
   // A new organization joins the account menu.
   revalidatePath("/", "layout");
-  redirect("/dashboard/organization");
+  redirect(routes.dashboardOrganization);
 }

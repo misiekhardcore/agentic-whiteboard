@@ -23,6 +23,7 @@ import {
   listOrganizationMembers,
   listPendingInvitations,
 } from "@/lib/organizations";
+import { routes, signInPath } from "@/lib/routes";
 
 import {
   CreateOrganizationForm,
@@ -56,7 +57,7 @@ function formatDate(value: Date) {
 export default async function OrganizationPage() {
   const account = await getSessionAccount();
   if (!account) {
-    redirect("/sign-in?redirectTo=/dashboard/organization");
+    redirect(signInPath(routes.dashboardOrganization));
   }
 
   const { teams, activeTeam, session } = account;
@@ -148,10 +149,10 @@ export default async function OrganizationPage() {
           </Badge>
           <div className="ml-auto flex items-center gap-2">
             <Button asChild variant="outline" size="sm">
-              <Link href="/dashboard/settings">Organization settings</Link>
+              <Link href={routes.dashboardSettings}>Organization settings</Link>
             </Button>
             <Button asChild variant="outline" size="sm">
-              <Link href="/dashboard/billing">Billing</Link>
+              <Link href={routes.dashboardBilling}>Billing</Link>
             </Button>
           </div>
         </div>

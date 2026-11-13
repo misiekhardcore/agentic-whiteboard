@@ -8,6 +8,8 @@ import {
 } from "@konopskidev/ui/components/card";
 import Link from "next/link";
 
+import { routes } from "@/lib/routes";
+
 import { ForgotPasswordForm } from "./forgot-password-form";
 
 export const metadata = {
@@ -29,7 +31,7 @@ export default function ForgotPasswordPage() {
       <CardFooter className="justify-center gap-1 text-sm text-muted-foreground">
         <span>Remembered it?</span>
         <Link
-          href="/sign-in"
+          href={routes.signIn}
           className="font-medium text-primary underline underline-offset-4 hover:no-underline"
         >
           Sign in

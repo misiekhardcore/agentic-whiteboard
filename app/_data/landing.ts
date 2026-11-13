@@ -5,6 +5,8 @@
  * layout and the words can be edited without touching markup.
  */
 
+import { routes } from "@/lib/routes";
+
 export const landing = {
   hero: {
     eyebrow: "Early access",
@@ -16,7 +18,7 @@ export const landing = {
     lead: "An infinite canvas where you and your agents sketch, map and refine ideas together — from messy first thought to something you can ship.",
     primaryCta: {
       label: "Start building for free",
-      href: "/sign-up",
+      href: routes.signUp,
     },
     secondaryCta: {
       label: "See how it works",
@@ -133,7 +135,7 @@ export const landing = {
       trail: " to the canvas",
     },
     lead: "Describe it, watch it take shape, and keep going until it’s something you can hand to the team.",
-    primaryCta: { label: "Start building for free", href: "/sign-up" },
+    primaryCta: { label: "Start building for free", href: routes.signUp },
     secondaryCta: { label: "See how it works", href: "#how-it-works" },
   },
 
@@ -152,9 +154,9 @@ export const landing = {
       {
         title: "Account",
         links: [
-          { label: "Start for free", href: "/sign-up" },
-          { label: "Sign in", href: "/sign-in" },
-          { label: "Dashboard", href: "/dashboard" },
+          { label: "Start for free", href: routes.signUp },
+          { label: "Sign in", href: routes.signIn },
+          { label: "Dashboard", href: routes.dashboard },
         ],
       },
     ],

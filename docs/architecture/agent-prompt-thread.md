@@ -34,6 +34,7 @@ Wiring it up needed answers to four questions the schema did not settle:
 | Workspace operations | One catalog in `lib/workspace-service.ts` | The dialog and the tool enforce the same validation, quota, advisory lock and permission rules; server actions only authenticate and revalidate. |
 | Transport | `POST /api/agent/prompts` streaming AI SDK UI messages | One endpoint persists the prompt, streams the reply, records usage and closes the row, including Stop and provider errors. |
 | Rendering | Agent text renders as markdown; each tool call is a line in the thread | The model answers in markdown, and a person must see which tool ran, on what, and whether it worked — not only the prose that followed. |
+| Links | Every path comes from `lib/routes`, and `createWorkspace` returns the new workspace's `link` | A route that moves is one edit rather than a search for string fragments, and the agent can point at what it created instead of describing where it might be. |
 | Concurrency | One `QUEUED`/`RUNNING` prompt per person's dashboard thread | Two streams over one conversation would interleave replies. A partial unique index enforces it; a second send gets 409 instead of a second run. |
 | Stale prompts | `QUEUED`/`RUNNING` older than 15 minutes is retired on the next send | A crashed process must not block the thread permanently. |
 | Test provider | `AI_PROVIDER=stub` scripted model | E2E needs a deterministic model that can also call a tool, without a GPU or a hosted key. Every reply is prefixed so a demo is not mistaken for a real answer. |
