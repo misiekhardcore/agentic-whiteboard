@@ -22,8 +22,8 @@ describe("routes", () => {
     }
 
     expect(staticPaths.length).toBeGreaterThan(0);
-    for (const [name, path] of staticPaths) {
-      expect(path, name).toMatch(/^\/(?:[a-z0-9-]+(?:\/[a-z0-9-]+)*)?$/);
+    for (const [, path] of staticPaths) {
+      expect(path).toMatch(/^\/(?:[a-z0-9-]+(?:\/[a-z0-9-]+)*)?$/);
     }
   });
 });

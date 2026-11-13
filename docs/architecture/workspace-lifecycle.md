@@ -17,19 +17,19 @@ mishears a workspace name should not be able to erase one.
 
 ## Decisions
 
-| Area | Decision | Why |
-| --- | --- | --- |
-| Removal | Two stages: archive, then delete | Archiving is reversible and is the confirmation that the workspace should leave the list; deleting is permanent and only allowed afterwards. |
-| Delete guard | `archivedAt` must be set, checked in the catalog and repeated in the `DELETE`'s `WHERE` | A restore that lands between the check and the write makes the statement match nothing, so an active workspace cannot be deleted by a stale request. |
-| Delete scope | Edit permission on the workspace's own account | Same authorization as every other mutation; the account comes from the workspace row, never from a request body or the model. |
-| Delete effect | The workspace row and, by cascade, its document, canvas and agent prompt history | The schema already declares `onDelete: "cascade"`; a hard delete is meant to leave nothing behind. |
-| Agent writes | Create, list, read, update, restore | These are the operations a conversation can carry out without asking. |
-| Agent removals | Archive and delete are proposed, never executed unconfirmed | Both remove something the person can see, so the tool call parks and the person answers an Approve/Deny card before anything changes. The capability is `approval: "always"` ([capabilities](capabilities.md)). |
-| Approval integrity | Approval requests are signed with `AI_TOOL_APPROVAL_SECRET` | The answer travels through the browser; without a signature a client could approve a request it was never shown. When the secret is unset the two tools are not offered. |
-| Restore | Allowed to the agent | It is the undo of the person's own archive action, not a removal. |
-| Partial update | Every field optional; the current row supplies the rest | A model that sends only a new name must not blank the description or reset the stage. The merged draft is validated once. |
-| Links | Every tool result that names a workspace includes its `link` | The agent answers with a markdown link to `/workspace/:id` instead of describing where it might be. |
-| Stop | Every mutating tool forwards the run's abort signal | A prompt the person stopped must not keep changing workspaces; the catalog checks the signal before it writes. |
+| Area               | Decision                                                                                | Why                                                                                                                                                                                                             |
+| ------------------ | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Removal            | Two stages: archive, then delete                                                        | Archiving is reversible and is the confirmation that the workspace should leave the list; deleting is permanent and only allowed afterwards.                                                                    |
+| Delete guard       | `archivedAt` must be set, checked in the catalog and repeated in the `DELETE`'s `WHERE` | A restore that lands between the check and the write makes the statement match nothing, so an active workspace cannot be deleted by a stale request.                                                            |
+| Delete scope       | Edit permission on the workspace's own account                                          | Same authorization as every other mutation; the account comes from the workspace row, never from a request body or the model.                                                                                   |
+| Delete effect      | The workspace row and, by cascade, its document, canvas and agent prompt history        | The schema already declares `onDelete: "cascade"`; a hard delete is meant to leave nothing behind.                                                                                                              |
+| Agent writes       | Create, list, read, update, restore                                                     | These are the operations a conversation can carry out without asking.                                                                                                                                           |
+| Agent removals     | Archive and delete are proposed, never executed unconfirmed                             | Both remove something the person can see, so the tool call parks and the person answers an Approve/Deny card before anything changes. The capability is `approval: "always"` ([capabilities](capabilities.md)). |
+| Approval integrity | Approval requests are signed with `AI_TOOL_APPROVAL_SECRET`                             | The answer travels through the browser; without a signature a client could approve a request it was never shown. When the secret is unset the two tools are not offered.                                        |
+| Restore            | Allowed to the agent                                                                    | It is the undo of the person's own archive action, not a removal.                                                                                                                                               |
+| Partial update     | Every field optional; the current row supplies the rest                                 | A model that sends only a new name must not blank the description or reset the stage. The merged draft is validated once.                                                                                       |
+| Links              | Every tool result that names a workspace includes its `link`                            | The agent answers with a markdown link to `/workspace/:id` instead of describing where it might be.                                                                                                             |
+| Stop               | Every mutating tool forwards the run's abort signal                                     | A prompt the person stopped must not keep changing workspaces; the catalog checks the signal before it writes.                                                                                                  |
 
 ## Consequences
 

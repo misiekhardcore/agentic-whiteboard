@@ -79,7 +79,7 @@ describe("createWorkspace tool", () => {
       workspace: { id: "ws_1", name: "Food delivery", status: "PLANNING" },
     });
 
-    const output = await createWorkspaceTools(actor).createWorkspace.execute?.(
+    const output: unknown = await createWorkspaceTools(actor).createWorkspace.execute?.(
       { name: "Food delivery" },
       callOptions,
     );
@@ -102,7 +102,7 @@ describe("createWorkspace tool", () => {
       fieldErrors: { name: "Name your workspace." },
     });
 
-    const output = await createWorkspaceTools(actor).createWorkspace.execute?.(
+    const output: unknown = await createWorkspaceTools(actor).createWorkspace.execute?.(
       { name: "" },
       callOptions,
     );
@@ -128,7 +128,7 @@ describe("read tools", () => {
       },
     ]);
 
-    const output = await createWorkspaceTools(actor).listWorkspaces.execute?.(
+    const output: unknown = await createWorkspaceTools(actor).listWorkspaces.execute?.(
       { includeArchived: true },
       callOptions,
     );
@@ -154,15 +154,14 @@ describe("read tools", () => {
   it("reports a workspace it cannot read without inventing one", async () => {
     service.authorizeWorkspace.mockResolvedValue(null);
 
-    const output = await createWorkspaceTools(actor).getWorkspace.execute?.(
+    const output: unknown = await createWorkspaceTools(actor).getWorkspace.execute?.(
       { workspaceId: "ws_other" },
       callOptions,
     );
 
-    expect(output).toMatchObject({
-      ok: false,
-      error: expect.stringContaining("could not be found"),
-    });
+    expect(output).toMatchObject({ ok: false });
+    const { error } = output as { error?: string };
+    expect(error).toContain("could not be found");
   });
 });
 
@@ -175,7 +174,7 @@ describe("updateWorkspace tool", () => {
       workspace: { id: "ws_1", name: "Launch", status: "PLANNING" },
     });
 
-    const output = await createWorkspaceTools(actor).updateWorkspace.execute?.(
+    const output: unknown = await createWorkspaceTools(actor).updateWorkspace.execute?.(
       { workspaceId: "ws_1", name: "Launch" },
       { ...callOptions, abortSignal },
     );

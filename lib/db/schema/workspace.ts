@@ -6,7 +6,6 @@ import { WORKSPACE_STATUSES } from "../../workspace-status";
 
 import { agentMessages } from "./agentMessage";
 import { agentPrompts } from "./agentPrompt";
-import { agentRuns } from "./agentRun";
 import { user } from "./auth";
 import { canvases } from "./canvas";
 import { docs } from "./doc";
@@ -59,6 +58,5 @@ export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
   doc: one(docs),
   canvas: one(canvases),
   agentPrompts: many(agentPrompts),
-  agentRuns: many(agentRuns),
   agentMessages: many(agentMessages),
 }));

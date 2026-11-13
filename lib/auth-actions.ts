@@ -7,9 +7,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import type { AuthFormState } from "@/lib/auth-form";
 import { DEFAULT_REDIRECT, safeRedirectTo } from "@/lib/auth-redirect";
+import { formString } from "@/lib/form-data";
 import { routes } from "@/lib/routes";
-
-import { formString } from "./form-data";
 
 const MESSAGES: Record<string, string> = {
   INVALID_EMAIL: "Enter a valid email address.",

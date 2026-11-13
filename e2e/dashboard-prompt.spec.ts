@@ -51,26 +51,26 @@ async function withDb<T>(work: (db: Client) => Promise<T>): Promise<T> {
 /** `undefined` means the row is gone; `null` means it exists and is active. */
 async function workspaceArchivedAt(email: string, name: string): Promise<Date | null | undefined> {
   return withDb(async (db) => {
-    const { rows } = await db.query(
+    const { rows } = await db.query<{ archivedAt: Date | null }>(
       `select "archivedAt" from workspace
         where name = $1
           and "creatorId" = (select id from "user" where email = $2)`,
       [name, email],
     );
 
-    return rows[0] ? (rows[0].archivedAt as Date | null) : undefined;
+    return rows[0] ? rows[0].archivedAt : undefined;
   });
 }
 
 async function promptCount(email: string): Promise<number> {
   return withDb(async (db) => {
-    const { rows } = await db.query(
+    const { rows } = await db.query<{ total: number }>(
       `select count(*)::int as total from "agentPrompt"
         where "userId" = (select id from "user" where email = $1)`,
       [email],
     );
 
-    return (rows[0]?.total as number | undefined) ?? 0;
+    return rows[0]?.total ?? 0;
   });
 }
 
