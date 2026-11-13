@@ -1,10 +1,10 @@
 import { planFacts } from "@/lib/billing/details";
 import { getSessionBillingOverview } from "@/lib/billing/overview";
+import { limitLabels } from "@/lib/billing/plans";
 
 import { BillingDetails } from "./billing-details";
 import { UpgradeControl } from "./upgrade-control";
 import { UsageMeter } from "./usage-meter";
-import { limitLabels } from "@/lib/billing/plans";
 
 /**
  * The header's account chrome: the signed-in user's prompt allowance for the
@@ -35,11 +35,7 @@ export async function HeaderBilling() {
         subscription={subscription}
         organizationId={overview.organizationId}
         canManageBilling={overview.canManageBilling}
-        upgradeHref={
-          overview.organizationId
-            ? "/?billing=team#pricing"
-            : "/#pricing"
-        }
+        upgradeHref={overview.organizationId ? "/?billing=team#pricing" : "/#pricing"}
       />
       <UsageMeter
         label={limitLabels.agentPromptsPerMonth}

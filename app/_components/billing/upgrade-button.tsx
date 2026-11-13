@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@konopskidev/ui/components/alert";
+import { Alert, AlertDescription, AlertTitle } from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import {
   Dialog,
@@ -14,12 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@konopskidev/ui/components/dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@konopskidev/ui/components/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@konopskidev/ui/components/tabs";
 import { Sparkles, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -27,26 +18,21 @@ import { useState } from "react";
 import { PlanCard } from "@/app/_components/billing/plan-card";
 import { CheckoutSheet } from "@/app/_components/landing/checkout-sheet";
 import {
+  type BillingAudience,
   getPlan,
   isPaidPlan,
-  plansForAudience,
-  planServesAudience,
-  type BillingAudience,
   type Plan,
   type PlanId,
+  planServesAudience,
+  plansForAudience,
   type UpgradeReason,
 } from "@/lib/billing/plans";
 import type { TeamOption } from "@/lib/organizations";
 import { cn } from "@/lib/utils";
 
 /** Paid plans for a tab, minus the plan the account is already on. */
-function plansFor(
-  audience: BillingAudience,
-  currentPlanId: PlanId,
-): Plan[] {
-  return plansForAudience(audience).filter(
-    (plan) => isPaidPlan(plan) && plan.id !== currentPlanId,
-  );
+function plansFor(audience: BillingAudience, currentPlanId: PlanId): Plan[] {
+  return plansForAudience(audience).filter((plan) => isPaidPlan(plan) && plan.id !== currentPlanId);
 }
 
 export function UpgradeButton({
@@ -71,9 +57,7 @@ export function UpgradeButton({
   triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [selectedPlanId, setSelectedPlanId] = useState<PlanId | null>(
-    null,
-  );
+  const [selectedPlanId, setSelectedPlanId] = useState<PlanId | null>(null);
 
   const personalPlans = plansFor("personal", currentPlanId);
   const teamPlans = plansFor("team", currentPlanId);
@@ -82,8 +66,7 @@ export function UpgradeButton({
   // An organization's limit is paid for by the organization, so personal plans
   // are not an answer there. A personal account can still put the work on a
   // team, which is why both tabs are offered in that case.
-  const showPersonal =
-    activeAudience === "personal" && personalPlans.length > 0;
+  const showPersonal = activeAudience === "personal" && personalPlans.length > 0;
   const showTeam = teamPlans.length > 0;
 
   const defaultTab: BillingAudience =
@@ -109,9 +92,7 @@ export function UpgradeButton({
   const changeMode = isPlanChange(selectedPlan);
 
   function ctaLabel(plan: Plan): string {
-    return isPlanChange(plan)
-      ? `Switch to ${plan.name}`
-      : `Upgrade to ${plan.name}`;
+    return isPlanChange(plan) ? `Switch to ${plan.name}` : `Upgrade to ${plan.name}`;
   }
 
   function choosePlan(plan: Plan) {
@@ -141,8 +122,7 @@ export function UpgradeButton({
           <DialogHeader>
             <DialogTitle>Upgrade your plan</DialogTitle>
             <DialogDescription>
-              You’ve reached a limit on {accountName}. Choose a plan to
-              keep going.
+              You’ve reached a limit on {accountName}. Choose a plan to keep going.
             </DialogDescription>
           </DialogHeader>
 
@@ -151,24 +131,21 @@ export function UpgradeButton({
               <Alert key={reason.title}>
                 <TriangleAlert aria-hidden="true" />
                 <AlertTitle>{reason.title}</AlertTitle>
-                <AlertDescription>
-                  {reason.description}
-                </AlertDescription>
+                <AlertDescription>{reason.description}</AlertDescription>
               </Alert>
             ))}
           </div>
 
           {!canManageBilling && (
             <p className="text-sm text-muted-foreground">
-              Only organization owners and admins can change billing. Ask an
-              owner to upgrade {accountName}.
+              Only organization owners and admins can change billing. Ask an owner to upgrade{" "}
+              {accountName}.
             </p>
           )}
 
           {!hasAnyPlan ? (
             <p className="text-sm text-muted-foreground">
-              You’re on the highest plan for this account. Manage the
-              subscription from{" "}
+              You’re on the highest plan for this account. Manage the subscription from{" "}
               <Link
                 href="/dashboard/billing"
                 className="underline underline-offset-3"
@@ -181,9 +158,7 @@ export function UpgradeButton({
           ) : (
             <Tabs
               value={activeTab}
-              onValueChange={(value) =>
-                setTab(value as BillingAudience)
-              }
+              onValueChange={(value) => setTab(value as BillingAudience)}
               className="gap-3"
             >
               {showPersonal && showTeam && (
@@ -206,10 +181,7 @@ export function UpgradeButton({
               )}
 
               {showTeam && (
-                <TabsContent
-                  value="team"
-                  className="flex flex-col gap-3"
-                >
+                <TabsContent value="team" className="flex flex-col gap-3">
                   <PlanGrid
                     plans={teamPlans}
                     disabled={!canManageBilling}
@@ -217,21 +189,19 @@ export function UpgradeButton({
                     onChoose={choosePlan}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Team plans give every member their own prompt
-                    allowance and include unlimited workspaces. Billed
-                    per member with unlimited seats.
+                    Team plans give every member their own prompt allowance and include unlimited
+                    workspaces. Billed per member with unlimited seats.
                   </p>
                 </TabsContent>
               )}
             </Tabs>
           )}
 
-          {activeAudience === "personal" &&
-            personalPlans.length === 0 && (
-              <p className="text-xs text-muted-foreground">
-                {`${getPlan(currentPlanId)?.name ?? "Your plan"} is the highest personal plan. A team plan is the next step for more prompts.`}
-              </p>
-            )}
+          {activeAudience === "personal" && personalPlans.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              {`${getPlan(currentPlanId)?.name ?? "Your plan"} is the highest personal plan. A team plan is the next step for more prompts.`}
+            </p>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -266,12 +236,7 @@ function PlanGrid({
   onChoose: (plan: Plan) => void;
 }) {
   return (
-    <div
-      className={cn(
-        "grid gap-3",
-        plans.length > 1 ? "sm:grid-cols-2" : undefined,
-      )}
-    >
+    <div className={cn("grid gap-3", plans.length > 1 ? "sm:grid-cols-2" : undefined)}>
       {plans.map((plan) => {
         const featured = plan.id === featuredId;
 

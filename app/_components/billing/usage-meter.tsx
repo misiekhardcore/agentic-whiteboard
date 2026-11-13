@@ -34,16 +34,11 @@ export function UsageMeter({
   className?: string;
 }) {
   const unlimited = limit === null;
-  const percent = unlimited
-    ? 0
-    : Math.min(100, Math.round((used / Math.max(limit, 1)) * 100));
+  const percent = unlimited ? 0 : Math.min(100, Math.round((used / Math.max(limit, 1)) * 100));
   const atLimit = !unlimited && used >= limit;
 
   return (
-    <div
-      className={cn("flex min-w-0 flex-col gap-1.5", className)}
-      title={title}
-    >
+    <div className={cn("flex min-w-0 flex-col gap-1.5", className)} title={title}>
       <div className="flex items-baseline justify-between gap-3">
         <span className="flex min-w-0 items-baseline gap-1.5 text-xs font-medium text-muted-foreground">
           {prefix}
@@ -65,9 +60,7 @@ export function UsageMeter({
         <Progress
           value={percent}
           aria-label={`${label} usage`}
-          aria-valuetext={
-            unlimited ? "Unlimited" : `${used} of ${limit} used`
-          }
+          aria-valuetext={unlimited ? "Unlimited" : `${used} of ${limit} used`}
           className={cn(
             "h-1.5",
             atLimit

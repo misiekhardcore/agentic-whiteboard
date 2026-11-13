@@ -20,46 +20,38 @@ const config: AiConfig = {
 };
 
 function stubCompletion(requests: CapturedRequest[]) {
-  const fetchMock = vi.fn(
-    async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url =
-        typeof input === "string"
-          ? input
-          : input instanceof URL
-            ? input.toString()
-            : input.url;
+  const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url =
+      typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
-      requests.push({
-        url,
-        body:
-          typeof init?.body === "string"
-            ? (JSON.parse(init.body) as Record<string, unknown>)
-            : {},
-        headers: new Headers(init?.headers),
-      });
+    requests.push({
+      url,
+      body:
+        typeof init?.body === "string" ? (JSON.parse(init.body) as Record<string, unknown>) : {},
+      headers: new Headers(init?.headers),
+    });
 
-      return new Response(
-        JSON.stringify({
-          id: "chatcmpl-test",
-          object: "chat.completion",
-          created: 0,
-          model: config.model,
-          choices: [
-            {
-              index: 0,
-              message: { role: "assistant", content: "OK" },
-              finish_reason: "stop",
-            },
-          ],
-          usage: { prompt_tokens: 3, completion_tokens: 1, total_tokens: 4 },
-        }),
-        {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        },
-      );
-    },
-  );
+    return new Response(
+      JSON.stringify({
+        id: "chatcmpl-test",
+        object: "chat.completion",
+        created: 0,
+        model: config.model,
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "OK" },
+            finish_reason: "stop",
+          },
+        ],
+        usage: { prompt_tokens: 3, completion_tokens: 1, total_tokens: 4 },
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  });
 
   vi.stubGlobal("fetch", fetchMock);
 }
@@ -81,9 +73,7 @@ describe("getLanguageModel", () => {
 
     expect(result.text).toBe("OK");
     expect(requests).toHaveLength(1);
-    expect(requests[0].url).toBe(
-      "http://127.0.0.1:9876/v1/chat/completions",
-    );
+    expect(requests[0].url).toBe("http://127.0.0.1:9876/v1/chat/completions");
     expect(requests[0].body.model).toBe("local/test-model");
     expect(requests[0].headers.get("authorization")).toBe("Bearer test-key");
   });

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { plans, BILLING_CURRENCY } from "./plans";
+import { BILLING_CURRENCY, plans } from "./plans";
 import { appUrl, BillingConfigurationError, lineItemForPlan } from "./stripe";
 
 afterEach(() => {
@@ -21,9 +21,7 @@ describe("checkout line items", () => {
   });
 
   it("enforces the catalog currency on the Stripe request", () => {
-    expect(lineItemForPlan(plans.team).price_data?.currency).toBe(
-      BILLING_CURRENCY,
-    );
+    expect(lineItemForPlan(plans.team).price_data?.currency).toBe(BILLING_CURRENCY);
     expect(BILLING_CURRENCY).toMatch(/^[a-z]{3}$/);
   });
 
@@ -39,9 +37,7 @@ describe("checkout line items", () => {
   });
 
   it("refuses to build a line item for a free plan", () => {
-    expect(() => lineItemForPlan(plans.free)).toThrow(
-      BillingConfigurationError,
-    );
+    expect(() => lineItemForPlan(plans.free)).toThrow(BillingConfigurationError);
     expect(() => lineItemForPlan(plans.free)).toThrow(/free plan/);
   });
 });

@@ -90,26 +90,21 @@ export function BillingDetails({
                 <Link href={upgradeHref}>Upgrade plan</Link>
               </Button>
               <p className="text-xs text-muted-foreground">
-                {accountName} is on the free plan. Upgrading keeps the account
-                and its work as it is.
+                {accountName} is on the free plan. Upgrading keeps the account and its work as it
+                is.
               </p>
             </div>
           ) : canManageBilling ? (
             <div className="flex flex-col gap-2">
-              <CancelSubscriptionButton
-                organizationId={organizationId}
-                className="w-full"
-              />
+              <CancelSubscriptionButton organizationId={organizationId} className="w-full" />
               <p className="text-xs text-muted-foreground">
-                You’ll confirm the cancellation in the secure Stripe billing
-                portal. Access continues until the end of the period you’ve
-                paid for.
+                You’ll confirm the cancellation in the secure Stripe billing portal. Access
+                continues until the end of the period you’ve paid for.
               </p>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Only organization owners and admins can cancel {accountName}’s
-              subscription.
+              Only organization owners and admins can cancel {accountName}’s subscription.
             </p>
           )}
 
@@ -126,18 +121,9 @@ export function BillingDetails({
 
         <SheetFooter className="border-t">
           <dl className="flex flex-col gap-3 text-xs">
-            <FooterItem
-              label="Current billing cycle"
-              value={facts.billingCycle ?? "—"}
-            />
-            <FooterItem
-              label="Next payment on"
-              value={facts.nextPaymentOn ?? "—"}
-            />
-            <FooterItem
-              label="Next payment amount"
-              value={facts.nextPaymentAmount ?? "—"}
-            />
+            <FooterItem label="Current billing cycle" value={facts.billingCycle ?? "—"} />
+            <FooterItem label="Next payment on" value={facts.nextPaymentOn ?? "—"} />
+            <FooterItem label="Next payment amount" value={facts.nextPaymentAmount ?? "—"} />
           </dl>
         </SheetFooter>
       </SheetContent>

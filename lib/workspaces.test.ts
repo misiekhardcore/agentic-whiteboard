@@ -4,14 +4,14 @@ vi.mock("@/lib/db", () => ({ db: {} }));
 
 import {
   isWorkspaceStatus,
-  WORKSPACE_STATUSES,
   WORKSPACE_STATUS_LABELS,
+  WORKSPACE_STATUSES,
 } from "@/lib/workspace-status";
 import {
   mergeRecentItems,
-  workspacePermission,
   type RecentWorkspaceItem,
   type WorkspaceAccess,
+  workspacePermission,
 } from "@/lib/workspaces";
 
 function access(overrides: Partial<WorkspaceAccess> = {}): WorkspaceAccess {
@@ -56,9 +56,7 @@ describe("workspace permission", () => {
   });
 });
 
-function recentItem(
-  overrides: Partial<RecentWorkspaceItem> = {},
-): RecentWorkspaceItem {
+function recentItem(overrides: Partial<RecentWorkspaceItem> = {}): RecentWorkspaceItem {
   return {
     key: "workspace:ws_1",
     type: "workspace",

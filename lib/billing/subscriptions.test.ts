@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type Stripe from "stripe";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BILLING_CURRENCY } from "./plans";
+import { applyStripeSubscription } from "./subscriptions";
 
 const mocks = vi.hoisted(() => ({
   values: vi.fn(),
@@ -18,8 +19,6 @@ vi.mock("@/lib/db", () => ({
     }),
   },
 }));
-
-import { applyStripeSubscription } from "./subscriptions";
 
 /** A subscription shaped like the one Checkout creates, minus the noise. */
 function stripeSubscription({

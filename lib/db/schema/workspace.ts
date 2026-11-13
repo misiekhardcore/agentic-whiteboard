@@ -1,25 +1,17 @@
-import {
-  doublePrecision,
-  index,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 import { relations } from "drizzle-orm";
+import { doublePrecision, index, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+
 import { WORKSPACE_STATUSES } from "../../workspace-status";
-import { user } from "./auth";
-import { docs } from "./doc";
-import { canvases } from "./canvas";
+
+import { agentMessages } from "./agentMessage";
 import { agentPrompts } from "./agentPrompt";
 import { agentRuns } from "./agentRun";
-import { agentMessages } from "./agentMessage";
+import { user } from "./auth";
+import { canvases } from "./canvas";
+import { docs } from "./doc";
 
-export const workspaceStatusEnum = pgEnum(
-  "WorkspaceStatus",
-  WORKSPACE_STATUSES,
-);
+export const workspaceStatusEnum = pgEnum("WorkspaceStatus", WORKSPACE_STATUSES);
 
 export const workspaces = pgTable(
   "workspace",
@@ -46,9 +38,7 @@ export const workspaces = pgTable(
      */
     archivedAt: timestamp("archivedAt", { precision: 3, mode: "date" }),
 
-    createdAt: timestamp("createdAt", { precision: 3, mode: "date" })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).defaultNow().notNull(),
 
     updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" })
       .defaultNow()
@@ -61,17 +51,14 @@ export const workspaces = pgTable(
   ],
 );
 
-export const workspacesRelations = relations(
-  workspaces,
-  ({ one, many }) => ({
-    creator: one(user, {
-      fields: [workspaces.creatorId],
-      references: [user.id],
-    }),
-    doc: one(docs),
-    canvas: one(canvases),
-    agentPrompts: many(agentPrompts),
-    agentRuns: many(agentRuns),
-    agentMessages: many(agentMessages),
+export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
+  creator: one(user, {
+    fields: [workspaces.creatorId],
+    references: [user.id],
   }),
-);
+  doc: one(docs),
+  canvas: one(canvases),
+  agentPrompts: many(agentPrompts),
+  agentRuns: many(agentRuns),
+  agentMessages: many(agentMessages),
+}));

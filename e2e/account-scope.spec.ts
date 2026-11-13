@@ -1,6 +1,5 @@
+import { expect, type Page, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-
-import { expect, test, type Page } from "@playwright/test";
 import { Client } from "pg";
 
 /**
@@ -11,11 +10,7 @@ import { Client } from "pg";
 
 async function signUp(
   page: Page,
-  {
-    name,
-    email,
-    password,
-  }: { name: string; email: string; password: string },
+  { name, email, password }: { name: string; email: string; password: string },
 ) {
   await page.goto("/sign-up");
   await page.getByLabel("Name").fill(name);
@@ -32,9 +27,9 @@ async function signUp(
 async function openTeamPlanSheet(page: Page) {
   await expect(async () => {
     await page.getByRole("tab", { name: "Team" }).click();
-    await expect(
-      page.getByRole("tab", { name: "Team" }),
-    ).toHaveAttribute("aria-selected", "true", { timeout: 2_000 });
+    await expect(page.getByRole("tab", { name: "Team" })).toHaveAttribute("aria-selected", "true", {
+      timeout: 2_000,
+    });
   }).toPass({ timeout: 30_000 });
 
   await expect(async () => {
@@ -46,18 +41,14 @@ async function openTeamPlanSheet(page: Page) {
 }
 
 async function findUserId(db: Client, email: string): Promise<string> {
-  const { rows } = await db.query<{ id: string }>(
-    'select id from "user" where email = $1',
-    [email],
-  );
+  const { rows } = await db.query<{ id: string }>('select id from "user" where email = $1', [
+    email,
+  ]);
   if (!rows[0]) throw new Error(`No user row for ${email}`);
   return rows[0].id;
 }
 
-async function findOrganizationId(
-  db: Client,
-  userId: string,
-): Promise<string> {
+async function findOrganizationId(db: Client, userId: string): Promise<string> {
   const { rows } = await db.query<{ id: string }>(
     `select o.id
        from organization o
@@ -80,15 +71,15 @@ async function insertWorkspace(
     organizationId: string | null;
   },
 ) {
-  await db.query(
-    'insert into workspace (id, name, "creatorId", "orgId") values ($1, $2, $3, $4)',
-    [workspace.id, workspace.name, workspace.userId, workspace.organizationId],
-  );
+  await db.query('insert into workspace (id, name, "creatorId", "orgId") values ($1, $2, $3, $4)', [
+    workspace.id,
+    workspace.name,
+    workspace.userId,
+    workspace.organizationId,
+  ]);
 }
 
-test("personal and organization accounts stay separate", async ({
-  page,
-}) => {
+test("personal and organization accounts stay separate", async ({ page }) => {
   const id = randomUUID().slice(0, 8);
   const email = `e2e-account-${id}@example.com`;
   const password = `e2e-pass-${id}`;
@@ -110,9 +101,7 @@ test("personal and organization accounts stay separate", async ({
       await signUp(page, { name: userName, email, password });
 
       await expect(page.getByText("Personal account.")).toBeVisible();
-      await expect(
-        page.getByText("No workspaces in Personal account"),
-      ).toBeVisible();
+      await expect(page.getByText("No workspaces in Personal account")).toBeVisible();
     });
 
     await test.step("personal workspaces appear only in the personal account", async () => {
@@ -126,18 +115,14 @@ test("personal and organization accounts stay separate", async ({
 
       await page.reload();
 
-      await expect(
-        page.getByRole("heading", { name: "Latest in Personal account" }),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Latest in Personal account" })).toBeVisible();
       await expect(page.getByText(personalWorkspace)).toBeVisible();
     });
 
     await test.step("creating an organization activates it and scopes its workspaces", async () => {
       await page.goto("/dashboard/organization");
       await page.getByLabel("Organization name").fill(teamName);
-      await page
-        .getByRole("button", { name: "Create organization" })
-        .click();
+      await page.getByRole("button", { name: "Create organization" }).click();
 
       // Wait for the server action to finish before reading the new row.
       await expect(page.getByText(teamName).first()).toBeVisible({
@@ -155,39 +140,25 @@ test("personal and organization accounts stay separate", async ({
 
       await page.goto("/dashboard");
 
-      await expect(
-        page.getByText(`Working in ${teamName}.`),
-      ).toBeVisible();
-      await expect(
-        page.getByRole("heading", { name: `Latest in ${teamName}` }),
-      ).toBeVisible();
+      await expect(page.getByText(`Working in ${teamName}.`)).toBeVisible();
+      await expect(page.getByRole("heading", { name: `Latest in ${teamName}` })).toBeVisible();
       await expect(page.getByText(organizationWorkspace)).toBeVisible();
       await expect(page.getByText(personalWorkspace)).toHaveCount(0);
     });
 
     await test.step("the organization page has no selector; the account menu switches", async () => {
       await page.goto("/dashboard/organization");
-      await expect(
-        page.getByRole("heading", { name: teamName }),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { name: teamName })).toBeVisible();
       await expect(page.getByLabel("Active account")).toHaveCount(0);
 
-      await page
-        .getByRole("button", { name: /Account menu for/ })
-        .click();
-      await page
-        .getByRole("button", { name: /Personal account/ })
-        .click();
+      await page.getByRole("button", { name: /Account menu for/ }).click();
+      await page.getByRole("button", { name: /Personal account/ }).click();
 
       await expect(page.getByText("Your organizations")).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "Manage" }),
-      ).toBeVisible();
+      await expect(page.getByRole("button", { name: "Manage" })).toBeVisible();
 
       await page.goto("/dashboard");
-      await expect(
-        page.getByRole("heading", { name: "Latest in Personal account" }),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Latest in Personal account" })).toBeVisible();
       await expect(page.getByText(personalWorkspace)).toBeVisible();
       await expect(page.getByText(organizationWorkspace)).toHaveCount(0);
     });
@@ -197,15 +168,9 @@ test("personal and organization accounts stay separate", async ({
       await openTeamPlanSheet(page);
 
       const sheet = page.getByRole("dialog");
-      await expect(sheet.getByLabel("Organization")).toContainText(
-        "Choose an organization",
-      );
-      await sheet
-        .getByRole("button", { name: /continue to secure checkout/i })
-        .click();
-      await expect(
-        sheet.getByText("Choose an organization to continue."),
-      ).toBeVisible();
+      await expect(sheet.getByLabel("Organization")).toContainText("Choose an organization");
+      await sheet.getByRole("button", { name: /continue to secure checkout/i }).click();
+      await expect(sheet.getByText("Choose an organization to continue.")).toBeVisible();
 
       // The API must not silently fall back to the first organization either.
       const refused = await page.request.post("/api/billing/checkout", {
@@ -222,33 +187,21 @@ test("personal and organization accounts stay separate", async ({
     await test.step("opening the organization defaults team checkout to it", async () => {
       await page.goto("/dashboard/organization");
       await expect(page.getByText("Your organizations")).toBeVisible();
-      await page
-        .getByRole("button", { name: /Account menu for/ })
-        .click();
-      await page
-        .getByRole("button", { name: new RegExp(teamName) })
-        .click();
-      await expect(
-        page.getByRole("heading", { name: teamName }),
-      ).toBeVisible();
+      await page.getByRole("button", { name: /Account menu for/ }).click();
+      await page.getByRole("button", { name: new RegExp(teamName) }).click();
+      await expect(page.getByRole("heading", { name: teamName })).toBeVisible();
 
       // The organization's plan lives on the billing page, which now owns it
       // rather than the members page.
       await page.goto("/dashboard/billing");
-      await expect(
-        page.getByText("Plan", { exact: true }),
-      ).toBeVisible();
-      await expect(
-        page.getByText(`Plan, usage and invoices for ${teamName}`),
-      ).toBeVisible();
+      await expect(page.getByText("Plan", { exact: true })).toBeVisible();
+      await expect(page.getByText(`Plan, usage and invoices for ${teamName}`)).toBeVisible();
 
       await page.goto("/#pricing");
       await openTeamPlanSheet(page);
 
       const sheet = page.getByRole("dialog");
-      await expect(sheet.getByLabel("Organization")).toContainText(
-        teamName,
-      );
+      await expect(sheet.getByLabel("Organization")).toContainText(teamName);
       await expect(sheet.getByLabel("Seats")).toHaveValue("1");
 
       await page.keyboard.press("Escape");
@@ -263,9 +216,7 @@ test("personal and organization accounts stay separate", async ({
 
     if (organizationId) {
       await db
-        .query("delete from organization where id = $1", [
-          organizationId,
-        ])
+        .query("delete from organization where id = $1", [organizationId])
         .catch(() => undefined);
     }
 
@@ -281,9 +232,7 @@ test("personal and organization accounts stay separate", async ({
       )
       .catch(() => undefined);
 
-    await db
-      .query('delete from "user" where email = $1', [email])
-      .catch(() => undefined);
+    await db.query('delete from "user" where email = $1', [email]).catch(() => undefined);
 
     await db.end();
   }

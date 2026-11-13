@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-
 import { Badge } from "@konopskidev/ui/components/badge";
 import {
   Card,
@@ -8,14 +6,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@konopskidev/ui/components/card";
+import { redirect } from "next/navigation";
 
 import { getSessionAccount } from "@/lib/account";
 import { canManageTeam } from "@/lib/organizations";
 
-import {
-  OrganizationProfileForm,
-  PersonalProfileForm,
-} from "./_components/profile-forms";
+import { OrganizationProfileForm, PersonalProfileForm } from "./_components/profile-forms";
 
 export const metadata = {
   title: "Settings",
@@ -42,11 +38,9 @@ export default async function SettingsPage() {
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-h2 font-semibold">Settings</h1>
         <p className="text-sm text-muted-foreground">
-          {activeTeam
-            ? `Profile settings for ${activeTeam.name}.`
-            : "Your personal profile."}{" "}
-          Use the account menu on your avatar to switch between your
-          personal account and your organizations.
+          {activeTeam ? `Profile settings for ${activeTeam.name}.` : "Your personal profile."} Use
+          the account menu on your avatar to switch between your personal account and your
+          organizations.
         </p>
       </header>
 
@@ -60,8 +54,7 @@ export default async function SettingsPage() {
               </Badge>
             </div>
             <CardDescription>
-              This name and photo appear wherever this organization is
-              shown to its teammates.
+              This name and photo appear wherever this organization is shown to its teammates.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -81,8 +74,8 @@ export default async function SettingsPage() {
           <CardHeader>
             <CardTitle>Personal account</CardTitle>
             <CardDescription>
-              This name and photo appear in the header and anywhere your
-              account is shown to teammates.
+              This name and photo appear in the header and anywhere your account is shown to
+              teammates.
             </CardDescription>
           </CardHeader>
           <CardContent>

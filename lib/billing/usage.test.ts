@@ -1,20 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { SubscriptionRow } from "./subscriptions";
-
-vi.mock("@/lib/db", () => ({ db: {} }));
-
 import {
+  type AccountUsage,
   fillUpgradeCopy,
   reachedLimits,
   usageWindow,
   workspaceLimitMessage,
-  type AccountUsage,
 } from "./usage";
 
-function subscription(
-  overrides: Partial<SubscriptionRow> = {},
-): SubscriptionRow {
+vi.mock("@/lib/db", () => ({ db: {} }));
+
+function subscription(overrides: Partial<SubscriptionRow> = {}): SubscriptionRow {
   return {
     id: "sub_row_1",
     ownerType: "ORGANIZATION",
@@ -55,10 +52,7 @@ function usage(overrides: Partial<AccountUsage> = {}): AccountUsage {
 
 describe("usage window", () => {
   it("uses the subscription period when one is mirrored", () => {
-    const window = usageWindow(
-      subscription(),
-      new Date("2026-11-20T12:00:00Z"),
-    );
+    const window = usageWindow(subscription(), new Date("2026-11-20T12:00:00Z"));
 
     expect(window).toEqual({
       start: new Date("2026-11-17T00:00:00Z"),
@@ -97,9 +91,7 @@ describe("reached limits", () => {
   const limits = { agentPromptsPerMonth: 20, workspaces: 3 };
 
   it("reports nothing while both limits have room", () => {
-    expect(
-      reachedLimits(limits, usage({ workspaces: { used: 2, limit: 3 } })),
-    ).toEqual([]);
+    expect(reachedLimits(limits, usage({ workspaces: { used: 2, limit: 3 } }))).toEqual([]);
   });
 
   it("reports the prompt limit at exactly the allowance", () => {
@@ -114,9 +106,7 @@ describe("reached limits", () => {
       }),
     );
 
-    expect(reached).toEqual([
-      { id: "agentPromptsPerMonth", used: 20, limit: 20 },
-    ]);
+    expect(reached).toEqual([{ id: "agentPromptsPerMonth", used: 20, limit: 20 }]);
   });
 
   it("reports every exhausted limit, including overuse", () => {
@@ -132,10 +122,7 @@ describe("reached limits", () => {
       }),
     );
 
-    expect(reached.map((limit) => limit.id)).toEqual([
-      "agentPromptsPerMonth",
-      "workspaces",
-    ]);
+    expect(reached.map((limit) => limit.id)).toEqual(["agentPromptsPerMonth", "workspaces"]);
   });
 
   it("never reports an unlimited plan", () => {
@@ -158,16 +145,13 @@ describe("reached limits", () => {
 describe("upgrade copy", () => {
   it("fills every placeholder", () => {
     expect(
-      fillUpgradeCopy(
-        "You’ve used {used} of {limit} prompts {period} in {account} on {plan}.",
-        {
-          used: 20,
-          limit: "20",
-          period: "this month",
-          account: "Acme",
-          plan: "Free",
-        },
-      ),
+      fillUpgradeCopy("You’ve used {used} of {limit} prompts {period} in {account} on {plan}.", {
+        used: 20,
+        limit: "20",
+        period: "this month",
+        account: "Acme",
+        plan: "Free",
+      }),
     ).toBe("You’ve used 20 of 20 prompts this month in Acme on Free.");
   });
 
@@ -190,8 +174,6 @@ describe("workspace limit message", () => {
   });
 
   it("never blocks an unlimited plan", () => {
-    expect(
-      workspaceLimitMessage({ ...base, used: 500, limit: null }),
-    ).toBeNull();
+    expect(workspaceLimitMessage({ ...base, used: 500, limit: null })).toBeNull();
   });
 });

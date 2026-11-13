@@ -6,17 +6,16 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
+import { formString } from "@/lib/form-data";
 import { canManageTeam, getMemberRole } from "@/lib/organizations";
 import type { ProfileFormState } from "@/lib/profile-form";
 
 const ORGANIZATION_MESSAGES: Record<string, string> = {
   ORGANIZATION_NOT_FOUND: "That organization no longer exists.",
-  ORGANIZATION_SLUG_ALREADY_TAKEN:
-    "That URL is already taken. Pick a different one.",
+  ORGANIZATION_SLUG_ALREADY_TAKEN: "That URL is already taken. Pick a different one.",
   YOU_ARE_NOT_ALLOWED_TO_UPDATE_THIS_ORGANIZATION:
     "Only owners and admins can edit the organization profile.",
-  USER_IS_NOT_A_MEMBER_OF_THE_ORGANIZATION:
-    "You are no longer a member of that organization.",
+  USER_IS_NOT_A_MEMBER_OF_THE_ORGANIZATION: "You are no longer a member of that organization.",
 };
 
 function toMessage(error: unknown, fallback: string): string {
@@ -58,8 +57,8 @@ export async function updatePersonalProfileAction(
   formData: FormData,
 ): Promise<ProfileFormState> {
   await requireSession();
-  const name = String(formData.get("name") ?? "").trim();
-  const image = String(formData.get("image") ?? "").trim();
+  const name = formString(formData, "name").trim();
+  const image = formString(formData, "image").trim();
 
   if (!name) return { error: "Add your name." };
   if (image && !isHttpUrl(image)) {
@@ -87,10 +86,10 @@ export async function updateOrganizationProfileAction(
   formData: FormData,
 ): Promise<ProfileFormState> {
   const session = await requireSession();
-  const organizationId = String(formData.get("organizationId") ?? "");
-  const name = String(formData.get("name") ?? "").trim();
-  const slug = normalizeSlug(String(formData.get("slug") ?? ""));
-  const logo = String(formData.get("logo") ?? "").trim();
+  const organizationId = formString(formData, "organizationId");
+  const name = formString(formData, "name").trim();
+  const slug = normalizeSlug(formString(formData, "slug"));
+  const logo = formString(formData, "logo").trim();
 
   if (!organizationId) {
     return { error: "That organization could not be found." };
@@ -116,10 +115,7 @@ export async function updateOrganizationProfileAction(
     });
   } catch (error) {
     return {
-      error: toMessage(
-        error,
-        "Could not save the organization profile. Try again.",
-      ),
+      error: toMessage(error, "Could not save the organization profile. Try again."),
     };
   }
 

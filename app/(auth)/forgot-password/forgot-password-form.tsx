@@ -1,19 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
-
-import {
-  Alert,
-  AlertDescription,
-} from "@konopskidev/ui/components/alert";
+import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@konopskidev/ui/components/field";
+import { Field, FieldGroup, FieldLabel } from "@konopskidev/ui/components/field";
 import { Input } from "@konopskidev/ui/components/input";
 import { Spinner } from "@konopskidev/ui/components/spinner";
+import { useActionState } from "react";
 
 import { requestPasswordResetAction } from "@/lib/auth-actions";
 import { initialAuthState } from "@/lib/auth-form";

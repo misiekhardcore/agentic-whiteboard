@@ -15,9 +15,7 @@ export function SiteFooter() {
       <div className="container-page grid gap-10 py-14 md:grid-cols-[1.75fr_1fr_1fr]">
         <div className="max-w-sm">
           <BrandLockup href="/" textClassName="text-base" />
-          <p className="mt-4 font-serif text-sm text-pretty text-muted-foreground">
-            {tagline}
-          </p>
+          <p className="mt-4 font-serif text-sm text-pretty text-muted-foreground">{tagline}</p>
         </div>
 
         {columns.map((column) => (

@@ -18,16 +18,16 @@ server, or Supabase Realtime infrastructure.
 
 ## Decisions
 
-| Area | Decision | Why |
-| --- | --- | --- |
-| CRDT | Yjs | Concurrent text and diagram edits need merge semantics, not last-write-wins. |
-| Sync server | Hocuspocus, separate long-running Node service | Purpose-built sync, awareness, auth hooks and persistence; the official Yjs-on-Supabase provider is 0.1.x, public-channel-only and lacks resync. |
-| Document state | Yjs is authoritative; JSONB `content` is a projection | The agent and exports need readable JSON without parsing Yjs on every request. |
-| Ephemeral events | Supabase Realtime Broadcast + Presence | Good for small status/chat/presence events and team-board invalidation; not for document bytes. |
-| Deployment | Long-running Node | A room needs one owner; `next start` plus a collab service on the same host is the simplest correct topology. |
-| Agent authority | Collaboration gateway (`snapshot` / `mutate`) | The agent computes intent; the room owner applies it to the live doc, so a stale snapshot cannot overwrite concurrent edits. |
-| Agent concurrency | One active run per workspace | Prevents two agents (or two users' runs) from fighting over the same semantic edit. |
-| Agent visibility | Live co-editing | Edits broadcast as they are applied; everyone sees the agent working; the requester can cancel. |
+| Area              | Decision                                              | Why                                                                                                                                              |
+| ----------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| CRDT              | Yjs                                                   | Concurrent text and diagram edits need merge semantics, not last-write-wins.                                                                     |
+| Sync server       | Hocuspocus, separate long-running Node service        | Purpose-built sync, awareness, auth hooks and persistence; the official Yjs-on-Supabase provider is 0.1.x, public-channel-only and lacks resync. |
+| Document state    | Yjs is authoritative; JSONB `content` is a projection | The agent and exports need readable JSON without parsing Yjs on every request.                                                                   |
+| Ephemeral events  | Supabase Realtime Broadcast + Presence                | Good for small status/chat/presence events and team-board invalidation; not for document bytes.                                                  |
+| Deployment        | Long-running Node                                     | A room needs one owner; `next start` plus a collab service on the same host is the simplest correct topology.                                    |
+| Agent authority   | Collaboration gateway (`snapshot` / `mutate`)         | The agent computes intent; the room owner applies it to the live doc, so a stale snapshot cannot overwrite concurrent edits.                     |
+| Agent concurrency | One active run per workspace                          | Prevents two agents (or two users' runs) from fighting over the same semantic edit.                                                              |
+| Agent visibility  | Live co-editing                                       | Edits broadcast as they are applied; everyone sees the agent working; the requester can cancel.                                                  |
 
 ### Why Hocuspocus for sync and Supabase Realtime for events
 

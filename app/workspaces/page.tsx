@@ -1,11 +1,11 @@
-import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Button } from "@konopskidev/ui/components/button";
 import { Folder } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { WorkspaceCard } from "@/app/dashboard/_components/WorkspaceCard";
 import { CreateWorkspaceDialog } from "@/app/dashboard/_components/CreateWorkspaceDialog";
+import { WorkspaceCard } from "@/app/dashboard/_components/WorkspaceCard";
+import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { getSessionAccount } from "@/lib/account";
 import { listAccountWorkspaces } from "@/lib/workspaces";
 
@@ -27,10 +27,7 @@ export default async function WorkspacesPage() {
 
   const { activeTeam, session } = account;
   const accountName = activeTeam?.name ?? "Personal account";
-  const workspaces = await listAccountWorkspaces(
-    session.user.id,
-    activeTeam?.id ?? null,
-  );
+  const workspaces = await listAccountWorkspaces(session.user.id, activeTeam?.id ?? null);
 
   return (
     <div className="stack">
@@ -38,8 +35,8 @@ export default async function WorkspacesPage() {
         <div>
           <h1 className="text-2xl font-bold">All workspaces</h1>
           <p className="text-sm text-muted-foreground">
-            Every active workspace in {accountName}. The dashboard shows the
-            latest five workspaces, docs and canvases.
+            Every active workspace in {accountName}. The dashboard shows the latest five workspaces,
+            docs and canvases.
           </p>
         </div>
         <CreateWorkspaceDialog size="sm" variant="outline" />
@@ -59,8 +56,7 @@ export default async function WorkspacesPage() {
       ) : (
         <div className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">
-            {workspaces.length}{" "}
-            {workspaces.length === 1 ? "workspace" : "workspaces"} in this
+            {workspaces.length} {workspaces.length === 1 ? "workspace" : "workspaces"} in this
             account.
           </p>
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

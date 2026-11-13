@@ -1,14 +1,10 @@
 import { and, eq } from "drizzle-orm";
 
 import { auth } from "@/lib/auth";
+import { ensureStripeCustomer } from "@/lib/billing/customers";
+import { appUrl, BillingConfigurationError, getStripe } from "@/lib/billing/stripe";
 import { db } from "@/lib/db";
 import { member, organization } from "@/lib/db/schema";
-import { ensureStripeCustomer } from "@/lib/billing/customers";
-import {
-  appUrl,
-  BillingConfigurationError,
-  getStripe,
-} from "@/lib/billing/stripe";
 
 /**
  * Opens the Stripe billing portal, where a customer updates a card, sees
@@ -22,13 +18,12 @@ export async function POST(request: Request) {
 
   let body: Record<string, unknown> = {};
   try {
-    body = await request.json();
+    body = (await request.json()) as Record<string, unknown>;
   } catch {
     // The personal billing portal needs no body.
   }
 
-  const organizationId =
-    typeof body.organizationId === "string" ? body.organizationId : null;
+  const organizationId = typeof body.organizationId === "string" ? body.organizationId : null;
 
   try {
     let customerId: string;
@@ -37,12 +32,7 @@ export async function POST(request: Request) {
       const [membership] = await db
         .select({ role: member.role })
         .from(member)
-        .where(
-          and(
-            eq(member.organizationId, organizationId),
-            eq(member.userId, session.user.id),
-          ),
-        )
+        .where(and(eq(member.organizationId, organizationId), eq(member.userId, session.user.id)))
         .limit(1);
 
       if (!membership) {
@@ -86,17 +76,11 @@ export async function POST(request: Request) {
       return_url: `${appUrl()}/dashboard/billing`,
     });
 
-    return Response.json(
-      { url: portal.url },
-      { headers: { "Cache-Control": "no-store" } },
-    );
+    return Response.json({ url: portal.url }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof BillingConfigurationError) {
       console.error("[billing] portal is not configured:", error.message);
-      return Response.json(
-        { error: "Payments are not configured yet." },
-        { status: 503 },
-      );
+      return Response.json({ error: "Payments are not configured yet." }, { status: 503 });
     }
 
     console.error("[billing] portal session failed:", error);

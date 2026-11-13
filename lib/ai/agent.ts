@@ -1,11 +1,6 @@
-import {
-  isStepCount,
-  ToolLoopAgent,
-  type LanguageModel,
-  type ToolSet,
-} from "ai";
+import { isStepCount, type LanguageModel, ToolLoopAgent, type ToolSet } from "ai";
 
-import { getAiConfig, type AiConfig } from "./config";
+import { type AiConfig, getAiConfig } from "./config";
 import { getLanguageModel } from "./provider";
 
 // Used when a caller supplies a model and therefore has no environment
@@ -50,10 +45,7 @@ export function createAgent(options: CreateAgentOptions = {}) {
     model,
     instructions: options.instructions ?? DEFAULT_AGENT_INSTRUCTIONS,
     tools: options.tools ?? {},
-    stopWhen: isStepCount(
-      options.maxSteps ?? config?.maxSteps ?? DEFAULT_AGENT_MAX_STEPS,
-    ),
-    maxRetries:
-      options.maxRetries ?? config?.maxRetries ?? DEFAULT_AGENT_MAX_RETRIES,
+    stopWhen: isStepCount(options.maxSteps ?? config?.maxSteps ?? DEFAULT_AGENT_MAX_STEPS),
+    maxRetries: options.maxRetries ?? config?.maxRetries ?? DEFAULT_AGENT_MAX_RETRIES,
   });
 }

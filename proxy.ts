@@ -1,5 +1,5 @@
 import { getSessionCookie } from "better-auth/cookies";
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { DEFAULT_REDIRECT, safeRedirectTo } from "@/lib/auth-redirect";
@@ -22,10 +22,7 @@ export async function proxy(request: NextRequest) {
   if (!authed && !onAuthPage) {
     // Remember where they were headed, including the query string.
     const signIn = new URL("/sign-in", request.url);
-    signIn.searchParams.set(
-      "redirectTo",
-      request.nextUrl.pathname + request.nextUrl.search,
-    );
+    signIn.searchParams.set("redirectTo", request.nextUrl.pathname + request.nextUrl.search);
     return NextResponse.redirect(signIn);
   }
 
@@ -33,11 +30,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/dashboard/:path*",
-    "/workspaces",
-    "/workspace/:path*",
-    "/sign-in",
-    "/sign-up",
-  ],
+  matcher: ["/dashboard/:path*", "/workspaces", "/workspace/:path*", "/sign-in", "/sign-up"],
 };

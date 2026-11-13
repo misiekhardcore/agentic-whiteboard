@@ -1,8 +1,10 @@
-import { jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { workspaces } from "./workspace";
 import { createId } from "@paralleldrive/cuid2";
-import { bytea } from "../bytea";
 import { relations } from "drizzle-orm";
+import { jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+
+import { bytea } from "../bytea";
+
+import { workspaces } from "./workspace";
 
 export const docs = pgTable("doc", {
   id: text("id")
@@ -17,9 +19,7 @@ export const docs = pgTable("doc", {
   content: jsonb("content"),
   yjsState: bytea("yjsState"),
 
-  createdAt: timestamp("createdAt", { precision: 3, mode: "date" })
-    .defaultNow()
-    .notNull(),
+  createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).defaultNow().notNull(),
 
   updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" })
     .defaultNow()

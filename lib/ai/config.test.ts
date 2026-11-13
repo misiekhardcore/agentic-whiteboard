@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  AiConfigurationError,
-  isAiConfigured,
-  resolveAiConfig,
-} from "./config";
+import { AiConfigurationError, isAiConfigured, resolveAiConfig } from "./config";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -43,9 +39,7 @@ describe("resolveAiConfig", () => {
   });
 
   it("allows an API key override for LM Studio auth", () => {
-    expect(
-      resolveAiConfig({ AI_MODEL: "local", AI_API_KEY: "token" }).apiKey,
-    ).toBe("token");
+    expect(resolveAiConfig({ AI_MODEL: "local", AI_API_KEY: "token" }).apiKey).toBe("token");
   });
 
   it("requires a model id and explains how to find one", () => {
@@ -54,9 +48,9 @@ describe("resolveAiConfig", () => {
   });
 
   it("rejects unknown providers and lists the supported ids", () => {
-    expect(() =>
-      resolveAiConfig({ AI_PROVIDER: "anthropic", AI_MODEL: "claude" }),
-    ).toThrow(/Unknown AI_PROVIDER "anthropic".*lmstudio, openai-compatible/);
+    expect(() => resolveAiConfig({ AI_PROVIDER: "anthropic", AI_MODEL: "claude" })).toThrow(
+      /Unknown AI_PROVIDER "anthropic".*lmstudio, openai-compatible/,
+    );
   });
 
   it("requires a base URL for a generic compatible endpoint", () => {
@@ -69,15 +63,15 @@ describe("resolveAiConfig", () => {
   });
 
   it("validates step and retry limits", () => {
-    expect(() =>
-      resolveAiConfig({ AI_MODEL: "local", AI_MAX_STEPS: "0" }),
-    ).toThrow(/AI_MAX_STEPS must be a whole number/);
-    expect(() =>
-      resolveAiConfig({ AI_MODEL: "local", AI_MAX_STEPS: "2.5" }),
-    ).toThrow(/AI_MAX_STEPS must be a whole number/);
-    expect(() =>
-      resolveAiConfig({ AI_MODEL: "local", AI_MAX_RETRIES: "-1" }),
-    ).toThrow(/AI_MAX_RETRIES must be a whole number/);
+    expect(() => resolveAiConfig({ AI_MODEL: "local", AI_MAX_STEPS: "0" })).toThrow(
+      /AI_MAX_STEPS must be a whole number/,
+    );
+    expect(() => resolveAiConfig({ AI_MODEL: "local", AI_MAX_STEPS: "2.5" })).toThrow(
+      /AI_MAX_STEPS must be a whole number/,
+    );
+    expect(() => resolveAiConfig({ AI_MODEL: "local", AI_MAX_RETRIES: "-1" })).toThrow(
+      /AI_MAX_RETRIES must be a whole number/,
+    );
   });
 });
 

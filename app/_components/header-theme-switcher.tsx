@@ -24,11 +24,7 @@ const getServerSnapshot = () => false;
  * 96x32), so the header does not shift when the real control appears.
  */
 export function HeaderThemeSwitcher() {
-  const hydrated = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot,
-  );
+  const hydrated = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   if (!hydrated) {
     return <div aria-hidden className="h-8 w-24" />;

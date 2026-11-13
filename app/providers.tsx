@@ -1,11 +1,8 @@
 "use client";
 
-import {
-  ThemeProvider,
-  useTheme,
-} from "@konopskidev/ui/components/theme-provider";
+import { ThemeProvider, useTheme } from "@konopskidev/ui/components/theme-provider";
 import { TooltipProvider } from "@konopskidev/ui/components/tooltip";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Toaster } from "sonner";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -22,7 +19,5 @@ export function Providers({ children }: { children: ReactNode }) {
 function ThemedToaster() {
   const { resolvedTheme } = useTheme();
 
-  return (
-    <Toaster richColors theme={resolvedTheme === "dark" ? "dark" : "light"} />
-  );
+  return <Toaster richColors theme={resolvedTheme === "dark" ? "dark" : "light"} />;
 }

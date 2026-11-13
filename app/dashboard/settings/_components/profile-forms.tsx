@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  Alert,
-  AlertDescription,
-} from "@konopskidev/ui/components/alert";
+import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import { Input } from "@konopskidev/ui/components/input";
 import { Label } from "@konopskidev/ui/components/label";
@@ -41,12 +38,7 @@ export function PersonalProfileForm({
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="profile-email">Email</Label>
-          <Input
-            id="profile-email"
-            value={user.email}
-            disabled
-            readOnly
-          />
+          <Input id="profile-email" value={user.email} disabled readOnly />
           <p className="text-xs text-muted-foreground">
             Your email is used to sign in and cannot be changed here.
           </p>
@@ -104,11 +96,7 @@ export function OrganizationProfileForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
-      <input
-        type="hidden"
-        name="organizationId"
-        value={organization.id}
-      />
+      <input type="hidden" name="organizationId" value={organization.id} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
@@ -132,9 +120,7 @@ export function OrganizationProfileForm({
             pattern="[a-zA-Z0-9-]+"
             required
           />
-          <p className="text-xs text-muted-foreground">
-            Lowercase letters, numbers, and hyphens.
-          </p>
+          <p className="text-xs text-muted-foreground">Lowercase letters, numbers, and hyphens.</p>
         </div>
       </div>
 
@@ -149,8 +135,7 @@ export function OrganizationProfileForm({
           disabled={!canManage}
         />
         <p className="text-xs text-muted-foreground">
-          Shown in the account menu. Leave it empty to use the
-          organization icon.
+          Shown in the account menu. Leave it empty to use the organization icon.
         </p>
       </div>
 

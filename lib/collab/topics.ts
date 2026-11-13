@@ -1,15 +1,11 @@
-import {
-  WORKSPACE_SURFACES,
-  type WorkspaceSurface,
-} from "./contracts";
+import { WORKSPACE_SURFACES, type WorkspaceSurface } from "./contracts";
 
 /**
  * Entities are cuid2/Better Auth ids: no colons, so they cannot forge another
  * workspace's topic or document name.
  */
 const ENTITY_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
-const WORKSPACE_DOCUMENT_PATTERN =
-  /^workspace:([A-Za-z0-9_-]{1,64}):(doc|canvas)$/;
+const WORKSPACE_DOCUMENT_PATTERN = /^workspace:([A-Za-z0-9_-]{1,64}):(doc|canvas)$/;
 
 export class CollabTopicError extends Error {
   constructor(label: string, value: string) {

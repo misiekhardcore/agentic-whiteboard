@@ -1,7 +1,6 @@
+import { generateText, jsonSchema, tool } from "ai";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-
-import { generateText, jsonSchema, tool } from "ai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAgent } from "./agent";
@@ -76,9 +75,7 @@ function toolCallCompletion(): Completion {
   };
 }
 
-async function startServer(
-  respond: (request: CapturedRequest, index: number) => Completion,
-) {
+async function startServer(respond: (request: CapturedRequest, index: number) => Completion) {
   const requests: CapturedRequest[] = [];
   const server = createServer((request, response) => {
     const chunks: Buffer[] = [];
@@ -88,7 +85,7 @@ async function startServer(
       const captured: CapturedRequest = {
         url: request.url ?? "",
         headers: request.headers,
-        body: JSON.parse(Buffer.concat(chunks).toString("utf8")),
+        body: JSON.parse(Buffer.concat(chunks).toString("utf8")) as ChatRequestBody,
       };
       requests.push(captured);
 
@@ -102,9 +99,7 @@ async function startServer(
     });
   });
 
-  await new Promise<void>((resolve) =>
-    server.listen(0, "127.0.0.1", resolve),
-  );
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address() as AddressInfo;
 
   return {
@@ -161,9 +156,7 @@ describe("LM Studio OpenAI-compatible path", () => {
 
   it("runs the agent tool loop against the same HTTP surface", async () => {
     const { baseURL, requests, close } = await startServer((_request, index) =>
-      index === 0
-        ? toolCallCompletion()
-        : textCompletion("The tool returned echo:hello"),
+      index === 0 ? toolCallCompletion() : textCompletion("The tool returned echo:hello"),
     );
     closeServer = close;
     vi.stubEnv("AI_BASE_URL", baseURL);
@@ -178,7 +171,7 @@ describe("LM Studio OpenAI-compatible path", () => {
             required: ["query"],
             additionalProperties: false,
           }),
-          execute: async ({ query }) => ({ answer: `echo:${query}` }),
+          execute: ({ query }) => ({ answer: `echo:${query}` }),
         }),
       },
       maxSteps: 3,
@@ -190,9 +183,7 @@ describe("LM Studio OpenAI-compatible path", () => {
     expect(result.text).toBe("The tool returned echo:hello");
     expect(requests).toHaveLength(2);
     expect(requests[1].body.messages).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ role: "tool", tool_call_id: "call_1" }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ role: "tool", tool_call_id: "call_1" })]),
     );
     expect(JSON.stringify(requests[1].body.messages)).toContain("echo:hello");
   });

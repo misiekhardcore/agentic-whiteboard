@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  Alert,
-  AlertDescription,
-} from "@konopskidev/ui/components/alert";
+import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import {
   Dialog,
@@ -28,13 +25,10 @@ import { Pencil } from "lucide-react";
 import { useActionState, useCallback, useEffect, useState } from "react";
 
 import { updateWorkspaceAction } from "@/lib/workspace-actions";
+import { EMPTY_WORKSPACE_FORM_STATE, WORKSPACE_DESCRIPTION_MAX_LENGTH } from "@/lib/workspace-form";
 import {
-  EMPTY_WORKSPACE_FORM_STATE,
-  WORKSPACE_DESCRIPTION_MAX_LENGTH,
-} from "@/lib/workspace-form";
-import {
-  WORKSPACE_STATUSES,
   WORKSPACE_STATUS_LABELS,
+  WORKSPACE_STATUSES,
   type WorkspaceStatus,
 } from "@/lib/workspace-status";
 
@@ -126,8 +120,7 @@ function EditWorkspaceForm({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="editWorkspaceDescription">
-          Description{" "}
-          <span className="font-normal text-muted-foreground">(optional)</span>
+          Description <span className="font-normal text-muted-foreground">(optional)</span>
         </Label>
         <Textarea
           id="editWorkspaceDescription"
@@ -138,9 +131,7 @@ function EditWorkspaceForm({
           aria-invalid={Boolean(state.fieldErrors?.description)}
         />
         {state.fieldErrors?.description && (
-          <p className="text-xs text-destructive">
-            {state.fieldErrors.description}
-          </p>
+          <p className="text-xs text-destructive">{state.fieldErrors.description}</p>
         )}
       </div>
 
@@ -159,9 +150,7 @@ function EditWorkspaceForm({
           </SelectContent>
         </Select>
         {state.fieldErrors?.status && (
-          <p className="text-xs text-destructive">
-            {state.fieldErrors.status}
-          </p>
+          <p className="text-xs text-destructive">{state.fieldErrors.status}</p>
         )}
       </div>
 

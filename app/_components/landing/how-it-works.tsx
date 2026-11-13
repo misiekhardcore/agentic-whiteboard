@@ -9,29 +9,17 @@ export function HowItWorks() {
   const { id, eyebrow, title, lead, steps } = landing.howItWorks;
 
   return (
-    <section
-      id={id}
-      aria-labelledby="how-it-works-heading"
-      className="topo-bg"
-    >
+    <section id={id} aria-labelledby="how-it-works-heading" className="topo-bg">
       <div className="container-page py-20 lg:py-28">
         <header className="max-w-2xl">
           <p className="flex items-center gap-2.5 font-mono text-xs font-medium tracking-[0.2em] text-muted-foreground uppercase">
-            <span
-              aria-hidden="true"
-              className="size-1.5 rotate-45 bg-primary"
-            />
+            <span aria-hidden="true" className="size-1.5 rotate-45 bg-primary" />
             {eyebrow}
           </p>
-          <h2
-            id="how-it-works-heading"
-            className="section-title mt-4 text-balance"
-          >
+          <h2 id="how-it-works-heading" className="mt-4 section-title text-balance">
             {title}
           </h2>
-          <p className="mt-4 font-serif text-lead text-pretty text-muted-foreground">
-            {lead}
-          </p>
+          <p className="mt-4 font-serif text-lead text-pretty text-muted-foreground">{lead}</p>
         </header>
 
         <ol className="relative mt-12 grid gap-10 md:mt-16 md:grid-cols-3 md:gap-10">
@@ -55,16 +43,12 @@ export function HowItWorks() {
               )}
 
               <span className="grid size-10 shrink-0 place-items-center rounded-full border border-primary/40 bg-background font-mono text-xs font-semibold text-primary shadow-xs">
-                <span aria-hidden="true">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
+                <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
                 <span className="sr-only">Step {index + 1}</span>
               </span>
 
               <div className="md:mt-6">
-                <h3 className="font-display text-h3 font-semibold">
-                  {step.title}
-                </h3>
+                <h3 className="font-display text-h3 font-semibold">{step.title}</h3>
                 <p className="mt-2 font-serif text-base leading-relaxed text-pretty text-muted-foreground">
                   {step.description}
                 </p>

@@ -44,7 +44,7 @@ export function ManageBillingButton({
 
   return (
     <div className="flex flex-col items-start gap-1.5">
-      <Button variant="outline" onClick={openPortal} disabled={loading}>
+      <Button variant="outline" onClick={() => void openPortal()} disabled={loading}>
         {loading ? "Opening…" : label}
       </Button>
       {error && <p className="text-xs text-destructive">{error}</p>}

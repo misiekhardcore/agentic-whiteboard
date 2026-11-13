@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import {
   Card,
   CardContent,
@@ -8,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@konopskidev/ui/components/card";
+import Link from "next/link";
 
 import { safeRedirectTo } from "@/lib/auth-redirect";
 
@@ -20,18 +19,14 @@ export const metadata = {
 // The page reads ?redirectTo, so it renders per request instead of prerendering.
 export const instant = false;
 
-export default async function SignUpPage({
-  searchParams,
-}: PageProps<"/sign-up">) {
+export default async function SignUpPage({ searchParams }: PageProps<"/sign-up">) {
   const redirectTo = safeRedirectTo((await searchParams).redirectTo);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Create an account</CardTitle>
-        <CardDescription>
-          Sign up with your email and a password to get started.
-        </CardDescription>
+        <CardDescription>Sign up with your email and a password to get started.</CardDescription>
       </CardHeader>
       <CardContent>
         <SignUpForm redirectTo={redirectTo} />
@@ -39,11 +34,7 @@ export default async function SignUpPage({
       <CardFooter className="justify-center gap-1 text-sm text-muted-foreground">
         <span>Already have an account?</span>
         <Link
-          href={
-            redirectTo
-              ? `/sign-in?redirectTo=${encodeURIComponent(redirectTo)}`
-              : "/sign-in"
-          }
+          href={redirectTo ? `/sign-in?redirectTo=${encodeURIComponent(redirectTo)}` : "/sign-in"}
           className="font-medium text-primary underline underline-offset-4 hover:no-underline"
         >
           Sign in

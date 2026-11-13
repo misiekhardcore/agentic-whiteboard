@@ -1,6 +1,5 @@
+import { expect, type Page, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-
-import { expect, test, type Page } from "@playwright/test";
 import { Client } from "pg";
 
 /**
@@ -12,11 +11,7 @@ import { Client } from "pg";
 
 async function signUp(
   page: Page,
-  {
-    name,
-    email,
-    password,
-  }: { name: string; email: string; password: string },
+  { name, email, password }: { name: string; email: string; password: string },
 ) {
   await page.goto("/sign-up");
   await page.getByLabel("Name").fill(name);
@@ -27,10 +22,9 @@ async function signUp(
 }
 
 async function findUserId(db: Client, email: string): Promise<string> {
-  const { rows } = await db.query<{ id: string }>(
-    'select id from "user" where email = $1',
-    [email],
-  );
+  const { rows } = await db.query<{ id: string }>('select id from "user" where email = $1', [
+    email,
+  ]);
   if (!rows[0]) throw new Error(`No user row for ${email}`);
   return rows[0].id;
 }
@@ -57,9 +51,7 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
 
       await expect(page.getByText("0 / 20")).toBeVisible();
       await expect(page.getByText("0 / 3")).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "Upgrade plan" }),
-      ).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Upgrade plan" })).toHaveCount(0);
     });
 
     await test.step("seed an organization, its workspaces and per-member prompts", async () => {
@@ -69,19 +61,20 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
       const memberIds = [randomUUID(), randomUUID()];
 
       await db.query(
-        'insert into organization (id, name, slug, created_at) values ($1, $2, $3, now())',
+        "insert into organization (id, name, slug, created_at) values ($1, $2, $3, now())",
         [organizationId, teamName, `upgrade-team-${id}`],
       );
       await db.query(
-        'insert into member (id, organization_id, user_id, role, created_at) values ($1, $2, $3, $4, now())',
+        "insert into member (id, organization_id, user_id, role, created_at) values ($1, $2, $3, $4, now())",
         [memberIds[0], organizationId, ownerId, "owner"],
       );
+      await db.query('insert into "user" (id, name, email) values ($1, $2, $3)', [
+        secondUserId,
+        "Second Member",
+        secondMemberEmail,
+      ]);
       await db.query(
-        'insert into "user" (id, name, email) values ($1, $2, $3)',
-        [secondUserId, "Second Member", secondMemberEmail],
-      );
-      await db.query(
-        'insert into member (id, organization_id, user_id, role, created_at) values ($1, $2, $3, $4, now())',
+        "insert into member (id, organization_id, user_id, role, created_at) values ($1, $2, $3, $4, now())",
         [memberIds[1], organizationId, secondUserId, "member"],
       );
 
@@ -98,12 +91,7 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
       for (let index = 0; index < 20; index += 1) {
         await db.query(
           'insert into "AgentPrompt" (id, "ownerId", "userId", "workspaceId") values ($1, $2, $3, $4)',
-          [
-            randomUUID(),
-            organizationId,
-            ownerId,
-            workspaceIds[index % workspaceIds.length],
-          ],
+          [randomUUID(), organizationId, ownerId, workspaceIds[index % workspaceIds.length]],
         );
       }
       for (let index = 0; index < 5; index += 1) {
@@ -117,9 +105,7 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
     await test.step("the organization's own plan and usage appear after switching", async () => {
       await page.reload();
 
-      await page
-        .getByRole("button", { name: `Account menu for ${userName}` })
-        .click();
+      await page.getByRole("button", { name: `Account menu for ${userName}` }).click();
       await page.getByRole("button", { name: new RegExp(teamName) }).click();
 
       await expect(page.getByText("20 / 20")).toBeVisible();
@@ -137,24 +123,14 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
 
       const dialog = page.getByRole("dialog", { name: "Upgrade your plan" });
       await expect(dialog).toBeVisible();
-      await expect(
-        dialog.getByText(/used 20 of 20 prompts this month in/),
-      ).toBeVisible();
-      await expect(
-        dialog.getByText(/has used all 3 workspaces on the Free plan/),
-      ).toBeVisible();
+      await expect(dialog.getByText(/used 20 of 20 prompts this month in/)).toBeVisible();
+      await expect(dialog.getByText(/has used all 3 workspaces on the Free plan/)).toBeVisible();
 
       // The organization pays, so a personal plan is not an answer here.
       await expect(dialog.getByRole("tab", { name: "Personal" })).toHaveCount(0);
-      await expect(
-        dialog.getByRole("button", { name: "Upgrade to Team" }),
-      ).toBeVisible();
-      await expect(
-        dialog.getByRole("button", { name: "Upgrade to Enterprise" }),
-      ).toBeVisible();
-      await expect(
-        dialog.getByText(/500 agent prompts per member \/ month/),
-      ).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "Upgrade to Team" })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "Upgrade to Enterprise" })).toBeVisible();
+      await expect(dialog.getByText(/500 agent prompts per member \/ month/)).toBeVisible();
     });
 
     await test.step("choosing a plan opens checkout on top of the closed dialog", async () => {
@@ -173,9 +149,7 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
     await test.step("the sidebar's upgrade CTA opens the same dialog", async () => {
       // The footer sits at the bottom of a fixed sidebar, so it has to stay
       // inside the viewport rather than being pushed past the bottom edge.
-      const sidebarCta = page
-        .getByRole("button", { name: "Upgrade plan" })
-        .last();
+      const sidebarCta = page.getByRole("button", { name: "Upgrade plan" }).last();
       await expect(sidebarCta).toBeInViewport();
       await expect(page.getByText("3 / 3")).toBeInViewport();
 
@@ -183,9 +157,7 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
 
       const dialog = page.getByRole("dialog", { name: "Upgrade your plan" });
       await expect(dialog).toBeVisible();
-      await expect(
-        dialog.getByText(/has used all 3 workspaces on the Free plan/),
-      ).toBeVisible();
+      await expect(dialog.getByText(/has used all 3 workspaces on the Free plan/)).toBeVisible();
 
       await page.keyboard.press("Escape");
       await expect(dialog).toHaveCount(0);
@@ -193,30 +165,18 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
 
     await test.step("the personal account stayed at zero throughout", async () => {
       await page.goto("/dashboard/settings");
-      await page
-        .getByRole("button", { name: /Account menu for/ })
-        .click();
-      await page
-        .getByRole("button", { name: /Personal account/ })
-        .click();
+      await page.getByRole("button", { name: /Account menu for/ }).click();
+      await page.getByRole("button", { name: /Personal account/ }).click();
 
       await expect(page.getByText("0 / 20")).toBeVisible();
       await expect(page.getByText("0 / 3")).toBeVisible();
-      await expect(
-        page.getByRole("button", { name: "Upgrade plan" }),
-      ).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Upgrade plan" })).toHaveCount(0);
     });
   } finally {
     if (organizationId) {
-      await db.query('delete from "AgentPrompt" where "ownerId" = $1', [
-        organizationId,
-      ]);
-      await db.query('delete from workspace where "orgId" = $1', [
-        organizationId,
-      ]);
-      await db.query("delete from organization where id = $1", [
-        organizationId,
-      ]);
+      await db.query('delete from "AgentPrompt" where "ownerId" = $1', [organizationId]);
+      await db.query('delete from workspace where "orgId" = $1', [organizationId]);
+      await db.query("delete from organization where id = $1", [organizationId]);
     }
     if (secondUserId) {
       await db.query('delete from "user" where id = $1', [secondUserId]);

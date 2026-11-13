@@ -1,5 +1,3 @@
-import { Loading } from "@/components/Loading/Loading";
-import { getSessionAccount } from "@/lib/account";
 import { Button } from "@konopskidev/ui/components/button";
 import {
   Card,
@@ -10,6 +8,10 @@ import {
 } from "@konopskidev/ui/components/card";
 import { Sparkles } from "lucide-react";
 import { Suspense } from "react";
+
+import { Loading } from "@/components/Loading/Loading";
+import { getSessionAccount } from "@/lib/account";
+
 import { CreateWorkspaceDialog } from "./CreateWorkspaceDialog";
 
 export function WelcomeBanner() {
@@ -37,9 +39,7 @@ async function WelcomeBannerInner() {
           </span>
         </CardTitle>
         <CardDescription>
-          {activeTeam
-            ? `Working in ${activeTeam.name}. `
-            : "Personal account. "}
+          {activeTeam ? `Working in ${activeTeam.name}. ` : "Personal account. "}
           Bring your ideas to life on an infinite canvas.
         </CardDescription>
       </CardHeader>

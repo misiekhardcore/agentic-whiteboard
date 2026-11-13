@@ -69,14 +69,8 @@ function accountScopeWhere(userId: string, organizationId: string | null): SQL {
  * by this predicate, so a workspace the dashboard shows is always a workspace the meter
  * counted, and archiving one frees its slot.
  */
-export function accountWorkspacesWhere(
-  userId: string,
-  organizationId: string | null,
-): SQL {
-  return and(
-    accountScopeWhere(userId, organizationId),
-    isNull(workspaces.archivedAt),
-  )!;
+export function accountWorkspacesWhere(userId: string, organizationId: string | null): SQL {
+  return and(accountScopeWhere(userId, organizationId), isNull(workspaces.archivedAt))!;
 }
 
 /**
@@ -116,17 +110,10 @@ export async function listArchivedWorkspaces(
       archivedAt: workspaces.archivedAt,
     })
     .from(workspaces)
-    .where(
-      and(
-        accountScopeWhere(userId, organizationId),
-        isNotNull(workspaces.archivedAt),
-      ),
-    )
+    .where(and(accountScopeWhere(userId, organizationId), isNotNull(workspaces.archivedAt)))
     .orderBy(desc(workspaces.archivedAt));
 
-  return rows.flatMap((row) =>
-    row.archivedAt ? [{ ...row, archivedAt: row.archivedAt }] : [],
-  );
+  return rows.flatMap((row) => (row.archivedAt ? [{ ...row, archivedAt: row.archivedAt }] : []));
 }
 
 /**
@@ -139,11 +126,7 @@ export function mergeRecentItems(
   limit: number,
 ): RecentWorkspaceItem[] {
   return [...items]
-    .sort(
-      (a, b) =>
-        b.updatedAt.getTime() - a.updatedAt.getTime() ||
-        a.key.localeCompare(b.key),
-    )
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime() || a.key.localeCompare(b.key))
     .slice(0, Math.max(0, limit));
 }
 
@@ -241,13 +224,7 @@ export async function getWorkspaceForUser(
       memberRole: member.role,
     })
     .from(workspaces)
-    .leftJoin(
-      member,
-      and(
-        eq(member.organizationId, workspaces.orgId),
-        eq(member.userId, userId),
-      ),
-    )
+    .leftJoin(member, and(eq(member.organizationId, workspaces.orgId), eq(member.userId, userId)))
     .where(
       and(
         eq(workspaces.id, workspaceId),
@@ -279,8 +256,6 @@ const VIEW_ONLY_ROLES: readonly string[] = [];
  * per-workspace RBAC introduces read-only roles; keep the decision here so
  * actions and future collaboration tokens share it.
  */
-export function workspacePermission(
-  access: WorkspaceAccess,
-): WorkspacePermission {
+export function workspacePermission(access: WorkspaceAccess): WorkspacePermission {
   return VIEW_ONLY_ROLES.includes(access.role) ? "view" : "edit";
 }

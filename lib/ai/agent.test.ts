@@ -1,10 +1,7 @@
 import { MockLanguageModelV4 } from "ai/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  createAgent,
-  DEFAULT_AGENT_INSTRUCTIONS,
-} from "./agent";
+import { createAgent, DEFAULT_AGENT_INSTRUCTIONS } from "./agent";
 
 type ChatMessage = {
   role: string;
@@ -12,36 +9,32 @@ type ChatMessage = {
 };
 
 function stubCompletion(messages: ChatMessage[][]) {
-  const fetchMock = vi.fn(
-    async (_input: RequestInfo | URL, init?: RequestInit) => {
-      const body =
-        typeof init?.body === "string"
-          ? (JSON.parse(init.body) as { messages?: ChatMessage[] })
-          : {};
-      messages.push(body.messages ?? []);
+  const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+    const body =
+      typeof init?.body === "string" ? (JSON.parse(init.body) as { messages?: ChatMessage[] }) : {};
+    messages.push(body.messages ?? []);
 
-      return new Response(
-        JSON.stringify({
-          id: "chatcmpl-agent-test",
-          object: "chat.completion",
-          created: 0,
-          model: "agent-test",
-          choices: [
-            {
-              index: 0,
-              message: { role: "assistant", content: "Hello" },
-              finish_reason: "stop",
-            },
-          ],
-          usage: { prompt_tokens: 3, completion_tokens: 1, total_tokens: 4 },
-        }),
-        {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        },
-      );
-    },
-  );
+    return new Response(
+      JSON.stringify({
+        id: "chatcmpl-agent-test",
+        object: "chat.completion",
+        created: 0,
+        model: "agent-test",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: "Hello" },
+            finish_reason: "stop",
+          },
+        ],
+        usage: { prompt_tokens: 3, completion_tokens: 1, total_tokens: 4 },
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  });
 
   vi.stubGlobal("fetch", fetchMock);
 }
@@ -103,20 +96,21 @@ describe("createAgent", () => {
     vi.stubEnv("AI_MAX_RETRIES", "not-a-number");
 
     const model = new MockLanguageModelV4({
-      doGenerate: async () => ({
-        content: [{ type: "text", text: "mock reply" }],
-        finishReason: { unified: "stop", raw: "stop" },
-        usage: {
-          inputTokens: {
-            total: 3,
-            noCache: 3,
-            cacheRead: 0,
-            cacheWrite: 0,
+      doGenerate: () =>
+        Promise.resolve({
+          content: [{ type: "text", text: "mock reply" }],
+          finishReason: { unified: "stop", raw: "stop" },
+          usage: {
+            inputTokens: {
+              total: 3,
+              noCache: 3,
+              cacheRead: 0,
+              cacheWrite: 0,
+            },
+            outputTokens: { total: 2, text: 2, reasoning: 0 },
           },
-          outputTokens: { total: 2, text: 2, reasoning: 0 },
-        },
-        warnings: [],
-      }),
+          warnings: [],
+        }),
     });
 
     const result = await createAgent({ model, maxRetries: 0 }).generate({

@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getOrganizationEntitlements, getUserEntitlements } from "./entitlements";
 import type { SubscriptionRow } from "./subscriptions";
 
 const getActiveSubscription = vi.hoisted(() => vi.fn());
 
 vi.mock("./subscriptions", () => ({ getActiveSubscription }));
-
-import { getOrganizationEntitlements, getUserEntitlements } from "./entitlements";
 
 function subscription(overrides: Partial<SubscriptionRow> = {}): SubscriptionRow {
   return {
@@ -51,9 +50,7 @@ describe("entitlements", () => {
   });
 
   it("grants the paid plan behind an active subscription", async () => {
-    getActiveSubscription.mockResolvedValue(
-      subscription({ plan: "enterprise", seats: 4 }),
-    );
+    getActiveSubscription.mockResolvedValue(subscription({ plan: "enterprise", seats: 4 }));
 
     const entitlements = await getUserEntitlements("user_1");
 

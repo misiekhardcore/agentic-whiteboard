@@ -1,5 +1,5 @@
-import { config as loadEnv } from "dotenv";
 import { defineConfig, devices } from "@playwright/test";
+import { config as loadEnv } from "dotenv";
 
 // The tests read the same environment the app does, so a local run needs no
 // extra setup beyond `.env.local`. Variables already set (CI) win.
@@ -17,9 +17,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   timeout: 120_000,
   expect: { timeout: 15_000 },
-  reporter: process.env.CI
-    ? [["list"], ["html", { open: "never" }]]
-    : [["list"]],
+  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
   use: {
     baseURL,
     trace: "retain-on-failure",

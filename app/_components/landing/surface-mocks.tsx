@@ -1,11 +1,5 @@
+import { FileText, MousePointer2, Shapes, Type, Wand2 } from "lucide-react";
 import type { ReactNode } from "react";
-import {
-  FileText,
-  MousePointer2,
-  Shapes,
-  Type,
-  Wand2,
-} from "lucide-react";
 
 import type { SurfaceId } from "@/app/_data/landing";
 import { cn } from "@/lib/utils";
@@ -26,18 +20,9 @@ export function SurfaceMock({ surface }: { surface: SurfaceId }) {
   }
 }
 
-function MockFrame({
-  file,
-  children,
-}: {
-  file: string;
-  children: ReactNode;
-}) {
+function MockFrame({ file, children }: { file: string; children: ReactNode }) {
   return (
-    <div
-      aria-hidden="true"
-      className="card relative overflow-hidden shadow-sm"
-    >
+    <div aria-hidden="true" className="relative overflow-hidden card shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b bg-muted/60 px-3 py-2">
         <div className="flex items-center gap-2">
           <span className="size-1.5 rotate-45 bg-primary" />
@@ -60,18 +45,9 @@ function CanvasMock() {
   return (
     <MockFrame file="checkout-flow.canvas">
       <div className="relative">
-        <svg
-          viewBox="0 0 360 270"
-          className="block h-auto w-full"
-          role="presentation"
-        >
+        <svg viewBox="0 0 360 270" className="block h-auto w-full" role="presentation">
           <defs>
-            <pattern
-              id="canvas-dots"
-              width="14"
-              height="14"
-              patternUnits="userSpaceOnUse"
-            >
+            <pattern id="canvas-dots" width="14" height="14" patternUnits="userSpaceOnUse">
               <circle cx="1" cy="1" r="0.9" className="fill-border" />
             </pattern>
             <marker
@@ -83,41 +59,20 @@ function CanvasMock() {
               markerHeight="5"
               orient="auto-start-reverse"
             >
-              <path
-                d="M0 0 L8 4 L0 8 Z"
-                className="fill-muted-foreground"
-              />
+              <path d="M0 0 L8 4 L0 8 Z" className="fill-muted-foreground" />
             </marker>
           </defs>
 
           <rect width="360" height="270" fill="url(#canvas-dots)" />
 
           {/* connectors */}
-          <g
-            fill="none"
-            className="stroke-muted-foreground/70"
-            strokeWidth="1.25"
-          >
+          <g fill="none" className="stroke-muted-foreground/70" strokeWidth="1.25">
             <path d="M122 45 L172 45" markerEnd="url(#canvas-arrow)" />
-            <path
-              d="M218 69 L218 88 L76 88 L76 100"
-              markerEnd="url(#canvas-arrow)"
-            />
-            <path
-              d="M122 123 L172 123"
-              markerEnd="url(#canvas-arrow)"
-            />
-            <path
-              d="M224 140 L224 166"
-              markerEnd="url(#canvas-arrow)"
-            />
+            <path d="M218 69 L218 88 L76 88 L76 100" markerEnd="url(#canvas-arrow)" />
+            <path d="M122 123 L172 123" markerEnd="url(#canvas-arrow)" />
+            <path d="M224 140 L224 166" markerEnd="url(#canvas-arrow)" />
           </g>
-          <text
-            x="128"
-            y="84"
-            fontSize="8"
-            className="fill-muted-foreground font-sans"
-          >
+          <text x="128" y="84" fontSize="8" className="fill-muted-foreground font-sans">
             revises
           </text>
 
@@ -132,25 +87,14 @@ function CanvasMock() {
                 rx="3"
                 className="fill-card stroke-border"
               />
-              <text
-                x="76"
-                y="49"
-                className="fill-foreground font-medium"
-              >
+              <text x="76" y="49" className="fill-foreground font-medium">
                 Problem
               </text>
             </g>
 
             <g>
-              <polygon
-                points="218,21 258,45 218,69 178,45"
-                className="fill-card stroke-border"
-              />
-              <text
-                x="218"
-                y="49"
-                className="fill-foreground font-medium"
-              >
+              <polygon points="218,21 258,45 218,69 178,45" className="fill-card stroke-border" />
+              <text x="218" y="49" className="fill-foreground font-medium">
                 Scope?
               </text>
             </g>
@@ -178,11 +122,7 @@ function CanvasMock() {
                 rx="3"
                 className="fill-card stroke-border"
               />
-              <text
-                x="224"
-                y="127"
-                className="fill-foreground font-medium"
-              >
+              <text x="224" y="127" className="fill-foreground font-medium">
                 Spec
               </text>
             </g>
@@ -196,11 +136,7 @@ function CanvasMock() {
                 rx="3"
                 className="fill-card stroke-border"
               />
-              <text
-                x="224"
-                y="187"
-                className="fill-foreground font-medium"
-              >
+              <text x="224" y="187" className="fill-foreground font-medium">
                 Ship
               </text>
             </g>
@@ -241,9 +177,7 @@ function CanvasMock() {
         {/* agent instruction */}
         <div className="absolute right-3 bottom-3 flex max-w-50 items-start gap-1.5 rounded-sm border bg-card p-2 shadow-md">
           <Wand2 className="mt-px size-3 shrink-0 text-primary" />
-          <p className="text-[10px] leading-snug text-foreground">
-            Add a review step after Scope
-          </p>
+          <p className="text-[10px] leading-snug text-foreground">Add a review step after Scope</p>
         </div>
       </div>
     </MockFrame>
@@ -263,17 +197,13 @@ function DocMock() {
           </span>
         </div>
 
-        <h3 className="mt-2.5 font-display text-xl font-semibold">
-          Checkout flow — spec
-        </h3>
+        <h3 className="mt-2.5 font-display text-xl font-semibold">Checkout flow — spec</h3>
 
         <div className="mt-3 space-y-3 text-[11.5px] leading-relaxed text-muted-foreground">
           <p>
             Customers move from cart to confirmation in three steps.{" "}
-            <span className="bg-primary/10 text-foreground">
-              Each step is reversible
-            </span>{" "}
-            so a failed payment never loses the cart.
+            <span className="bg-primary/10 text-foreground">Each step is reversible</span> so a
+            failed payment never loses the cart.
           </p>
 
           <div className="rounded-sm border-l-2 border-primary/50 bg-primary/5 px-2.5 py-2">
@@ -282,8 +212,7 @@ function DocMock() {
             </p>
             <p className="mt-1 text-xs leading-snug text-foreground/80">
               Three-step flow, generated from{" "}
-              <span className="font-mono text-[10px]">flow.canvas</span>{" "}
-              · 2 min ago
+              <span className="font-mono text-[10px]">flow.canvas</span> · 2 min ago
             </p>
           </div>
 
@@ -337,11 +266,7 @@ function BoardMock() {
             marker="bg-chart-3"
             className="border-primary/40 bg-primary/5"
           >
-            <BoardCard
-              title="Checkout diagram"
-              tag="canvas"
-              highlighted
-            />
+            <BoardCard title="Checkout diagram" tag="canvas" highlighted />
             <BoardCard title="Auth spec" tag="docs" />
           </BoardColumn>
 
@@ -351,16 +276,8 @@ function BoardMock() {
           </BoardColumn>
         </div>
 
-        <LiveCursor
-          name="Maya"
-          tone="amber"
-          className="top-[43%] left-[38%]"
-        />
-        <LiveCursor
-          name="Ari"
-          tone="violet"
-          className="top-[64%] left-[8%]"
-        />
+        <LiveCursor name="Maya" tone="amber" className="top-[43%] left-[38%]" />
+        <LiveCursor name="Ari" tone="violet" className="top-[64%] left-[8%]" />
       </div>
     </MockFrame>
   );
@@ -380,12 +297,7 @@ function BoardColumn({
   children: ReactNode;
 }) {
   return (
-    <div
-      className={cn(
-        "rounded-sm border bg-background/70 p-1.5",
-        className,
-      )}
-    >
+    <div className={cn("rounded-sm border bg-background/70 p-1.5", className)}>
       <div className="flex items-center justify-between gap-1 px-0.5 pb-1.5">
         <div className="flex items-center gap-1.5">
           <span className={cn("size-1.5 rounded-full", marker)} />
@@ -393,9 +305,7 @@ function BoardColumn({
             {label}
           </span>
         </div>
-        <span className="font-mono text-[9px] text-muted-foreground">
-          {count}
-        </span>
+        <span className="font-mono text-[9px] text-muted-foreground">{count}</span>
       </div>
       <div className="flex flex-col gap-1.5">{children}</div>
     </div>
@@ -418,9 +328,7 @@ function BoardCard({
         highlighted && "border-primary/50",
       )}
     >
-      <p className="text-[10.5px] leading-snug font-medium text-foreground">
-        {title}
-      </p>
+      <p className="text-[10.5px] leading-snug font-medium text-foreground">{title}</p>
       <div className="mt-1.5 flex items-center justify-between gap-1">
         <span className="rounded-xs bg-secondary px-1 py-px font-mono text-[8px] tracking-[0.08em] text-muted-foreground uppercase">
           {tag}

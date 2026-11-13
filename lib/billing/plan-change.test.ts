@@ -1,7 +1,9 @@
 import type Stripe from "stripe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { changeSubscriptionPlan } from "./plan-change";
 import { plans } from "./plans";
+import type * as StripeModule from "./stripe";
 import type { SubscriptionRow } from "./subscriptions";
 
 const mocks = vi.hoisted(() => ({
@@ -12,7 +14,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("./stripe", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./stripe")>();
+  const actual = await importOriginal<typeof StripeModule>();
   return {
     ...actual,
     getStripe: () => ({
@@ -28,8 +30,6 @@ vi.mock("./stripe", async (importOriginal) => {
 vi.mock("./subscriptions", () => ({
   applyStripeSubscription: mocks.apply,
 }));
-
-import { changeSubscriptionPlan } from "./plan-change";
 
 function localSubscription(): SubscriptionRow {
   return {
@@ -124,13 +124,11 @@ describe("changing an existing subscription's plan", () => {
   });
 
   it("refuses a subscription with no line item", async () => {
-    mocks.retrieve.mockResolvedValue(
-      stripeSubscription({ items: { data: [] } }),
-    );
+    mocks.retrieve.mockResolvedValue(stripeSubscription({ items: { data: [] } }));
 
-    await expect(
-      changeSubscriptionPlan(localSubscription(), plans.enterprise),
-    ).rejects.toThrow(/no line item/);
+    await expect(changeSubscriptionPlan(localSubscription(), plans.enterprise)).rejects.toThrow(
+      /no line item/,
+    );
 
     expect(mocks.update).not.toHaveBeenCalled();
     expect(mocks.apply).not.toHaveBeenCalled();

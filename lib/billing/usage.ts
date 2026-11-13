@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { agentPrompts, workspaces } from "@/lib/db/schema";
 import { accountWorkspacesWhere } from "@/lib/workspaces";
 
-import { upgradeMessages, type PlanLimits } from "./plans";
+import { type PlanLimits, upgradeMessages } from "./plans";
 import type { SubscriptionRow } from "./subscriptions";
 
 export type LimitUsage = {
@@ -121,10 +121,7 @@ export type ReachedLimit = {
 };
 
 /** The limits a plan has actually run out of; unlimited ones never appear. */
-export function reachedLimits(
-  limits: PlanLimits,
-  usage: AccountUsage,
-): ReachedLimit[] {
+export function reachedLimits(limits: PlanLimits, usage: AccountUsage): ReachedLimit[] {
   const metrics: Array<[keyof PlanLimits, number]> = [
     ["agentPromptsPerMonth", usage.agentPrompts.used],
     ["workspaces", usage.workspaces.used],
@@ -162,10 +159,7 @@ export function workspaceLimitMessage({
 }
 
 /** Fills `{used}`, `{limit}`, `{plan}`, `{period}` and `{account}` tokens. */
-export function fillUpgradeCopy(
-  template: string,
-  values: Record<string, string | number>,
-): string {
+export function fillUpgradeCopy(template: string, values: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (match, key: string) =>
     key in values ? String(values[key]) : match,
   );

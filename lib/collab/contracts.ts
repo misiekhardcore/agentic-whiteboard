@@ -5,12 +5,7 @@
  */
 
 export type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 export const WORKSPACE_SURFACES = ["doc", "canvas"] as const;
 export type WorkspaceSurface = (typeof WORKSPACE_SURFACES)[number];
@@ -93,10 +88,7 @@ export type MutationResult = {
  * implementation will call the Hocuspocus room owner; tests can use a fake.
  */
 export type WorkspaceGateway = {
-  snapshot(input: {
-    workspaceId: string;
-    surface: WorkspaceSurface;
-  }): Promise<WorkspaceSnapshot>;
+  snapshot(input: { workspaceId: string; surface: WorkspaceSurface }): Promise<WorkspaceSnapshot>;
   mutate(input: {
     workspaceId: string;
     surface: WorkspaceSurface;
@@ -148,7 +140,4 @@ export type WorkspaceUpdatedEvent = {
  * Ephemeral Supabase Realtime payloads. Document bytes never travel here;
  * Hocuspocus owns CRDT sync. Authoritative chat/run history lives in Postgres.
  */
-export type WorkspaceRealtimeEvent =
-  | AgentStatusEvent
-  | AgentMessageEvent
-  | WorkspaceUpdatedEvent;
+export type WorkspaceRealtimeEvent = AgentStatusEvent | AgentMessageEvent | WorkspaceUpdatedEvent;

@@ -1,8 +1,9 @@
 import { createId } from "@paralleldrive/cuid2";
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { workspaces } from "./workspace";
-import { user } from "./auth";
 import { relations } from "drizzle-orm";
+import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+
+import { user } from "./auth";
+import { workspaces } from "./workspace";
 
 export const agentPrompts = pgTable(
   "AgentPrompt",
@@ -24,28 +25,18 @@ export const agentPrompts = pgTable(
       onDelete: "set null",
     }),
 
-    createdAt: timestamp("createdAt", { precision: 3, mode: "date" })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).defaultNow().notNull(),
   },
-  (table) => [
-    index("AgentPrompt_ownerId_createdAt_idx").on(
-      table.ownerId,
-      table.createdAt,
-    ),
-  ],
+  (table) => [index("AgentPrompt_ownerId_createdAt_idx").on(table.ownerId, table.createdAt)],
 );
 
-export const agentPromptsRelations = relations(
-  agentPrompts,
-  ({ one }) => ({
-    user: one(user, {
-      fields: [agentPrompts.userId],
-      references: [user.id],
-    }),
-    workspace: one(workspaces, {
-      fields: [agentPrompts.workspaceId],
-      references: [workspaces.id],
-    }),
+export const agentPromptsRelations = relations(agentPrompts, ({ one }) => ({
+  user: one(user, {
+    fields: [agentPrompts.userId],
+    references: [user.id],
   }),
-);
+  workspace: one(workspaces, {
+    fields: [agentPrompts.workspaceId],
+    references: [workspaces.id],
+  }),
+}));

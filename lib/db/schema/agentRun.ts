@@ -1,23 +1,14 @@
 import { createId } from "@paralleldrive/cuid2";
 import { relations, sql } from "drizzle-orm";
-import {
-  index,
-  jsonb,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
-import { user } from "./auth";
-import { workspaces } from "./workspace";
-import { agentMessages } from "./agentMessage";
+import { index, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+
 import { AGENT_RUN_STATUSES } from "../../collab/contracts";
 
-export const agentRunStatusEnum = pgEnum(
-  "AgentRunStatus",
-  AGENT_RUN_STATUSES,
-);
+import { agentMessages } from "./agentMessage";
+import { user } from "./auth";
+import { workspaces } from "./workspace";
+
+export const agentRunStatusEnum = pgEnum("AgentRunStatus", AGENT_RUN_STATUSES);
 
 export const agentRuns = pgTable(
   "agentRun",
@@ -50,23 +41,15 @@ export const agentRuns = pgTable(
     startedAt: timestamp("startedAt", { precision: 3, mode: "date" }),
     finishedAt: timestamp("finishedAt", { precision: 3, mode: "date" }),
 
-    createdAt: timestamp("createdAt", { precision: 3, mode: "date" })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" })
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    index("AgentRun_workspaceId_createdAt_idx").on(
-      table.workspaceId,
-      table.createdAt,
-    ),
-    index("AgentRun_requestedByUserId_createdAt_idx").on(
-      table.requestedByUserId,
-      table.createdAt,
-    ),
+    index("AgentRun_workspaceId_createdAt_idx").on(table.workspaceId, table.createdAt),
+    index("AgentRun_requestedByUserId_createdAt_idx").on(table.requestedByUserId, table.createdAt),
     // One agent may write to a workspace at a time. Concurrent intents would
     // be merged by Yjs but could still fight over the same semantic edit.
     uniqueIndex("AgentRun_one_active_per_workspace_idx")

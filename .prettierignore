@@ -1,0 +1,24 @@
+# Dependencies and build output
+node_modules
+.next
+out
+build
+coverage
+playwright-report
+test-results
+*.tsbuildinfo
+next-env.d.ts
+
+# Lockfile is owned by pnpm
+pnpm-lock.yaml
+
+# Generated database migrations and snapshots
+drizzle
+
+# Vendored third-party documents and the local Supabase stack
+.agents
+supabase-project
+public
+
+# Git worktrees checked out inside the repo are separate projects
+.worktrees

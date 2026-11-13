@@ -1,13 +1,10 @@
 import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
 
+import { getStripe } from "@/lib/billing/stripe";
+import { applyStripeSubscription, markSubscriptionCanceled } from "@/lib/billing/subscriptions";
 import { db } from "@/lib/db";
 import { stripeEvents } from "@/lib/db/schema";
-import { getStripe } from "@/lib/billing/stripe";
-import {
-  applyStripeSubscription,
-  markSubscriptionCanceled,
-} from "@/lib/billing/subscriptions";
 
 /**
  * Shape check for an event that arrived without a signature, so a stray POST
@@ -45,10 +42,7 @@ export async function POST(request: Request) {
   // configuration error instead of a misleading signature error.
   if (!process.env.STRIPE_SECRET_KEY) {
     console.error("[billing] STRIPE_SECRET_KEY is not set");
-    return Response.json(
-      { error: "Webhook is not configured." },
-      { status: 503 },
-    );
+    return Response.json({ error: "Webhook is not configured." }, { status: 503 });
   }
 
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -56,10 +50,7 @@ export async function POST(request: Request) {
 
   if (!secret && isProduction) {
     console.error("[billing] STRIPE_WEBHOOK_SECRET is not set");
-    return Response.json(
-      { error: "Webhook is not configured." },
-      { status: 503 },
-    );
+    return Response.json({ error: "Webhook is not configured." }, { status: 503 });
   }
 
   const payload = await request.text();
@@ -81,10 +72,7 @@ export async function POST(request: Request) {
   } else {
     const parsed = parseUnsignedEvent(payload);
     if (!parsed) {
-      return Response.json(
-        { error: "Expected a Stripe event payload." },
-        { status: 400 },
-      );
+      return Response.json({ error: "Expected a Stripe event payload." }, { status: 400 });
     }
     console.warn(
       "[billing] STRIPE_WEBHOOK_SECRET is not set; accepting an unsigned event because this is not production",
@@ -111,8 +99,7 @@ export async function POST(request: Request) {
             typeof session.subscription === "string"
               ? session.subscription
               : session.subscription.id;
-          const subscription =
-            await getStripe().subscriptions.retrieve(subscriptionId);
+          const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
           await applyStripeSubscription(subscription);
         }
         break;

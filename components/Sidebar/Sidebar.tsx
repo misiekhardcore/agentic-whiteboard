@@ -1,12 +1,4 @@
 import {
-  Archive,
-  CreditCard,
-  LayoutGrid,
-  Settings,
-  Sparkles,
-  Users,
-} from "lucide-react";
-import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
@@ -15,11 +7,15 @@ import {
   SidebarHeader,
   SidebarMenu,
 } from "@konopskidev/ui/components/sidebar";
+import { Archive, CreditCard, LayoutGrid, Settings, Sparkles, Users } from "lucide-react";
 import { Suspense } from "react";
+
 import { CreateWorkspaceDialog } from "@/app/dashboard/_components/CreateWorkspaceDialog";
-import { WorkspaceUsage } from "./WorkspaceUsage";
-import { SidebarMenuLink } from "./SidebarMenuLink";
+
 import { Loading } from "../Loading/Loading";
+
+import { SidebarMenuLink } from "./SidebarMenuLink";
+import { WorkspaceUsage } from "./WorkspaceUsage";
 
 export function DashboardSidebar() {
   return (
