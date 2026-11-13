@@ -10,7 +10,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . --max-warnings=0",
+    "lint": "next typegen && eslint . --max-warnings=0",
     "test": "vitest run",
     "test:ai": "AI_LIVE=1 vitest run lib/ai/live.test.ts",
     "test:e2e": "playwright test",
@@ -21,10 +21,10 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "lint:fix": "eslint . --fix",
+    "lint:fix": "next typegen && eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "tsc": "tsc --noEmit"
+    "tsc": "next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.87",
