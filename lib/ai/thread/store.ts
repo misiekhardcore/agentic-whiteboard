@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, gte, inArray, isNull, lt, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, inArray, isNull, sql } from "drizzle-orm";
 
 import { addUsage, type StoredPromptMessage, threadMessages } from "@/lib/ai/thread/rules";
 import type { PlanLimits } from "@/lib/billing/plans";
@@ -12,6 +12,8 @@ import {
 import type { AgentPromptStatus } from "@/lib/collab/contracts";
 import { db } from "@/lib/db";
 import { agentMessages, agentPrompts } from "@/lib/db/schema";
+
+import { streamingPromptIds } from "./live";
 
 /**
  * Persistence for the dashboard's prompt thread. A prompt row is created when a
@@ -92,8 +94,7 @@ export async function promptAllowance({
  * A prompt whose process died keeps its QUEUED/RUNNING status forever and would
  * block the single-flight rule, so the next send retires it first.
  */
-export const STALE_PROMPT_AFTER_MS = 15 * 60 * 1000;
-const STALE_PROMPT_ERROR =
+const ORPHANED_PROMPT_ERROR =
   "The agent stopped before finishing this prompt. Send it again to retry.";
 
 export type OpenPromptResult = { kind: "opened"; promptId: string } | { kind: "busy" };
@@ -138,13 +139,42 @@ export async function loadDashboardPromptThread(userId: string, limit = DASHBOAR
   );
 }
 
+/**
+ * The active prompts on a person's thread that nothing is streaming.
+ *
+ * A prompt is only alive while the request that created it holds its stream, so
+ * anything missing from this process's registry was left behind by a server that
+ * has since gone. Deliberately not a timestamp comparison: a slow model can hold
+ * one prompt for longer than any lease we would pick, and two times were ever
+ * guesswork.
+ */
+export function deadThreadPrompts(
+  active: readonly { id: string }[],
+  streaming: readonly string[],
+): string[] {
+  const live = new Set(streaming);
+  return active.filter((prompt) => !live.has(prompt.id)).map((prompt) => prompt.id);
+}
+
+const UNIQUE_VIOLATION = "23505";
+
+/**
+ * Whether the driver refused a write on a unique index. Drizzle wraps every
+ * failed query in a `DrizzleQueryError` and keeps the driver's error as `cause`,
+ * so the SQLSTATE is one level down — reading only the wrapper made a busy thread
+ * surface as a 500 instead of the 409 the send path means to report.
+ */
 function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: unknown }).code === "23505"
-  );
+  let current = error;
+
+  for (let depth = 0; depth < 4; depth += 1) {
+    if (typeof current !== "object" || current === null) return false;
+    if ((current as { code?: unknown }).code === UNIQUE_VIOLATION) return true;
+
+    current = (current as { cause?: unknown }).cause;
+  }
+
+  return false;
 }
 
 /**
@@ -152,6 +182,10 @@ function isUniqueViolation(error: unknown): boolean {
  * one QUEUED/RUNNING prompt per person's dashboard thread; a second send while
  * the agent is working reports `busy` instead of running two streams over the
  * same conversation.
+ *
+ * Retiring an orphan first is what makes a restart recoverable: the row a killed
+ * server left behind would otherwise block every send until someone cleared it by
+ * hand.
  */
 export async function openDashboardPrompt({
   ownerId,
@@ -164,21 +198,29 @@ export async function openDashboardPrompt({
   provider: string;
   model: string;
 }): Promise<OpenPromptResult> {
-  await db
-    .update(agentPrompts)
-    .set({
-      status: "FAILED",
-      error: STALE_PROMPT_ERROR,
-      finishedAt: new Date(),
-    })
+  const active = await db
+    .select({ id: agentPrompts.id })
+    .from(agentPrompts)
     .where(
       and(
         eq(agentPrompts.userId, userId),
         isNull(agentPrompts.workspaceId),
         inArray(agentPrompts.status, ["QUEUED", "RUNNING"]),
-        lt(agentPrompts.createdAt, new Date(Date.now() - STALE_PROMPT_AFTER_MS)),
       ),
     );
+
+  const orphaned = deadThreadPrompts(active, streamingPromptIds(userId));
+
+  if (orphaned.length > 0) {
+    await db
+      .update(agentPrompts)
+      .set({
+        status: "FAILED",
+        error: ORPHANED_PROMPT_ERROR,
+        finishedAt: new Date(),
+      })
+      .where(inArray(agentPrompts.id, orphaned));
+  }
 
   try {
     const [created] = await db
