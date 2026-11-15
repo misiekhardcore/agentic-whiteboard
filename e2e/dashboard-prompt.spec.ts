@@ -335,7 +335,9 @@ test("the agent archives and deletes only after the person approves", async ({ p
     // Two prompts were sent; answering an approval is not a third.
     await expect.poll(() => promptCount(email)).toBe(2);
 
-    // The answered card is gone from the replay; its reply is not.
+    // The answered card is gone from the replay; its reply is not. The reply
+    // is persisted when the turn closes, so reloading before that loses it.
+    await waitForTurnsToClose(email);
     await page.reload();
     await expect(page.getByRole("list", { name: "Agent conversation" })).toContainText("Archived.");
     await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
@@ -382,6 +384,7 @@ test("denying an approval leaves the workspace exactly as it was", async ({ page
     await expect.poll(() => promptCount(email)).toBe(2);
 
     // The denial is recorded as the card's outcome, not as a second question.
+    await waitForTurnsToClose(email);
     await page.reload();
     await expect(page.getByRole("list", { name: "Agent conversation" })).toContainText(
       "Nothing changed.",

@@ -6,32 +6,32 @@ const dbMocks = vi.hoisted(() => {
   const from = vi.fn(() => ({ where: selectWhere }));
   const select = vi.fn(() => ({ from }));
 
-  const updateWhere = vi.fn();
-  const set = vi.fn(() => ({ where: updateWhere }));
-  const update = vi.fn(() => ({ set }));
+  const onConflictDoUpdate = vi.fn();
+  const values = vi.fn(() => ({ onConflictDoUpdate }));
+  const insert = vi.fn(() => ({ values }));
 
   return {
-    db: { select, update },
+    db: { select, insert },
     select,
     from,
     selectWhere,
     limit,
-    update,
-    set,
-    updateWhere,
+    insert,
+    values,
+    onConflictDoUpdate,
   };
 });
 
 vi.mock("@/lib/db", () => ({ db: dbMocks.db }));
 
-import { user } from "@/lib/db/schema";
+import { userSettings } from "@/lib/db/schema";
 
 import { readReadAloudPreference, setReadAloudPreference } from "./preferences";
 
 beforeEach(() => {
   vi.clearAllMocks();
   dbMocks.limit.mockResolvedValue([]);
-  dbMocks.updateWhere.mockResolvedValue(undefined);
+  dbMocks.onConflictDoUpdate.mockResolvedValue(undefined);
 });
 
 describe("readReadAloudPreference", () => {
@@ -45,28 +45,32 @@ describe("readReadAloudPreference", () => {
     await expect(readReadAloudPreference("user_1")).resolves.toBe(true);
   });
 
-  it("looks the preference up by the person's id", async () => {
+  it("looks the choice up in the person's settings row", async () => {
     await readReadAloudPreference("user_1");
 
-    expect(dbMocks.select).toHaveBeenCalledWith({ readAloud: user.readAloud });
-    expect(dbMocks.from).toHaveBeenCalledTimes(1);
+    expect(dbMocks.select).toHaveBeenCalledWith({ readAloud: userSettings.readAloud });
+    expect(dbMocks.from).toHaveBeenCalledWith(userSettings);
     expect(dbMocks.selectWhere).toHaveBeenCalledTimes(1);
     expect(dbMocks.limit).toHaveBeenCalledWith(1);
   });
 });
 
 describe("setReadAloudPreference", () => {
-  it("stores the choice on the person's row", async () => {
+  it("inserts the choice when the person has no settings row yet", async () => {
     await setReadAloudPreference("user_1", true);
 
-    expect(dbMocks.update).toHaveBeenCalledTimes(1);
-    expect(dbMocks.set).toHaveBeenCalledWith({ readAloud: true });
-    expect(dbMocks.updateWhere).toHaveBeenCalledTimes(1);
+    expect(dbMocks.insert).toHaveBeenCalledWith(userSettings);
+    expect(dbMocks.values).toHaveBeenCalledWith({ userId: "user_1", readAloud: true });
+    expect(dbMocks.onConflictDoUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it("stores an explicit off", async () => {
+  it("updates the existing settings row for the person", async () => {
     await setReadAloudPreference("user_1", false);
 
-    expect(dbMocks.set).toHaveBeenCalledWith({ readAloud: false });
+    expect(dbMocks.values).toHaveBeenCalledWith({ userId: "user_1", readAloud: false });
+    expect(dbMocks.onConflictDoUpdate).toHaveBeenCalledWith({
+      target: userSettings.userId,
+      set: { readAloud: false },
+    });
   });
 });

@@ -1,5 +1,5 @@
 {
-  "id": "16938371-782c-455c-aeb3-23e567f2f290",
+  "id": "952ddea0-6720-4fc7-ab06-f20d216fccbb",
   "prevId": "60651092-ba67-40ba-9798-216e0c9aa80e",
   "version": "7",
   "dialect": "postgresql",
@@ -931,13 +931,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "read_aloud": {
-          "name": "read_aloud",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1513,6 +1506,60 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.userSettings": {
+      "name": "userSettings",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "read_aloud": {
+          "name": "read_aloud",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "userSettings_user_id_user_id_fk": {
+          "name": "userSettings_user_id_user_id_fk",
+          "tableFrom": "userSettings",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
