@@ -1,7 +1,10 @@
 import { cache } from "react";
 
-import { getSessionAccount } from "@/lib/account";
-import { canManageTeam, type TeamOption } from "@/lib/organizations";
+import { countPromptsForMember } from "@/lib/ai/thread/store";
+import { getSessionAccount } from "@/lib/identity/account";
+import type { TeamOption } from "@/lib/organizations/contracts";
+import { canManageTeam } from "@/lib/organizations/membership";
+import { countAccountWorkspaces } from "@/lib/workspace/queries";
 
 import {
   type Entitlements,
@@ -12,9 +15,9 @@ import { upgradeMessages, type UpgradeReason } from "./plans";
 import {
   type AccountUsage,
   fillUpgradeCopy,
-  getAccountUsage,
   type ReachedLimit,
   reachedLimits,
+  usageWindow,
 } from "./usage";
 
 export type BillingOverview = {
@@ -34,12 +37,14 @@ export type BillingOverview = {
 
 /**
  * Everything the header and the sidebar need about the active account's plan
- * and consumption. It reads the request, so it is only called from components
- * inside a `<Suspense>` boundary.
+ * and consumption.
  *
- * `cache` makes the header and the sidebar share one resolution per request:
- * the session, the account, the subscription and the two counts are read once
- * even though two separate server components ask for them.
+ * This is the one place that needs both counts, so it composes the public
+ * queries of the contexts that own the rows instead of counting them itself:
+ * prompts belong to `ai`, workspaces to `workspace`, and the window and the
+ * limit copy to `billing`. Reads the request, so it is only called from
+ * components inside a `<Suspense>` boundary; `cache` makes the header and the
+ * sidebar share one resolution per render.
  */
 export const getSessionBillingOverview = cache(async (): Promise<BillingOverview | null> => {
   const account = await getSessionAccount();
@@ -53,12 +58,27 @@ export const getSessionBillingOverview = cache(async (): Promise<BillingOverview
     ? await getOrganizationEntitlements(activeTeam.id)
     : await getUserEntitlements(session.user.id);
 
-  const usage = await getAccountUsage({
-    userId: session.user.id,
-    organizationId,
-    subscription: entitlements.subscription,
-    limits: entitlements.limits,
-  });
+  const window = usageWindow(entitlements.subscription);
+  const ownerId = organizationId ?? session.user.id;
+
+  const [promptsUsed, workspacesUsed] = await Promise.all([
+    countPromptsForMember({ ownerId, userId: session.user.id, since: window.start }),
+    countAccountWorkspaces(session.user.id, organizationId),
+  ]);
+
+  const usage: AccountUsage = {
+    agentPrompts: {
+      used: promptsUsed,
+      limit: entitlements.limits.agentPromptsPerMonth,
+      periodStart: window.start,
+      periodEnd: window.end,
+      periodLabel: window.label,
+    },
+    workspaces: {
+      used: workspacesUsed,
+      limit: entitlements.limits.workspaces,
+    },
+  };
 
   const reached = reachedLimits(entitlements.limits, usage);
   const accountName = activeTeam?.name ?? session.user.name;

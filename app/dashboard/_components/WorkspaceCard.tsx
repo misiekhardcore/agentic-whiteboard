@@ -1,10 +1,10 @@
 import Link from "next/link";
 
 import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
-import { routes } from "@/lib/routes";
-import { archiveWorkspaceAction } from "@/lib/workspace-actions";
-import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace-status";
-import type { AccountWorkspace } from "@/lib/workspaces";
+import { routes } from "@/lib/shared/routes";
+import { archiveWorkspaceAction } from "@/lib/workspace/actions";
+import type { AccountWorkspace } from "@/lib/workspace/queries";
+import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace/status";
 
 import { EditWorkspaceDialog } from "./EditWorkspaceDialog";
 

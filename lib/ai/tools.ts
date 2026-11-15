@@ -1,8 +1,8 @@
 import { tool, type ToolSet } from "ai";
 
-import type { AccountActor } from "@/lib/actor";
 import type { CapabilityContext } from "@/lib/capabilities/define";
 import { agentCapabilities } from "@/lib/capabilities/registry";
+import type { AccountActor } from "@/lib/identity/actor";
 
 /**
  * Tools are built per run from the capability registry and close over the

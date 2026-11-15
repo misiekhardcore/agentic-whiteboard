@@ -19,9 +19,12 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useCallback, useEffect, useState } from "react";
 
-import { routes } from "@/lib/routes";
-import { createWorkspaceAction } from "@/lib/workspace-actions";
-import { EMPTY_WORKSPACE_FORM_STATE, WORKSPACE_DESCRIPTION_MAX_LENGTH } from "@/lib/workspace-form";
+import { routes } from "@/lib/shared/routes";
+import { createWorkspaceAction } from "@/lib/workspace/actions";
+import {
+  EMPTY_WORKSPACE_FORM_STATE,
+  WORKSPACE_DESCRIPTION_MAX_LENGTH,
+} from "@/lib/workspace/forms";
 
 /**
  * Creating a workspace belongs to the account the dashboard is showing: a

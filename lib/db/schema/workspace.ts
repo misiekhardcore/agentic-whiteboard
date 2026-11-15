@@ -2,7 +2,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { relations } from "drizzle-orm";
 import { doublePrecision, index, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
-import { WORKSPACE_STATUSES } from "../../workspace-status";
+import { WORKSPACE_STATUSES } from "../../workspace/status";
 
 import { agentMessages } from "./agentMessage";
 import { agentPrompts } from "./agentPrompt";

@@ -1,10 +1,7 @@
-import { and, eq } from "drizzle-orm";
-
-import { auth } from "@/lib/auth";
 import { BillingConfigurationError, BillingRequestError, getStripe } from "@/lib/billing/stripe";
 import { applyStripeSubscription } from "@/lib/billing/subscriptions";
-import { db } from "@/lib/db";
-import { member } from "@/lib/db/schema";
+import { auth } from "@/lib/identity/better-auth";
+import { getMemberRole } from "@/lib/organizations/queries";
 
 /**
  * Reconciles a finished embedded checkout with the database.
@@ -59,16 +56,8 @@ export async function POST(request: Request) {
           { status: 403 },
         );
       }
-    } else {
-      const [membership] = await db
-        .select({ role: member.role })
-        .from(member)
-        .where(and(eq(member.organizationId, ownerId), eq(member.userId, session.user.id)))
-        .limit(1);
-
-      if (!membership) {
-        return Response.json({ error: "You are not a member of that team." }, { status: 403 });
-      }
+    } else if (!(await getMemberRole(ownerId, session.user.id))) {
+      return Response.json({ error: "You are not a member of that team." }, { status: 403 });
     }
 
     if (!checkout.subscription) {

@@ -6,9 +6,9 @@ import { redirect } from "next/navigation";
 import { CreateWorkspaceDialog } from "@/app/dashboard/_components/CreateWorkspaceDialog";
 import { WorkspaceCard } from "@/app/dashboard/_components/WorkspaceCard";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
-import { getSessionAccount } from "@/lib/account";
-import { routes, signInPath } from "@/lib/routes";
-import { listAccountWorkspaces } from "@/lib/workspaces";
+import { getSessionAccount } from "@/lib/identity/account";
+import { routes, signInPath } from "@/lib/shared/routes";
+import { listAccountWorkspaces } from "@/lib/workspace/queries";
 
 export const metadata = {
   title: "All workspaces",

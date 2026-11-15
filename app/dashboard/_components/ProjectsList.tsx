@@ -4,11 +4,11 @@ import { Suspense } from "react";
 
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Loading } from "@/components/Loading/Loading";
-import { getSessionAccount } from "@/lib/account";
-import { formatDay } from "@/lib/formatDate";
-import { routes } from "@/lib/routes";
-import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace-status";
-import { listRecentWorkspaceItems, type RecentWorkspaceItem } from "@/lib/workspaces";
+import { getSessionAccount } from "@/lib/identity/account";
+import { formatDay } from "@/lib/shared/format-date";
+import { routes } from "@/lib/shared/routes";
+import { listRecentWorkspaceItems, type RecentWorkspaceItem } from "@/lib/workspace/recent";
+import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace/status";
 
 import { CreateWorkspaceDialog } from "./CreateWorkspaceDialog";
 import { WorkspaceCard } from "./WorkspaceCard";

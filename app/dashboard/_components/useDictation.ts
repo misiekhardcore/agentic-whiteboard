@@ -8,7 +8,7 @@ import {
   dictationErrorMessage,
   dictationTranscript,
   withTranscript,
-} from "@/lib/ai/prompt-composer";
+} from "@/lib/ai/thread/composer";
 
 /** Support is a fact about the browser, so there is nothing to subscribe to. */
 const subscribeToNothing = () => () => {

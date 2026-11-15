@@ -24,13 +24,16 @@ import { Textarea } from "@konopskidev/ui/components/textarea";
 import { Pencil } from "lucide-react";
 import { useActionState, useCallback, useEffect, useState } from "react";
 
-import { updateWorkspaceAction } from "@/lib/workspace-actions";
-import { EMPTY_WORKSPACE_FORM_STATE, WORKSPACE_DESCRIPTION_MAX_LENGTH } from "@/lib/workspace-form";
+import { updateWorkspaceAction } from "@/lib/workspace/actions";
+import {
+  EMPTY_WORKSPACE_FORM_STATE,
+  WORKSPACE_DESCRIPTION_MAX_LENGTH,
+} from "@/lib/workspace/forms";
 import {
   WORKSPACE_STATUS_LABELS,
   WORKSPACE_STATUSES,
   type WorkspaceStatus,
-} from "@/lib/workspace-status";
+} from "@/lib/workspace/status";
 
 /**
  * Renaming a workspace and moving it between stages. The workspace id is the

@@ -6,11 +6,9 @@ import { Input } from "@konopskidev/ui/components/input";
 import { Label } from "@konopskidev/ui/components/label";
 import { useActionState } from "react";
 
-import {
-  updateOrganizationProfileAction,
-  updatePersonalProfileAction,
-} from "@/lib/profile-actions";
-import { EMPTY_PROFILE_FORM_STATE } from "@/lib/profile-form";
+import { updatePersonalProfileAction } from "@/lib/identity/actions";
+import { EMPTY_PROFILE_FORM_STATE } from "@/lib/identity/forms";
+import { updateOrganizationProfileAction } from "@/lib/organizations/actions";
 
 export function PersonalProfileForm({
   user,

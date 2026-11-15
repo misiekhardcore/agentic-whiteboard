@@ -17,7 +17,7 @@ import { UsageMeter } from "@/app/_components/billing/usage-meter";
 import { planFacts } from "@/lib/billing/details";
 import { getSessionBillingOverview } from "@/lib/billing/overview";
 import { isPaidPlan, limitLabels } from "@/lib/billing/plans";
-import { routes, signInPath } from "@/lib/routes";
+import { routes, signInPath } from "@/lib/shared/routes";
 
 export const metadata = {
   title: "Billing",

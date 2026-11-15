@@ -2,8 +2,8 @@ import { Button } from "@konopskidev/ui/components/button";
 import { headers } from "next/headers";
 import Link from "next/link";
 
-import { auth } from "@/lib/auth";
-import { routes } from "@/lib/routes";
+import { auth } from "@/lib/identity/better-auth";
+import { routes } from "@/lib/shared/routes";
 
 export async function SignButton() {
   const session = await auth.api.getSession({

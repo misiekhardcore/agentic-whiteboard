@@ -8,7 +8,7 @@ import {
 } from "@konopskidev/ui/components/card";
 import Link from "next/link";
 
-import { routes } from "@/lib/routes";
+import { routes } from "@/lib/shared/routes";
 
 import { ResetPasswordForm } from "./reset-password-form";
 

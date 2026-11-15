@@ -10,11 +10,11 @@ import {
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { getSessionAccount } from "@/lib/account";
-import { formatDay } from "@/lib/formatDate";
-import { routes, signInPath } from "@/lib/routes";
-import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace-status";
-import { getWorkspaceForUser } from "@/lib/workspaces";
+import { getSessionAccount } from "@/lib/identity/account";
+import { formatDay } from "@/lib/shared/format-date";
+import { routes, signInPath } from "@/lib/shared/routes";
+import { getWorkspaceForUser } from "@/lib/workspace/access";
+import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace/status";
 
 // The id comes from the URL and access depends on the session, so this route
 // renders per request.

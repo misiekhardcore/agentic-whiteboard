@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 
 import { Loading } from "@/components/Loading/Loading";
-import { getSessionAccount } from "@/lib/account";
-import { loadDashboardPromptThread } from "@/lib/ai/prompts";
+import { loadDashboardPromptThread } from "@/lib/ai/thread/store";
+import { getSessionAccount } from "@/lib/identity/account";
 
 import { PromptComposer } from "./PromptComposer";
 

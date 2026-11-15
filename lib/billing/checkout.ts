@@ -1,8 +1,7 @@
-import { and, eq } from "drizzle-orm";
-
-import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { member, organization } from "@/lib/db/schema";
+import { auth } from "@/lib/identity/better-auth";
+import { canManageTeam } from "@/lib/organizations/membership";
+import { getMemberRole, getOrganizationRecord } from "@/lib/organizations/queries";
+import { uniqueOrganizationSlug } from "@/lib/organizations/slugs";
 
 import { ensureStripeCustomer } from "./customers";
 import { changeSubscriptionPlan } from "./plan-change";
@@ -11,9 +10,6 @@ import { appUrl, BillingRequestError, getStripe, lineItemForPlan } from "./strip
 import { getActiveSubscription } from "./subscriptions";
 
 const MAX_SEATS = 500;
-
-/** Roles allowed to put an organization on a paid plan. */
-const BILLING_ROLES = ["owner", "admin"] as const;
 
 export type CheckoutUser = {
   id: string;
@@ -35,19 +31,6 @@ function clampSeats(value: unknown): number {
   return Math.min(seats, MAX_SEATS);
 }
 
-function slugify(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40);
-  return slug || "team";
-}
-
-function uniqueSlug(name: string): string {
-  return `${slugify(name)}-${crypto.randomUUID().slice(0, 8)}`;
-}
-
 /**
  * Picks the organization a team plan bills. An explicit id must belong to the
  * caller with a billing role; a name creates a new organization (the pricing
@@ -67,16 +50,12 @@ async function resolveTeamOrganization({
   headers: Headers;
 }): Promise<string> {
   if (typeof organizationId === "string" && organizationId) {
-    const [membership] = await db
-      .select({ role: member.role })
-      .from(member)
-      .where(and(eq(member.organizationId, organizationId), eq(member.userId, userId)))
-      .limit(1);
+    const role = await getMemberRole(organizationId, userId);
 
-    if (!membership) {
+    if (!role) {
       throw new BillingRequestError("You are not a member of that organization.", 403);
     }
-    if (!BILLING_ROLES.includes(membership.role as (typeof BILLING_ROLES)[number])) {
+    if (!canManageTeam(role)) {
       throw new BillingRequestError("Only organization owners and admins can manage billing.", 403);
     }
 
@@ -88,7 +67,7 @@ async function resolveTeamOrganization({
     const created = await auth.api.createOrganization({
       body: {
         name,
-        slug: uniqueSlug(name),
+        slug: uniqueOrganizationSlug(name),
         keepCurrentActiveOrganization: true,
       },
       headers,
@@ -146,11 +125,7 @@ export async function startCheckout({
       headers,
     });
 
-    const [team] = await db
-      .select({ name: organization.name })
-      .from(organization)
-      .where(eq(organization.id, ownerId))
-      .limit(1);
+    const team = await getOrganizationRecord(ownerId);
     if (!team) {
       throw new BillingRequestError("That organization no longer exists.", 404);
     }

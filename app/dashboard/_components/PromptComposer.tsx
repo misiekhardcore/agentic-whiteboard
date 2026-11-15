@@ -21,9 +21,9 @@ import {
   composerView,
   EXAMPLE_PROMPTS,
   submittedPrompt,
-} from "@/lib/ai/prompt-composer";
-import { threadText } from "@/lib/ai/thread-parts";
-import { routes } from "@/lib/routes";
+} from "@/lib/ai/thread/composer";
+import { threadText } from "@/lib/ai/thread/parts";
+import { routes } from "@/lib/shared/routes";
 
 import { DictationButton } from "./DictationButton";
 import { PromptThread } from "./PromptThread";

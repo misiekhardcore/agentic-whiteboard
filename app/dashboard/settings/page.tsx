@@ -8,9 +8,9 @@ import {
 } from "@konopskidev/ui/components/card";
 import { redirect } from "next/navigation";
 
-import { getSessionAccount } from "@/lib/account";
-import { canManageTeam } from "@/lib/organizations";
-import { routes, signInPath } from "@/lib/routes";
+import { getSessionAccount } from "@/lib/identity/account";
+import { canManageTeam } from "@/lib/organizations/membership";
+import { routes, signInPath } from "@/lib/shared/routes";
 
 import { OrganizationProfileForm, PersonalProfileForm } from "./_components/profile-forms";
 

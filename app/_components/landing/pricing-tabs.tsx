@@ -15,8 +15,8 @@ import {
   type Plan,
   planServesAudience,
 } from "@/lib/billing/plans";
-import type { TeamOption } from "@/lib/organizations";
-import { routes, signInPath } from "@/lib/routes";
+import type { TeamOption } from "@/lib/organizations/contracts";
+import { routes, signInPath } from "@/lib/shared/routes";
 import { cn } from "@/lib/utils";
 
 import { CheckoutSheet } from "./checkout-sheet";

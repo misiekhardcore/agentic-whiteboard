@@ -15,7 +15,7 @@ import type { ReactNode } from "react";
 
 import type { PlanFacts } from "@/lib/billing/details";
 import { isPaidPlan, type Plan } from "@/lib/billing/plans";
-import { routes } from "@/lib/routes";
+import { routes } from "@/lib/shared/routes";
 
 import { CancelSubscriptionButton } from "./cancel-subscription-button";
 import { PlanSummary } from "./plan-summary";

@@ -7,8 +7,8 @@ import { Input } from "@konopskidev/ui/components/input";
 import { Spinner } from "@konopskidev/ui/components/spinner";
 import { useActionState } from "react";
 
-import { signUpAction } from "@/lib/auth-actions";
-import { initialAuthState } from "@/lib/auth-form";
+import { signUpAction } from "@/lib/identity/actions";
+import { initialAuthState } from "@/lib/identity/forms";
 
 export function SignUpForm({ redirectTo }: { redirectTo?: string }) {
   const [state, formAction, isPending] = useActionState(signUpAction, initialAuthState);

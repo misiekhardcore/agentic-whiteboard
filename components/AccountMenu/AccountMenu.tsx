@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { getSessionAccount } from "@/lib/account";
+import { getSessionAccount } from "@/lib/identity/account";
 
 import { AccountMenuPopover } from "./AccountMenuPopover";
 

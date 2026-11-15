@@ -11,7 +11,7 @@ import { Archive, CreditCard, LayoutGrid, Settings, Sparkles, Users } from "luci
 import { Suspense } from "react";
 
 import { CreateWorkspaceDialog } from "@/app/dashboard/_components/CreateWorkspaceDialog";
-import { routes } from "@/lib/routes";
+import { routes } from "@/lib/shared/routes";
 
 import { Loading } from "../Loading/Loading";
 

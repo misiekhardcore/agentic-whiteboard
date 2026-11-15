@@ -32,8 +32,8 @@ import {
   type Plan,
   planServesAudience,
 } from "@/lib/billing/plans";
-import type { TeamOption } from "@/lib/organizations";
-import { routes } from "@/lib/routes";
+import type { TeamOption } from "@/lib/organizations/contracts";
+import { routes } from "@/lib/shared/routes";
 
 /** Loaded once per page load; Stripe.js is cached by the browser afterwards. */
 let stripePromise: Promise<Stripe | null> | null = null;

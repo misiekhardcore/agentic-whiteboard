@@ -1,9 +1,9 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { auth } from "@/lib/auth";
-import { DEFAULT_REDIRECT, safeRedirectTo } from "@/lib/auth-redirect";
-import { routes } from "@/lib/routes";
+import { auth } from "@/lib/identity/better-auth";
+import { DEFAULT_REDIRECT, safeRedirectTo } from "@/lib/identity/redirect";
+import { routes } from "@/lib/shared/routes";
 
 const AUTH_PAGES: readonly string[] = [routes.signIn, routes.signUp];
 
