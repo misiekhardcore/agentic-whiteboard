@@ -55,6 +55,30 @@ from different angles, and both are kept:
 A new layer or context means adding it to both lists. That duplication is the
 point: a single gate is one config edit away from allowing what it should not.
 
+Each zone was verified by introducing the violation it forbids and watching lint
+fail: a `lib/capabilities` core file importing a context (and `identity/actor`
+still allowed), a surface importing its workspace, `lib/...` importing `@/app`,
+and a client-safe module importing `@/lib/db`.
+
+### Why the boundary zones need a resolver
+
+`no-restricted-paths` compares _resolved_ files, so it depends on the import
+resolver. With Node's resolver alone, neither `@/...` nor an extensionless
+relative import resolves, and the rule silently allows every violation — which
+is what happened when the zones were first added: they were green and did
+nothing. `eslint-import-resolver-typescript` (pointed at [tsconfig.json](../../tsconfig.json))
+fixes that, and it stays a dev dependency because the gate is worthless without
+it.
+
+Two consequences to keep in mind when editing the zones:
+
+- `except` entries resolve **against the zone's `from`** and must be descendants
+  of it, so `from: ["./lib/identity"], except: ["./actor.ts"]` allows exactly
+  `lib/identity/actor.ts`. Without the extension the path never matches.
+- A zone's `from` list cannot mix globs and paths, which is why the client-safe
+  rule is two zones: server packages, then `./lib/db/**` (importing the adapter
+  reaches `pg` even though the file never names it).
+
 ### Rule calibrations for the boundaries
 
 The `clientSafeFiles` list and the `CLIENT_SAFE` patterns are deliberately

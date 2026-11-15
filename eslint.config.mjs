@@ -86,6 +86,15 @@ export default defineConfig([
     plugins: {
       "import-x": importX,
     },
+    // The path zones below match on resolved files. Node resolution alone cannot
+    // follow `@/...` or an extensionless relative import, so without this resolver
+    // `no-restricted-paths` silently allows every alias import it should refuse.
+    settings: {
+      "import-x/resolver": {
+        typescript: { project: "./tsconfig.json", alwaysTryTypes: true },
+        node: true,
+      },
+    },
     rules: {
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": [
@@ -118,8 +127,8 @@ export default defineConfig([
       // maintained flat-config fork is used for import ordering and duplicates.
       "import-x/no-duplicates": "error",
       // The layering contract from docs/architecture/module-boundaries.md.
-      // lib/architecture.test.ts asserts the same direction without the
-      // resolver, so a boundary breaks a build twice rather than by review.
+      // lib/architecture.test.ts asserts the same direction by reading the
+      // import lines, so a boundary breaks a build twice rather than by review.
       "import-x/no-restricted-paths": [
         "error",
         {
@@ -130,7 +139,10 @@ export default defineConfig([
               message: "lib is the domain and the application layer; it must not import the UI.",
             },
             {
-              target: "./lib/capabilities",
+              // A surface is reached through its workspace, which owns the
+              // account scope and the archive flag. Depending on another
+              // context here would recreate the cycle the split removed.
+              target: ["./lib/doc", "./lib/canvas"],
               from: [
                 "./lib/workspace",
                 "./lib/identity",
@@ -139,13 +151,56 @@ export default defineConfig([
                 "./lib/billing",
                 "./lib/collab",
               ],
-              except: ["./presentation", "./presentations", "./registry", "./action"],
               message:
-                "The capability kernel declares and runs capabilities; contexts register themselves in registry.ts.",
+                "A content surface is reached through its workspace; it never depends on another context.",
+            },
+            {
+              // The kernel's core declares, runs and describes a capability by
+              // naming the actor contract and nothing else. `except` resolves
+              // against the zone's `from`, so "./actor" allows exactly
+              // lib/identity/actor.ts inside the identity restriction.
+              target: [
+                "./lib/capabilities/define.ts",
+                "./lib/capabilities/invoke.ts",
+                "./lib/capabilities/describe.ts",
+              ],
+              from: [
+                "./lib/workspace",
+                "./lib/doc",
+                "./lib/canvas",
+                "./lib/organizations",
+                "./lib/ai",
+                "./lib/billing",
+                "./lib/collab",
+                "./lib/notifications",
+              ],
+              message:
+                "The capability kernel knows the actor contract and nothing else about the domain.",
+            },
+            {
+              target: [
+                "./lib/capabilities/define.ts",
+                "./lib/capabilities/invoke.ts",
+                "./lib/capabilities/describe.ts",
+              ],
+              from: ["./lib/identity"],
+              except: ["./actor.ts"],
+              message:
+                "The capability kernel knows the actor contract and nothing else about the domain.",
             },
             {
               target: clientSafeFiles,
               from: serverOnlyPackages,
+              message:
+                "A client-safe module ships to the browser; keep server-only packages out of it.",
+            },
+            {
+              // The same rule, one step further in: importing the database
+              // adapter reaches `pg` through it, even though this file never
+              // names a server package. `from` must stay all-globs here, which
+              // is why it is a separate zone from the package one above.
+              target: clientSafeFiles,
+              from: ["./lib/db/**"],
               message:
                 "A client-safe module ships to the browser; keep server-only packages out of it.",
             },

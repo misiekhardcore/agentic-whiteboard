@@ -80,6 +80,15 @@ const KERNEL = [/^lib[\\/]capabilities[\\/](define|invoke|describe)\.ts$/];
 
 const KERNEL_ALLOWED = [/^zod$/, /^\.\//, /^@\/lib\/identity\/actor$/];
 
+/**
+ * The content surfaces are leaves: each answers for its own rows, and the
+ * workspace context decides which of them a person may see. They may use the
+ * database and the shared primitives, and no other context.
+ */
+const SURFACE_CONTEXTS = [/^lib[\\/](doc|canvas)[\\/]/];
+
+const SURFACE_ALLOWED = [/^@\/lib\/db(\/|$)/, /^@\/lib\/shared(\/|$)/, /^drizzle-orm/, /^\.\//];
+
 describe("module boundaries", () => {
   it("keeps lib out of the presentation layer", () => {
     expect(offendersIn(() => true, [/^@\/app(\/|$)/, /^@\/components(\/|$)/])).toEqual([]);
@@ -89,6 +98,24 @@ describe("module boundaries", () => {
     expect(
       offendersIn((file) => CLIENT_SAFE.some((pattern) => pattern.test(file)), SERVER_ONLY),
     ).toEqual([]);
+  });
+
+  it("keeps the content surfaces free of other contexts", () => {
+    const files = sourceFiles(LIB).filter((file) =>
+      SURFACE_CONTEXTS.some((pattern) => pattern.test(relative(ROOT, file))),
+    );
+
+    // The rule is only worth anything while there are surfaces to apply it to.
+    expect(files.length).toBeGreaterThan(0);
+
+    const external = files.flatMap((file) => {
+      const label = relative(ROOT, file);
+      return importsOf(file)
+        .filter((specifier) => !SURFACE_ALLOWED.some((pattern) => pattern.test(specifier)))
+        .map((specifier) => `${label} imports ${specifier}`);
+    });
+
+    expect(external).toEqual([]);
   });
 
   it("keeps the capability kernel free of domain knowledge", () => {
