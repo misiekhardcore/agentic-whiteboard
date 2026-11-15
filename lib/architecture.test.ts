@@ -59,7 +59,7 @@ const CLIENT_SAFE = [
   /^lib[\\/]organizations[\\/]contracts\.ts$/,
   /^lib[\\/]identity[\\/](forms|redirect)\.ts$/,
   /^lib[\\/]billing[\\/]plans\.ts$/,
-  /^lib[\\/]ai[\\/]thread[\\/](parts|composer)\.ts$/,
+  /^lib[\\/]ai[\\/]thread[\\/](parts|composer|read-aloud)\.ts$/,
 ];
 
 const SERVER_ONLY = [

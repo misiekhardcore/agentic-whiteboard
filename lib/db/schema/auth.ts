@@ -12,6 +12,9 @@ export const user = pgTable("user", {
   image: text("image"),
   // Billing identity, managed by lib/billing rather than better-auth.
   stripeCustomerId: text("stripe_customer_id").unique(),
+  // A personal accessibility preference, managed by lib/identity/preferences.
+  // It belongs to the person, not to the active organization.
+  readAloud: boolean("read_aloud").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

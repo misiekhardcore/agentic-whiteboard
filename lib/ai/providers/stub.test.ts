@@ -111,4 +111,21 @@ describe("stub model", () => {
   it("still calls create for a new create request", async () => {
     expect(await answer([user("create a new workspace for me")])).toBe("tool:createWorkspace");
   });
+
+  it("streams a reply in more than one piece that rejoins to the same answer", async () => {
+    const { stream } = await model().doStream({
+      prompt: [user("say hello there")],
+      tools: offeredTools,
+    });
+
+    const deltas: string[] = [];
+    const chunks = stream as unknown as AsyncIterable<Record<string, unknown>>;
+
+    for await (const raw of chunks) {
+      if (raw.type === "text-delta" && typeof raw.delta === "string") deltas.push(raw.delta);
+    }
+
+    expect(deltas.length).toBeGreaterThan(1);
+    expect(deltas.join("")).toBe(`**${STUB_REPLY_PREFIX}** say hello there`);
+  });
 });

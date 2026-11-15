@@ -29,6 +29,7 @@ const clientSafeFiles = [
   "lib/billing/plans.ts",
   "lib/ai/thread/parts.ts",
   "lib/ai/thread/composer.ts",
+  "lib/ai/thread/read-aloud.ts",
 ];
 
 const serverOnlyPackages = [

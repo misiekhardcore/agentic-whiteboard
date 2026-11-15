@@ -71,6 +71,13 @@
       "when": 1794605308845,
       "tag": "0009_simple_darwin",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794766120142,
+      "tag": "0010_bouncy_exodus",
+      "breakpoints": true
     }
   ]
 }

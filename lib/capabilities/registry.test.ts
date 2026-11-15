@@ -20,6 +20,7 @@ describe("capability registry", () => {
       "openWorkspace",
       "removeMember",
       "restoreWorkspace",
+      "setReadAloud",
       "switchAccount",
       "updateMemberRole",
       "updateOrganizationProfile",

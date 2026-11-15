@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "read_aloud" boolean DEFAULT false NOT NULL;

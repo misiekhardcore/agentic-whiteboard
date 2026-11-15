@@ -17,7 +17,7 @@ import {
   signUp,
   startProviderSignIn,
 } from "./authentication";
-import { updatePersonalProfile } from "./capabilities";
+import { setReadAloud, updatePersonalProfile } from "./capabilities";
 import { type AuthFormState, initialAuthState, type ProfileFormState } from "./forms";
 import { DEFAULT_REDIRECT, safeRedirectTo } from "./redirect";
 
@@ -30,6 +30,7 @@ import { DEFAULT_REDIRECT, safeRedirectTo } from "./redirect";
  */
 
 const saveProfile = action(updatePersonalProfile);
+const saveReadAloud = action(setReadAloud);
 
 export async function signInAction(
   _previousState: AuthFormState,
@@ -129,4 +130,12 @@ export async function updatePersonalProfileAction(
   if (!output.ok) return { error: output.error };
 
   return { error: null, notice: "Your profile was updated." };
+}
+
+/**
+ * The read aloud toggle. The composer applies the choice optimistically, so a
+ * refusal comes back as a value for it to revert the button and explain.
+ */
+export async function setReadAloudAction(enabled: boolean) {
+  return saveReadAloud({ enabled });
 }

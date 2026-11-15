@@ -13,7 +13,7 @@ import { ArrowUp, Square, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { KeyboardEvent, SubmitEvent } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
@@ -23,11 +23,14 @@ import {
   submittedPrompt,
 } from "@/lib/ai/thread/composer";
 import { threadText } from "@/lib/ai/thread/parts";
+import { setReadAloudAction } from "@/lib/identity/actions";
 import { routes } from "@/lib/shared/routes";
 
 import { DictationButton } from "./DictationButton";
 import { PromptThread } from "./PromptThread";
+import { ReadAloudButton } from "./ReadAloudButton";
 import { useDictation } from "./useDictation";
+import { useReadAloud } from "./useReadAloud";
 
 type PromptFailure = {
   message: string;
@@ -63,6 +66,8 @@ function promptFailure(error: Error): PromptFailure {
 type PromptComposerProps = {
   /** The person's dashboard thread, loaded on the server. */
   initialMessages: UIMessage[];
+  /** The person's stored read-aloud preference. */
+  initialReadAloud: boolean;
 };
 
 /**
@@ -78,10 +83,16 @@ type PromptComposerProps = {
  * recognizes the speech and the words are spliced in where the caret was, with
  * the phrase still in flight previewed in place, and committed as editable text
  * when the session ends.
+ *
+ * Read aloud is the reverse: `useReadAloud` speaks new agent replies sentence
+ * by sentence as they stream, and the speaker's preference is the person's
+ * stored choice, so it follows them between devices.
  */
-export function PromptComposer({ initialMessages }: PromptComposerProps) {
+export function PromptComposer({ initialMessages, initialReadAloud }: PromptComposerProps) {
   const [draft, setDraft] = useState("");
   const [failure, setFailure] = useState<PromptFailure | null>(null);
+  const [readAloud, setReadAloud] = useState(initialReadAloud);
+  const [, startTransition] = useTransition();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
   const dictation = useDictation({ draft, setDraft, fieldRef: textareaRef });
@@ -149,6 +160,7 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
   // thread would look empty even though the agent is working.
   const lastMessage = messages[messages.length - 1];
   const awaitingText = isBusy && (!lastMessage || threadText(lastMessage).trim().length === 0);
+  const speech = useReadAloud({ messages, isBusy, enabled: readAloud });
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -181,6 +193,22 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
     event.currentTarget.form?.requestSubmit();
   }
 
+  function toggleReadAloud() {
+    const next = !readAloud;
+    // Flip first, because turning it off must go silent immediately; a failed
+    // save puts the button back rather than claiming a choice that was lost.
+    setReadAloud(next);
+    if (!next) speech.cancel();
+
+    startTransition(async () => {
+      const result = await setReadAloudAction(next);
+      if (!result.ok) {
+        setReadAloud(!next);
+        toast.error(result.error);
+      }
+    });
+  }
+
   function applyExample(prompt: string) {
     // An example replaces the draft, so an open session must not commit over it.
     if (dictation.isListening) dictation.discard();
@@ -196,11 +224,13 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
     ? dictation.error
     : dictation.isListening
       ? "Listening… speak your prompt, then press the microphone again"
-      : !dictation.supported
-        ? "Voice input needs a browser with speech recognition, such as Chrome or Safari"
-        : isBusy
-          ? "Shift + Enter for a new line · Enter queues this prompt for the next turn"
-          : "Shift + Enter for a new line";
+      : speech.error
+        ? speech.error
+        : !dictation.supported
+          ? "Voice input needs a browser with speech recognition, such as Chrome or Safari"
+          : isBusy
+            ? "Shift + Enter for a new line · Enter queues this prompt for the next turn"
+            : "Shift + Enter for a new line";
 
   return (
     <section aria-labelledby="prompt-composer-title" className="topo-bg px-2 py-10 sm:py-14">
@@ -278,6 +308,12 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
                   describedBy="prompt-composer-hint"
                   onToggle={dictation.toggle}
                 />
+                <ReadAloudButton
+                  supported={speech.supported}
+                  enabled={readAloud}
+                  isSpeaking={speech.isSpeaking}
+                  onToggle={toggleReadAloud}
+                />
                 {isBusy && (
                   <Button
                     type="button"
@@ -285,7 +321,10 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
                     size="icon-lg"
                     className="rounded-full shadow"
                     aria-label="Stop prompt"
-                    onClick={() => void stop()}
+                    onClick={() => {
+                      speech.cancel();
+                      void stop();
+                    }}
                   >
                     <Square />
                   </Button>
