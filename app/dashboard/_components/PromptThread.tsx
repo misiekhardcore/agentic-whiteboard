@@ -2,7 +2,7 @@
 
 import type { UIMessage } from "ai";
 
-import { threadBlocks, threadText } from "@/lib/ai/thread-parts";
+import { threadBlocks, threadText } from "@/lib/ai/thread/parts";
 
 import { AgentMarkdown } from "./AgentMarkdown";
 import { ToolCallLine } from "./ToolCallLine";

@@ -10,10 +10,10 @@ import { Suspense } from "react";
 
 import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
 import { Loading } from "@/components/Loading/Loading";
-import { getSessionAccount } from "@/lib/account";
-import { formatDay } from "@/lib/formatDate";
-import { deleteWorkspaceAction, restoreWorkspaceAction } from "@/lib/workspace-actions";
-import { listArchivedWorkspaces } from "@/lib/workspaces";
+import { getSessionAccount } from "@/lib/identity/account";
+import { formatDay } from "@/lib/shared/format-date";
+import { deleteWorkspaceAction, restoreWorkspaceAction } from "@/lib/workspace/actions";
+import { listArchivedWorkspaces } from "@/lib/workspace/queries";
 
 /**
  * Archived workspaces stay restorable without cluttering the dashboard. Only

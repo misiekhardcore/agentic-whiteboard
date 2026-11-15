@@ -3,6 +3,10 @@
 Status: accepted
 Date: 2026-11-13
 
+> The paths in this record are the ones that existed when it was written. The
+> modules have since moved into per-context folders; see
+> [module-boundaries](module-boundaries.md) for where they live now.
+
 ## Context
 
 A workspace could be created, edited (name, description, stage), archived and

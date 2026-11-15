@@ -1,17 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 
 const service = vi.hoisted(() => ({
-  authorizeWorkspace: vi.fn(),
   createWorkspaceFor: vi.fn(),
-  listWorkspacesFor: vi.fn(),
-  readWorkspaceWith: vi.fn(),
   updateWorkspaceWith: vi.fn(),
-  restoreWorkspaceWith: vi.fn(),
-  archiveWorkspaceWith: vi.fn(),
-  deleteWorkspaceWith: vi.fn(),
 }));
 
-vi.mock("@/lib/workspace-service", () => service);
+const queries = vi.hoisted(() => ({
+  listWorkspacesFor: vi.fn(),
+  readWorkspaceWith: vi.fn(),
+}));
+
+const accessMock = vi.hoisted(() => ({ authorizeWorkspace: vi.fn() }));
+
+vi.mock("@/lib/workspace/service", () => service);
+vi.mock("@/lib/workspace/queries", () => queries);
+vi.mock("@/lib/workspace/access", () => accessMock);
 
 import { createWorkspaceTools } from "./tools";
 
@@ -118,7 +121,7 @@ describe("createWorkspace tool", () => {
 
 describe("read tools", () => {
   it("links every workspace so the agent can point at one", async () => {
-    service.listWorkspacesFor.mockResolvedValue([
+    queries.listWorkspacesFor.mockResolvedValue([
       {
         id: "ws_1",
         name: "Food delivery",
@@ -133,7 +136,7 @@ describe("read tools", () => {
       callOptions,
     );
 
-    expect(service.listWorkspacesFor).toHaveBeenCalledWith(actor, {
+    expect(queries.listWorkspacesFor).toHaveBeenCalledWith(actor, {
       includeArchived: true,
     });
     expect(output).toEqual({
@@ -152,7 +155,7 @@ describe("read tools", () => {
   });
 
   it("reports a workspace it cannot read without inventing one", async () => {
-    service.authorizeWorkspace.mockResolvedValue(null);
+    accessMock.authorizeWorkspace.mockResolvedValue(null);
 
     const output: unknown = await createWorkspaceTools(actor).getWorkspace.execute?.(
       { workspaceId: "ws_other" },
@@ -168,7 +171,7 @@ describe("read tools", () => {
 describe("updateWorkspace tool", () => {
   it("sends only the fields that change and forwards the run's stop signal", async () => {
     const abortSignal = new AbortController().signal;
-    service.authorizeWorkspace.mockResolvedValue(access);
+    accessMock.authorizeWorkspace.mockResolvedValue(access);
     service.updateWorkspaceWith.mockResolvedValue({
       ok: true,
       workspace: { id: "ws_1", name: "Launch", status: "PLANNING" },

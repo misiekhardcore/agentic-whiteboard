@@ -1,6 +1,6 @@
-import { auth } from "@/lib/auth";
 import { startCheckout } from "@/lib/billing/checkout";
 import { BillingConfigurationError, BillingRequestError } from "@/lib/billing/stripe";
+import { auth } from "@/lib/identity/better-auth";
 
 /**
  * Starts an embedded checkout for the signed-in user. The browser never sends

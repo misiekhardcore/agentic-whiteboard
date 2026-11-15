@@ -4,8 +4,8 @@ import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import { useActionState } from "react";
 
-import { acceptInvitationAction } from "@/lib/organization-actions";
-import { EMPTY_TEAM_FORM_STATE } from "@/lib/organization-form";
+import { acceptInvitationAction } from "@/lib/organizations/actions";
+import { EMPTY_TEAM_FORM_STATE } from "@/lib/organizations/forms";
 
 export function AcceptInvitationForm({ invitationId }: { invitationId: string }) {
   const [state, formAction, pending] = useActionState(

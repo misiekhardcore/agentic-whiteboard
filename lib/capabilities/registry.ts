@@ -1,4 +1,14 @@
-import { type CapabilityDescriptor, describeCapability, describeClientCapability } from "./define";
+import { updatePersonalProfile } from "@/lib/identity/capabilities";
+import {
+  acceptInvitation,
+  cancelInvitation,
+  createOrganization,
+  inviteMember,
+  removeMember,
+  switchAccount,
+  updateMemberRole,
+  updateOrganizationProfile,
+} from "@/lib/organizations/capabilities";
 import {
   archiveWorkspace,
   createWorkspace,
@@ -8,7 +18,10 @@ import {
   openWorkspace,
   restoreWorkspace,
   updateWorkspace,
-} from "./workspaces";
+} from "@/lib/workspace/capabilities";
+
+import { type CapabilityDescriptor } from "./define";
+import { describeCapability, describeClientCapability } from "./describe";
 
 /**
  * Every capability the app offers, in the order the agent sees them.
@@ -17,6 +30,10 @@ import {
  * is reachable only through its own action, and nothing silently becomes
  * available to the model: `callers` decides that per capability, and
  * `approval` decides whether an agent call waits for a person.
+ *
+ * Human-only capabilities are registered too. They are not tools, but they are
+ * operations with a declared input, a refusal shape and revalidation paths, and
+ * a registry test can still hold them to that contract.
  */
 export const capabilities: readonly CapabilityDescriptor[] = [
   describeCapability(createWorkspace),
@@ -27,6 +44,15 @@ export const capabilities: readonly CapabilityDescriptor[] = [
   describeCapability(archiveWorkspace),
   describeCapability(deleteWorkspace),
   describeClientCapability(openWorkspace),
+  describeCapability(createOrganization),
+  describeCapability(switchAccount),
+  describeCapability(inviteMember),
+  describeCapability(updateMemberRole),
+  describeCapability(cancelInvitation),
+  describeCapability(removeMember),
+  describeCapability(acceptInvitation),
+  describeCapability(updateOrganizationProfile),
+  describeCapability(updatePersonalProfile),
 ];
 
 /** What the agent may call, in registry order. */

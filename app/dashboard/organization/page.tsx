@@ -11,19 +11,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
-import { getSessionAccount } from "@/lib/account";
 import { getOrganizationEntitlements } from "@/lib/billing/entitlements";
+import { getSessionAccount } from "@/lib/identity/account";
 import {
   cancelInvitationAction,
   removeMemberAction,
   switchTeamAction,
-} from "@/lib/organization-actions";
-import {
-  canManageTeam,
-  listOrganizationMembers,
-  listPendingInvitations,
-} from "@/lib/organizations";
-import { routes, signInPath } from "@/lib/routes";
+} from "@/lib/organizations/actions";
+import { canManageTeam } from "@/lib/organizations/membership";
+import { listOrganizationMembers, listPendingInvitations } from "@/lib/organizations/queries";
+import { routes, signInPath } from "@/lib/shared/routes";
 
 import {
   CreateOrganizationForm,

@@ -4,7 +4,7 @@ import { Button } from "@konopskidev/ui/components/button";
 import { Spinner } from "@konopskidev/ui/components/spinner";
 import { useFormStatus } from "react-dom";
 
-import { signInWithProviderAction } from "@/lib/auth-actions";
+import { signInWithProviderAction } from "@/lib/identity/actions";
 
 export type SocialProvider = "github" | "google";
 

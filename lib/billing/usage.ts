@@ -1,11 +1,15 @@
-import { and, count, eq, gte } from "drizzle-orm";
-
-import { db } from "@/lib/db";
-import { agentPrompts, workspaces } from "@/lib/db/schema";
-import { accountWorkspacesWhere } from "@/lib/workspaces";
-
 import { type PlanLimits, upgradeMessages } from "./plans";
 import type { SubscriptionRow } from "./subscriptions";
+
+/**
+ * The plan allowance rules: which window a count belongs to, which limits are
+ * exhausted, and the sentence a refusal shows.
+ *
+ * Pure. The counts themselves belong to the contexts that own the rows — the
+ * agent's prompts to `ai`, the account's workspaces to `workspace` — and the
+ * page that shows them composes the two. That is what keeps billing from
+ * querying another context's tables.
+ */
 
 export type LimitUsage = {
   used: number;
@@ -57,60 +61,6 @@ export function usageWindow(
     start: new Date(Date.UTC(year, month, 1)),
     end: new Date(Date.UTC(year, month + 1, 1)),
     label: "this month",
-  };
-}
-
-/**
- * Counts the active account's usage from the rows that already record it:
- * `agentPrompt` for the per-member prompt count, `workspace` for the account's
- * workspaces. Both queries mirror the predicates the rest of the app scopes by, so
- * the meter can never disagree with what the dashboard shows.
- */
-export async function getAccountUsage({
-  userId,
-  organizationId,
-  subscription,
-  limits,
-  now = new Date(),
-}: {
-  userId: string;
-  organizationId: string | null;
-  subscription: SubscriptionRow | null;
-  limits: PlanLimits;
-  now?: Date;
-}): Promise<AccountUsage> {
-  const window = usageWindow(subscription, now);
-  const ownerId = organizationId ?? userId;
-
-  const [promptRows, workspaceRows] = await Promise.all([
-    db
-      .select({ total: count() })
-      .from(agentPrompts)
-      .where(
-        and(
-          eq(agentPrompts.ownerId, ownerId),
-          eq(agentPrompts.userId, userId),
-          gte(agentPrompts.createdAt, window.start),
-        ),
-      ),
-    db
-      .select({ total: count() })
-      .from(workspaces)
-      .where(accountWorkspacesWhere(userId, organizationId)),
-  ]);
-
-  return {
-    agentPrompts: {
-      used: Number(promptRows[0]?.total ?? 0),
-      limit: limits.agentPromptsPerMonth,
-      periodStart: window.start,
-      periodEnd: window.end,
-      periodLabel: window.label,
-    },
-    workspaces: {
-      used: Number(workspaceRows[0]?.total ?? 0),
-      limit: limits.workspaces,
-    },
   };
 }
 

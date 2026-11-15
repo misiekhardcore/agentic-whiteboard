@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { AccountActor } from "@/lib/actor";
+import type { AccountActor } from "@/lib/identity/actor";
 
 import type { ToolPresentation } from "./presentation";
 
@@ -12,6 +12,9 @@ import type { ToolPresentation } from "./presentation";
  * declared here rather than at each call site, so a caller cannot skip one. A
  * capability module is never marked `"use server"`: handlers are plain server
  * functions, and only the wrappers in a `"use server"` file become endpoints.
+ *
+ * The kernel keeps no domain knowledge. This module declares the contract;
+ * `invoke.ts` runs it and `describe.ts` widens it for the registry.
  */
 
 export type CapabilityCaller = "human" | "agent";
@@ -20,6 +23,9 @@ export type CapabilityCaller = "human" | "agent";
  * Why an operation did not happen. Deliberately a value and not an exception:
  * the model has to be able to read it and try something else, and a person has
  * to see the sentence in the form.
+ *
+ * Domain services return this shape too, so a refusal crosses the capability
+ * boundary without a translation layer.
  */
 export type CapabilityFailure = {
   ok: false;
@@ -71,6 +77,13 @@ export type { ToolPresentation };
 /** Client-only tools are performed by the browser; there is no server execute. */
 export type ClientToolHandler = "openWorkspace";
 
+/**
+ * A route path a successful call changes. `layout` mirrors
+ * `revalidatePath(path, "layout")`: an account-wide change (a profile, a role,
+ * a plan) invalidates the shell, not one page.
+ */
+export type RevalidationTarget = string | { path: string; layout?: boolean };
+
 export type Capability<I, T, R = undefined> = {
   /** The tool name and the stored key. Renaming one breaks history. */
   name: string;
@@ -84,7 +97,7 @@ export type Capability<I, T, R = undefined> = {
   /** When set, the browser performs this call and the server only offers it. */
   client?: ClientToolHandler;
   /** Route paths to revalidate after a successful human call. */
-  invalidates?: (output: CapabilitySuccess<T>) => string[];
+  invalidates?: (output: CapabilitySuccess<T>) => RevalidationTarget[];
   /** What a missing resource reports; defaults to a generic sentence. */
   notFound?: string;
   /**
@@ -131,7 +144,8 @@ export function defineClientCapability<I>(capability: ClientCapability<I>): Clie
 /**
  * A capability widened for the places that only need the surface: the tool
  * catalog, the conversation's tool line and the registry invariants. Keeping
- * the widening here means no call site has to cast a handler's input.
+ * the widening in `describe.ts` means no call site has to cast a handler's
+ * input.
  */
 export type CapabilityDescriptor = {
   name: string;
@@ -143,91 +157,3 @@ export type CapabilityDescriptor = {
   present?: (input: unknown) => ToolPresentation;
   invoke?: (ctx: CapabilityContext, raw: unknown) => Promise<CapabilityOutput<unknown>>;
 };
-
-function presentation<I>(
-  present: ((input: I) => ToolPresentation) | undefined,
-): ((input: unknown) => ToolPresentation) | undefined {
-  return present ? (input: unknown) => present(input as I) : undefined;
-}
-
-export function describeCapability<I, T, R>(capability: Capability<I, T, R>): CapabilityDescriptor {
-  return {
-    name: capability.name,
-    description: capability.description,
-    inputSchema: capability.input,
-    callers: capability.callers,
-    approval: capability.approval === "always",
-    present: presentation(capability.present),
-    invoke: (ctx, raw) => invoke(capability, ctx, raw),
-  };
-}
-
-export function describeClientCapability<I>(capability: ClientCapability<I>): CapabilityDescriptor {
-  return {
-    name: capability.name,
-    description: capability.description,
-    inputSchema: capability.input,
-    callers: capability.callers,
-    approval: false,
-    client: capability.client,
-    present: presentation(capability.present),
-  };
-}
-
-/** The field messages from a rejected input, first issue per field wins. */
-function inputFieldErrors(error: z.ZodError): Record<string, string> {
-  const fieldErrors: Record<string, string> = {};
-
-  for (const issue of error.issues) {
-    const key = issue.path[0];
-    if (typeof key === "string" && !(key in fieldErrors)) {
-      fieldErrors[key] = issue.message;
-    }
-  }
-
-  return fieldErrors;
-}
-
-/**
- * The one way a capability is called. Every caller goes through this, so the
- * validation, the authorization and the result contract cannot be skipped.
- *
- * Only a broken handler throws (its output does not match the declared schema);
- * everything a caller can cause is returned as a value.
- */
-export async function invoke<I, T, R>(
-  capability: Capability<I, T, R>,
-  ctx: CapabilityContext,
-  raw: unknown,
-): Promise<CapabilityOutput<T>> {
-  if (!capability.callers.includes(ctx.actorType)) {
-    return failure("That operation is not available here.");
-  }
-
-  const parsed = capability.input.safeParse(raw);
-  if (!parsed.success) {
-    return failure("Check the details and try again.", {
-      fieldErrors: inputFieldErrors(parsed.error),
-      hint: "Fix the fields it names and call it again with every required field.",
-    });
-  }
-
-  const resource =
-    capability.authorize === undefined
-      ? (undefined as R)
-      : await capability.authorize(ctx, parsed.data);
-
-  if (resource === null) {
-    return failure(capability.notFound ?? "That item could not be found.");
-  }
-
-  const output = await capability.handler(ctx, parsed.data, resource, {
-    signal: ctx.abortSignal,
-  });
-
-  // A handler that returns the wrong shape is a bug in the handler, not a
-  // refusal: fail loudly instead of handing a caller a malformed result.
-  capability.output.parse(output);
-
-  return output;
-}

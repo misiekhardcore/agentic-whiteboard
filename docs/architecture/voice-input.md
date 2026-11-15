@@ -13,7 +13,7 @@ answer to how dictated words join a draft that may already contain text, how a
 session that fails is explained, and where the recognition runs.
 
 The composer's existing split applies: the rules live in
-[lib/ai/prompt-composer.ts](../../lib/ai/prompt-composer.ts) as pure functions,
+[lib/ai/thread/composer.ts](../../lib/ai/thread/composer.ts) as pure functions,
 and the component maps browser events onto them.
 
 ## Decisions

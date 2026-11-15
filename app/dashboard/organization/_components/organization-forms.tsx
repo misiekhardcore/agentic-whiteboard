@@ -17,8 +17,8 @@ import {
   createOrganizationAction,
   inviteMemberAction,
   updateMemberRoleAction,
-} from "@/lib/organization-actions";
-import { EMPTY_TEAM_FORM_STATE } from "@/lib/organization-form";
+} from "@/lib/organizations/actions";
+import { EMPTY_TEAM_FORM_STATE } from "@/lib/organizations/forms";
 
 /**
  * Creating an organization is only offered from the personal account: it makes

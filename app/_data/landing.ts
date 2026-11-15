@@ -5,7 +5,7 @@
  * layout and the words can be edited without touching markup.
  */
 
-import { routes } from "@/lib/routes";
+import { routes } from "@/lib/shared/routes";
 
 export const landing = {
   hero: {

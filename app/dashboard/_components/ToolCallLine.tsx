@@ -12,7 +12,7 @@ import {
 } from "@konopskidev/ui/components/trace";
 import { Wrench } from "lucide-react";
 
-import type { ToolTrace } from "@/lib/ai/thread-parts";
+import type { ToolTrace } from "@/lib/ai/thread/parts";
 
 function format(value: unknown): string {
   if (typeof value === "string") return value;

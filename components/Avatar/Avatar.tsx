@@ -6,7 +6,7 @@ import {
 import { headers } from "next/headers";
 import { Suspense } from "react";
 
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/identity/better-auth";
 
 export function Avatar() {
   return (

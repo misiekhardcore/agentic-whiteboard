@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 
 import { landing } from "@/app/_data/landing";
-import { getSessionAccount } from "@/lib/account";
 import { getPlan, isPaidPlan } from "@/lib/billing/plans";
+import { getSessionAccount } from "@/lib/identity/account";
 
 import { PricingTabs } from "./pricing-tabs";
 

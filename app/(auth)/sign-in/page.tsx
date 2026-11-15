@@ -9,8 +9,8 @@ import {
 } from "@konopskidev/ui/components/card";
 import Link from "next/link";
 
-import { safeRedirectTo } from "@/lib/auth-redirect";
-import { routes, signUpPath } from "@/lib/routes";
+import { safeRedirectTo } from "@/lib/identity/redirect";
+import { routes, signUpPath } from "@/lib/shared/routes";
 
 import { SignInForm } from "./sign-in-form";
 import { type SocialProvider, SocialSignIn } from "./social-sign-in";

@@ -8,8 +8,8 @@ import {
 } from "@konopskidev/ui/components/card";
 import Link from "next/link";
 
-import { safeRedirectTo } from "@/lib/auth-redirect";
-import { signInPath } from "@/lib/routes";
+import { safeRedirectTo } from "@/lib/identity/redirect";
+import { signInPath } from "@/lib/shared/routes";
 
 import { SignUpForm } from "./sign-up-form";
 

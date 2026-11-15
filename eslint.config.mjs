@@ -13,6 +13,33 @@ const tsFiles = ["**/*.{ts,tsx,mts,cts}"];
 const testFiles = ["**/*.test.{ts,tsx}"];
 const e2eFiles = ["e2e/**/*.ts"];
 
+// Files a client component may import: they ship in the browser bundle, so a
+// server-only package here either breaks the build or pulls it into the bundle.
+const clientSafeFiles = [
+  "lib/shared/**",
+  "lib/capabilities/presentation.ts",
+  "lib/capabilities/presentations.ts",
+  "lib/workspace/status.ts",
+  "lib/workspace/contracts.ts",
+  "lib/workspace/forms.ts",
+  "lib/workspace/presentation.ts",
+  "lib/organizations/contracts.ts",
+  "lib/identity/forms.ts",
+  "lib/identity/redirect.ts",
+  "lib/billing/plans.ts",
+  "lib/ai/thread/parts.ts",
+  "lib/ai/thread/composer.ts",
+];
+
+const serverOnlyPackages = [
+  "node_modules/next",
+  "node_modules/drizzle-orm",
+  "node_modules/pg",
+  "node_modules/stripe",
+  "node_modules/nodemailer",
+  "node_modules/better-auth",
+];
+
 export default defineConfig([
   globalIgnores([
     // Next.js build output and generated types.
@@ -90,6 +117,41 @@ export default defineConfig([
       // `eslint-plugin-import` still uses APIs removed in ESLint 10, so the
       // maintained flat-config fork is used for import ordering and duplicates.
       "import-x/no-duplicates": "error",
+      // The layering contract from docs/architecture/module-boundaries.md.
+      // lib/architecture.test.ts asserts the same direction without the
+      // resolver, so a boundary breaks a build twice rather than by review.
+      "import-x/no-restricted-paths": [
+        "error",
+        {
+          zones: [
+            {
+              target: "./lib",
+              from: ["./app", "./components"],
+              message: "lib is the domain and the application layer; it must not import the UI.",
+            },
+            {
+              target: "./lib/capabilities",
+              from: [
+                "./lib/workspace",
+                "./lib/identity",
+                "./lib/organizations",
+                "./lib/ai",
+                "./lib/billing",
+                "./lib/collab",
+              ],
+              except: ["./presentation", "./presentations", "./registry", "./action"],
+              message:
+                "The capability kernel declares and runs capabilities; contexts register themselves in registry.ts.",
+            },
+            {
+              target: clientSafeFiles,
+              from: serverOnlyPackages,
+              message:
+                "A client-safe module ships to the browser; keep server-only packages out of it.",
+            },
+          ],
+        },
+      ],
       "import-x/order": [
         "error",
         {

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { SubscriptionRow } from "./subscriptions";
 import {
@@ -9,8 +9,6 @@ import {
   usageWindow,
   workspaceLimitMessage,
 } from "./usage";
-
-vi.mock("@/lib/db", () => ({ db: {} }));
 
 function subscription(overrides: Partial<SubscriptionRow> = {}): SubscriptionRow {
   return {

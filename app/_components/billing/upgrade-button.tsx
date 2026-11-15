@@ -27,8 +27,8 @@ import {
   plansForAudience,
   type UpgradeReason,
 } from "@/lib/billing/plans";
-import type { TeamOption } from "@/lib/organizations";
-import { routes } from "@/lib/routes";
+import type { TeamOption } from "@/lib/organizations/contracts";
+import { routes } from "@/lib/shared/routes";
 import { cn } from "@/lib/utils";
 
 /** Paid plans for a tab, minus the plan the account is already on. */

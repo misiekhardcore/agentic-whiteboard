@@ -8,13 +8,22 @@ describe("capability registry", () => {
 
     expect(new Set(names).size).toBe(names.length);
     expect(names.sort()).toEqual([
+      "acceptInvitation",
       "archiveWorkspace",
+      "cancelInvitation",
+      "createOrganization",
       "createWorkspace",
       "deleteWorkspace",
       "getWorkspace",
+      "inviteMember",
       "listWorkspaces",
       "openWorkspace",
+      "removeMember",
       "restoreWorkspace",
+      "switchAccount",
+      "updateMemberRole",
+      "updateOrganizationProfile",
+      "updatePersonalProfile",
       "updateWorkspace",
     ]);
   });

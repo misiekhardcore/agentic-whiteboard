@@ -9,10 +9,10 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import type { ReactNode } from "react";
 
-import { signOutAction } from "@/lib/auth-actions";
-import { switchAccountAction } from "@/lib/organization-actions";
-import type { TeamOption } from "@/lib/organizations";
-import { routes } from "@/lib/routes";
+import { signOutAction } from "@/lib/identity/actions";
+import { switchAccountAction } from "@/lib/organizations/actions";
+import type { TeamOption } from "@/lib/organizations/contracts";
+import { routes } from "@/lib/shared/routes";
 import { cn } from "@/lib/utils";
 
 function initials(name: string): string {

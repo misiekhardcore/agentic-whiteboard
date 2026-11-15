@@ -40,15 +40,19 @@ into "confirm the change is what was asked" — never into "skip the tests".
 
 ## Domain-driven design
 
-- **Bounded contexts** already present: `auth`/`organizations` (identity and
-  membership), `billing` (plans, subscriptions, entitlements, usage),
-  `collaboration` (Yjs/Hocuspocus contracts and realtime topics), `ai` (provider
-  registry, agents, runs), `workspace`/`doc`/`canvas` (content). New features
-  belong inside one of them, not in a new top-level grab bag.
+- **Bounded contexts** already present: `identity` (actor, session, roles) and
+  `organizations` (membership, invitations), `billing` (plans, subscriptions,
+  entitlements, usage), `collab` (Yjs/Hocuspocus contracts and realtime topics),
+  `ai` (providers, runtime, thread, tools), `workspace` (content),
+  `notifications` (outbound email). New features belong inside one of them, not
+  in a new top-level grab bag.
 - **Layout.** One folder per context under `lib/<context>/` with the domain
   types, pure rules and the persistence/API adapters beside them, e.g.
   [lib/billing/entitlements.ts](lib/billing/entitlements.ts) and
   [lib/billing/subscriptions.ts](lib/billing/subscriptions.ts).
+- **Layers are filenames**, in this order: `status`/`forms`/`contracts`/`presentation` (client-safe) → `rules` → `queries`/`access`/`service` → `capabilities` → `actions`. A file imports only leftwards; `lib/capabilities` imports no context. Enforced by lint zones and [lib/architecture.test.ts](lib/architecture.test.ts) — see [docs/architecture/module-boundaries.md](docs/architecture/module-boundaries.md).
+- **A user-facing mutation is a capability.** That includes operations the agent must never call: declare `callers: ["human"]` instead of writing a bespoke action. Pre-auth flows (sign-in, reset, OAuth) are the documented exception, because there is no actor yet.
+- **One rule, one module.** Quota copy, roles, slugs and lifecycle invariants are imported, never re-derived in a page, action or tool. A context may use another context's published functions and contracts, never its `actions.ts`, schema or SQL.
 - **Domain first.** Money, quotas, entitlements, roles and permissions,
   collaboration contracts and agent tool semantics are domain rules. They live
   in `lib/` as small, pure, exported functions and types. Server actions, route
@@ -115,18 +119,24 @@ Write the failing test before the production code, for every behaviour change.
 
 ## Project map
 
-| Path                 | Contents                                                                                                      |
-| -------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `app/`               | App Router routes, layouts, server actions, route handlers (`app/api`).                                       |
-| `lib/`               | Domain + adapters, one folder per bounded context (`ai`, `billing`, `collab`, `db`).                          |
-| `lib/capabilities/`  | The capability registry: one definition per operation, used by both the agent's tools and the server actions. |
-| `components/`        | Shared client UI; `components/ui` are shadcn-style primitives.                                                |
-| `lib/db/`            | Drizzle schema, connection, column helpers.                                                                   |
-| `drizzle/`           | Generated migrations — never hand-edit applied files.                                                         |
-| `e2e/`               | Playwright specs.                                                                                             |
-| `docs/architecture/` | Architecture records and decisions.                                                                           |
-| `scripts/`           | Local tooling (SMTP sink, etc.).                                                                              |
-| `.agents/skills/`    | Vendored skill docs for Supabase, Stripe, etc. Read the relevant `SKILL.md` before using that service.        |
+| Path                 | Contents                                                                                                    |
+| -------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `app/`               | App Router routes, layouts, server actions, route handlers (`app/api`).                                     |
+| `lib/`               | One folder per bounded context; layers are filenames inside a context. See below.                           |
+| `lib/capabilities/`  | The capability kernel: `define`, `invoke`, the human/route entry points, registry and thread presentations. |
+| `lib/identity/`      | Actor, session → active account, roles, better-auth adapter, pre-auth actions.                              |
+| `lib/organizations/` | Membership, slug rule, invitations, organization settings and their capabilities.                           |
+| `lib/workspace/`     | The reference context: status/contracts/forms, rules, access, queries, service, capabilities, actions.      |
+| `lib/ai/`            | Providers, runtime (agent + instructions), thread (rules, store, allowance, turn, composer), tools adapter. |
+| `lib/billing/`       | Plans, entitlements, usage rules (pure), subscriptions, checkout, Stripe adapter.                           |
+| `lib/shared/`        | Routes, form-data reading and date formatting — the only genuinely shared primitives.                       |
+| `components/`        | Shared client UI; `components/ui` are shadcn-style primitives.                                              |
+| `lib/db/`            | Drizzle schema, connection, column helpers.                                                                 |
+| `drizzle/`           | Generated migrations — never hand-edit applied files.                                                       |
+| `e2e/`               | Playwright specs.                                                                                           |
+| `docs/architecture/` | Architecture records and decisions.                                                                         |
+| `scripts/`           | Local tooling (SMTP sink, etc.).                                                                            |
+| `.agents/skills/`    | Vendored skill docs for Supabase, Stripe, etc. Read the relevant `SKILL.md` before using that service.      |
 
 ## Commands
 

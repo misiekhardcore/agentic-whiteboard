@@ -1,10 +1,8 @@
-import { and, eq } from "drizzle-orm";
-
-import { auth } from "@/lib/auth";
 import { ensureStripeCustomer } from "@/lib/billing/customers";
 import { appUrl, BillingConfigurationError, getStripe } from "@/lib/billing/stripe";
-import { db } from "@/lib/db";
-import { member, organization } from "@/lib/db/schema";
+import { auth } from "@/lib/identity/better-auth";
+import { canManageTeam } from "@/lib/organizations/membership";
+import { getMemberRole, getOrganizationRecord } from "@/lib/organizations/queries";
 
 /**
  * Opens the Stripe billing portal, where a customer updates a card, sees
@@ -29,30 +27,22 @@ export async function POST(request: Request) {
     let customerId: string;
 
     if (organizationId) {
-      const [membership] = await db
-        .select({ role: member.role })
-        .from(member)
-        .where(and(eq(member.organizationId, organizationId), eq(member.userId, session.user.id)))
-        .limit(1);
+      const role = await getMemberRole(organizationId, session.user.id);
 
-      if (!membership) {
+      if (!role) {
         return Response.json(
           { error: "You are not a member of that organization." },
           { status: 403 },
         );
       }
-      if (membership.role !== "owner" && membership.role !== "admin") {
+      if (!canManageTeam(role)) {
         return Response.json(
           { error: "Only organization owners and admins can manage billing." },
           { status: 403 },
         );
       }
 
-      const [team] = await db
-        .select({ name: organization.name })
-        .from(organization)
-        .where(eq(organization.id, organizationId))
-        .limit(1);
+      const team = await getOrganizationRecord(organizationId);
       if (!team) {
         return Response.json({ error: "That organization no longer exists." }, { status: 404 });
       }

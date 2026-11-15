@@ -7,8 +7,8 @@ import { Input } from "@konopskidev/ui/components/input";
 import { Spinner } from "@konopskidev/ui/components/spinner";
 import { useActionState } from "react";
 
-import { resetPasswordAction } from "@/lib/auth-actions";
-import { initialAuthState } from "@/lib/auth-form";
+import { resetPasswordAction } from "@/lib/identity/actions";
+import { initialAuthState } from "@/lib/identity/forms";
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const [state, formAction, isPending] = useActionState(resetPasswordAction, initialAuthState);

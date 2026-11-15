@@ -11,9 +11,9 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { auth } from "@/lib/auth";
-import { getInvitationDetails } from "@/lib/organizations";
-import { routes, signInPath, signUpPath } from "@/lib/routes";
+import { auth } from "@/lib/identity/better-auth";
+import { getInvitationDetails } from "@/lib/organizations/queries";
+import { routes, signInPath, signUpPath } from "@/lib/shared/routes";
 
 import { AcceptInvitationForm } from "./accept-form";
 
