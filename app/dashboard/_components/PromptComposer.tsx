@@ -4,27 +4,31 @@ import { useChat } from "@ai-sdk/react";
 import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import { Textarea } from "@konopskidev/ui/components/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@konopskidev/ui/components/tooltip";
 import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithApprovalResponses,
   type UIMessage,
 } from "ai";
-import { ArrowUp, Square, X } from "lucide-react";
+import { ArrowUp, Mic, Square, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, type KeyboardEvent, useMemo, useRef, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
   composerKeyIntent,
+  type ComposerSelection,
   composerView,
   EXAMPLE_PROMPTS,
   submittedPrompt,
+  withTranscript,
 } from "@/lib/ai/prompt-composer";
 import { threadText } from "@/lib/ai/thread-parts";
 import { routes } from "@/lib/routes";
 
 import { PromptThread } from "./PromptThread";
+import { useDictation } from "./useDictation";
 
 type PromptFailure = {
   message: string;
@@ -62,6 +66,12 @@ type PromptComposerProps = {
   initialMessages: UIMessage[];
 };
 
+/** The draft and caret captured when a dictation session starts. */
+type DictationSession = {
+  draft: string;
+  selection: ComposerSelection;
+};
+
 /**
  * The dashboard's starting point for an agent session: a prompt box that sends
  * on Enter, keeps Shift+Enter for line breaks, and offers curated examples that
@@ -70,12 +80,23 @@ type PromptComposerProps = {
  *
  * Only one prompt runs at a time, so a prompt sent while the agent is answering
  * waits in `useChat`'s queue and goes out when the current turn ends.
+ *
+ * The microphone dictates into the draft: the browser recognizes the speech and
+ * the words are spliced in where the caret was, with the phrase still in flight
+ * previewed in place, and committed as editable text when the session ends.
  */
 export function PromptComposer({ initialMessages }: PromptComposerProps) {
   const [draft, setDraft] = useState("");
   const [failure, setFailure] = useState<PromptFailure | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
+  const dictation = useDictation();
+  const [dictationSession, setDictationSession] = useState<DictationSession | null>(null);
+  // Mirrors the session for the commit effect, which must not re-run on it, and
+  // the caret to restore once the committed words are in the field.
+  const sessionRef = useRef<DictationSession | null>(null);
+  const wasListeningRef = useRef(false);
+  const caretRef = useRef<number | null>(null);
 
   const transport = useMemo(
     () =>
@@ -134,14 +155,87 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
   });
 
   const isBusy = status === "submitted" || status === "streaming";
-  const promptToSend = submittedPrompt(draft);
+  // While dictating, the field shows the captured draft with the words heard so
+  // far spliced in at the captured caret: the interim phrase is replaced by its
+  // final text rather than appended again.
+  const spoken = dictationSession
+    ? withTranscript(dictationSession.draft, dictationSession.selection, dictation.transcript)
+    : null;
+  const fieldValue = spoken?.text ?? draft;
+  const promptToSend = submittedPrompt(fieldValue);
   // A reasoning model streams reasoning parts before any visible text, so the
   // thread would look empty even though the agent is working.
   const lastMessage = messages[messages.length - 1];
   const awaitingText = isBusy && (!lastMessage || threadText(lastMessage).trim().length === 0);
 
+  // A session ends on Stop, on silence or on an error. Whatever was heard is
+  // committed into the draft there as ordinary editable text — never sent.
+  useEffect(() => {
+    if (dictation.isListening) {
+      wasListeningRef.current = true;
+      return;
+    }
+    if (!wasListeningRef.current) return;
+    wasListeningRef.current = false;
+
+    const session = sessionRef.current;
+    sessionRef.current = null;
+    setDictationSession(null);
+    if (!session) return;
+
+    const inserted = withTranscript(session.draft, session.selection, dictation.transcript);
+    if (!inserted) {
+      textareaRef.current?.focus();
+      return;
+    }
+
+    caretRef.current = inserted.caret;
+    setDraft(inserted.text);
+  }, [dictation.isListening, dictation.transcript]);
+
+  // Put the caret after the committed words once they are in the field, so the
+  // person can correct them by typing where speech stopped.
+  useEffect(() => {
+    const caret = caretRef.current;
+    if (caret === null) return;
+    caretRef.current = null;
+
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.focus();
+    textarea.setSelectionRange(caret, caret);
+  }, [draft]);
+
+  function toggleDictation() {
+    if (dictation.isListening) {
+      dictation.stop();
+      return;
+    }
+
+    // The words go where the caret was when the microphone opened, even if the
+    // person clicks around the field while speaking.
+    const textarea = textareaRef.current;
+    const selection: ComposerSelection = {
+      start: textarea?.selectionStart ?? draft.length,
+      end: textarea?.selectionEnd ?? draft.length,
+    };
+    const session = { draft, selection };
+
+    sessionRef.current = session;
+    setDictationSession(session);
+    dictation.start();
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    // Sending while dictating keeps the words heard so far and closes the
+    // session; nothing is left listening behind the reply.
+    if (dictation.isListening) {
+      dictation.stop();
+      sessionRef.current = null;
+      setDictationSession(null);
+    }
     if (!promptToSend) return;
 
     setFailure(null);
@@ -168,9 +262,29 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
   }
 
   function applyExample(prompt: string) {
+    // An example replaces the draft, so an open session must not commit over it.
+    if (dictation.isListening) {
+      dictation.stop();
+      sessionRef.current = null;
+      setDictationSession(null);
+    }
+
     setDraft(prompt);
     textareaRef.current?.focus();
   }
+
+  // What the line under the field says, in the order the person needs it: a
+  // failure, the live session, a reason the microphone is unavailable, then the
+  // keyboard hint.
+  const hint = dictation.error
+    ? dictation.error
+    : dictation.isListening
+      ? "Listening… speak your prompt, then press the microphone again"
+      : !dictation.supported
+        ? "Voice input needs a browser with speech recognition, such as Chrome or Safari"
+        : isBusy
+          ? "Shift + Enter for a new line · Enter queues this prompt for the next turn"
+          : "Shift + Enter for a new line";
 
   return (
     <section aria-labelledby="prompt-composer-title" className="topo-bg px-2 py-10 sm:py-14">
@@ -221,9 +335,12 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
           <div className="flex flex-col card p-1.5">
             <Textarea
               ref={textareaRef}
-              value={draft}
+              value={fieldValue}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={handleKeyDown}
+              // The words being dictated own the field until the session ends;
+              // typed edits would be overwritten by the next recognition event.
+              readOnly={dictation.isListening}
               aria-label="Prompt"
               aria-describedby="prompt-composer-hint"
               placeholder="e.g. Design the database for a food delivery app and document it"
@@ -231,12 +348,41 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
             />
 
             <div className="flex items-center justify-between gap-3 px-1.5">
-              <p id="prompt-composer-hint" className="text-xs text-muted-foreground">
-                {isBusy
-                  ? "Shift + Enter for a new line · Enter queues this prompt for the next turn"
-                  : "Shift + Enter for a new line"}
+              <p
+                id="prompt-composer-hint"
+                aria-live="polite"
+                className="text-xs text-muted-foreground"
+              >
+                {hint}
               </p>
               <div className="flex items-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {/* A disabled button still explains itself through its wrapper. */}
+                    <span className="inline-flex">
+                      <Button
+                        type="button"
+                        variant={dictation.isListening ? "destructive" : "outline"}
+                        size="icon-lg"
+                        className="rounded-full shadow"
+                        aria-label={
+                          dictation.isListening ? "Stop voice input" : "Start voice input"
+                        }
+                        aria-pressed={dictation.isListening}
+                        aria-describedby={dictation.supported ? undefined : "prompt-composer-hint"}
+                        disabled={!dictation.supported}
+                        onClick={toggleDictation}
+                      >
+                        <Mic className={dictation.isListening ? "animate-pulse" : undefined} />
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {dictation.supported
+                      ? "Dictate your prompt"
+                      : "Voice input needs Chrome or Safari"}
+                  </TooltipContent>
+                </Tooltip>
                 {isBusy && (
                   <Button
                     type="button"
