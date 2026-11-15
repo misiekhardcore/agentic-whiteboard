@@ -8,6 +8,8 @@ import {
 } from "@konopskidev/ui/components/card";
 import Link from "next/link";
 
+import { routes } from "@/lib/routes";
+
 import { ResetPasswordForm } from "./reset-password-form";
 
 export const metadata = {
@@ -37,7 +39,7 @@ export default async function ResetPasswordPage({
         </CardHeader>
         <CardFooter className="justify-center text-sm">
           <Link
-            href="/forgot-password"
+            href={routes.forgotPassword}
             className="font-medium text-primary underline underline-offset-4 hover:no-underline"
           >
             Request a new link
@@ -59,7 +61,7 @@ export default async function ResetPasswordPage({
       <CardFooter className="justify-center gap-1 text-sm text-muted-foreground">
         <span>Need another link?</span>
         <Link
-          href="/forgot-password"
+          href={routes.forgotPassword}
           className="font-medium text-primary underline underline-offset-4 hover:no-underline"
         >
           Start over

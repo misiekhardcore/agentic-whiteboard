@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Loading } from "@/components/Loading/Loading";
 import { getSessionAccount } from "@/lib/account";
 import { formatDay } from "@/lib/formatDate";
+import { routes } from "@/lib/routes";
 import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace-status";
 import { listRecentWorkspaceItems, type RecentWorkspaceItem } from "@/lib/workspaces";
 
@@ -93,7 +94,7 @@ function SurfaceCard({ item }: { item: RecentWorkspaceItem }) {
 
   return (
     <li className="flex flex-col gap-2 card p-3 transition-colors hover:border-primary/40">
-      <Link href={`/workspace/${item.workspaceId}`} className="flex min-w-0 items-center gap-2">
+      <Link href={routes.workspace(item.workspaceId)} className="flex min-w-0 items-center gap-2">
         <Icon className="size-4 shrink-0 text-muted-foreground" />
         <span className="truncate font-medium">{item.workspaceName}</span>
       </Link>

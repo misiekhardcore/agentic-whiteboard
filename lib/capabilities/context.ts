@@ -1,0 +1,67 @@
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+import { getSessionAccount } from "@/lib/account";
+import { routes, signInPath } from "@/lib/routes";
+
+import { type Capability, type CapabilityContext, type CapabilityOutput, invoke } from "./define";
+
+/**
+ * The human context is built from the session, never from the request body, so
+ * a form field can name a workspace but not an account.
+ */
+export async function humanContext(): Promise<CapabilityContext> {
+  const account = await getSessionAccount();
+  if (!account) redirect(signInPath(routes.dashboard));
+
+  return {
+    actorType: "human",
+    actor: {
+      userId: account.session.user.id,
+      organizationId: account.activeOrganizationId,
+      accountName: account.activeTeam?.name ?? account.session.user.name,
+    },
+  };
+}
+
+/**
+ * A form submission carries its fields as `FormData`; a typed caller passes its
+ * object as-is and Zod is the one place that decides what is valid. Action
+ * bookkeeping fields (`$ACTION_*`) are not input.
+ */
+function readInput(raw: unknown): unknown {
+  if (typeof FormData === "undefined" || !(raw instanceof FormData)) return raw;
+
+  return Object.fromEntries([...raw.entries()].filter(([key]) => !key.startsWith("$ACTION_")));
+}
+
+/** Runs a capability for the signed-in person; nothing is revalidated here. */
+export async function runCapability<I, T, R>(
+  capability: Capability<I, T, R>,
+  raw: unknown,
+): Promise<CapabilityOutput<T>> {
+  return invoke(capability, await humanContext(), readInput(raw));
+}
+
+type ActionOptions = { revalidate?: (path: string) => void };
+
+/**
+ * The human entry point for one capability: authenticate, invoke, and
+ * revalidate the paths the capability declared. Exported from a `"use server"`
+ * file, this becomes the endpoint; the capability module itself stays a plain
+ * server module, so no handler can be called over HTTP without a session.
+ */
+export function action<I, T, R>(
+  capability: Capability<I, T, R>,
+  { revalidate = revalidatePath }: ActionOptions = {},
+) {
+  return async (raw: unknown): Promise<CapabilityOutput<T>> => {
+    const output = await runCapability(capability, raw);
+
+    if (output.ok && capability.invalidates) {
+      for (const path of capability.invalidates(output)) revalidate(path);
+    }
+
+    return output;
+  };
+}

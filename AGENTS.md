@@ -115,17 +115,18 @@ Write the failing test before the production code, for every behaviour change.
 
 ## Project map
 
-| Path                 | Contents                                                                                               |
-| -------------------- | ------------------------------------------------------------------------------------------------------ |
-| `app/`               | App Router routes, layouts, server actions, route handlers (`app/api`).                                |
-| `lib/`               | Domain + adapters, one folder per bounded context (`ai`, `billing`, `collab`, `db`).                   |
-| `components/`        | Shared client UI; `components/ui` are shadcn-style primitives.                                         |
-| `lib/db/`            | Drizzle schema, connection, column helpers.                                                            |
-| `drizzle/`           | Generated migrations — never hand-edit applied files.                                                  |
-| `e2e/`               | Playwright specs.                                                                                      |
-| `docs/architecture/` | Architecture records and decisions.                                                                    |
-| `scripts/`           | Local tooling (SMTP sink, etc.).                                                                       |
-| `.agents/skills/`    | Vendored skill docs for Supabase, Stripe, etc. Read the relevant `SKILL.md` before using that service. |
+| Path                 | Contents                                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `app/`               | App Router routes, layouts, server actions, route handlers (`app/api`).                                       |
+| `lib/`               | Domain + adapters, one folder per bounded context (`ai`, `billing`, `collab`, `db`).                          |
+| `lib/capabilities/`  | The capability registry: one definition per operation, used by both the agent's tools and the server actions. |
+| `components/`        | Shared client UI; `components/ui` are shadcn-style primitives.                                                |
+| `lib/db/`            | Drizzle schema, connection, column helpers.                                                                   |
+| `drizzle/`           | Generated migrations — never hand-edit applied files.                                                         |
+| `e2e/`               | Playwright specs.                                                                                             |
+| `docs/architecture/` | Architecture records and decisions.                                                                           |
+| `scripts/`           | Local tooling (SMTP sink, etc.).                                                                              |
+| `.agents/skills/`    | Vendored skill docs for Supabase, Stripe, etc. Read the relevant `SKILL.md` before using that service.        |
 
 ## Commands
 
@@ -143,7 +144,7 @@ pnpm build              # Production build
 pnpm db:up              # Local Supabase/Postgres + migrations prerequisites
 pnpm db:generate        # Generate a Drizzle migration after schema changes
 pnpm db:migrate         # Apply migrations
-pnpm test:e2e           # Playwright (starts/reuses the dev server, needs a DB)
+pnpm test:e2e           # Playwright on :3100 with the scripted provider; needs a DB, and `pnpm dev` stopped
 pnpm test:e2e:smtp      # Local SMTP sink used by the invitation flows
 ```
 

@@ -240,6 +240,46 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await dialog.getByRole("button", { name: "Cancel" }).click();
       await expect(page.getByText(`Fourth ${id}`)).toHaveCount(0);
     });
+
+    await test.step("an archived workspace can be deleted permanently", async () => {
+      if (!workspaceId) throw new Error("The workspace id is missing");
+
+      // The dashboard's latest list is capped and now holds this workspace's
+      // doc and canvas, so the workspace card is managed from /workspaces.
+      await page.goto("/workspaces");
+      const card = page.getByRole("listitem").filter({ hasText: renamedWorkspace }).first();
+      await openDialog(
+        page,
+        card.getByRole("button", { name: "Archive", exact: true }),
+        "alertdialog",
+      );
+      await page
+        .getByRole("alertdialog")
+        .getByRole("button", { name: "Archive workspace" })
+        .click();
+      await expect(card).toHaveCount(0);
+
+      await page.goto("/dashboard");
+      await expect(page.getByText("Archived workspaces")).toBeVisible();
+      await expect(page.getByText("2 / 3")).toBeVisible();
+
+      // Only the archived row offers Delete; the cards offer Edit and Archive.
+      await openDialog(
+        page,
+        page.getByRole("button", { name: "Delete", exact: true }),
+        "alertdialog",
+      );
+
+      const dialog = page.getByRole("alertdialog");
+      await expect(dialog.getByText(`Delete ${renamedWorkspace} permanently?`)).toBeVisible();
+      await dialog.getByRole("button", { name: "Delete workspace" }).click();
+
+      // The archive list disappears with its last row, and the row is gone from
+      // the database rather than merely hidden.
+      await expect(page.getByText("Archived workspaces")).toHaveCount(0);
+      const { rows } = await db.query("select id from workspace where id = $1", [workspaceId]);
+      expect(rows).toHaveLength(0);
+    });
   } finally {
     for (const cleanup of cleanups) {
       await cleanup().catch(() => undefined);

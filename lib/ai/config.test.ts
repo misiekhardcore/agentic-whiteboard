@@ -53,6 +53,17 @@ describe("resolveAiConfig", () => {
     );
   });
 
+  it("accepts the scripted stub provider used by the e2e suite", () => {
+    expect(resolveAiConfig({ AI_PROVIDER: "stub", AI_MODEL: "stub-model" })).toEqual({
+      provider: "stub",
+      model: "stub-model",
+      baseURL: "stub://local",
+      apiKey: "stub",
+      maxSteps: 20,
+      maxRetries: 0,
+    });
+  });
+
   it("requires a base URL for a generic compatible endpoint", () => {
     expect(() =>
       resolveAiConfig({

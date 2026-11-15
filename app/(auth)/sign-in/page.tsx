@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 
 import { safeRedirectTo } from "@/lib/auth-redirect";
+import { routes, signUpPath } from "@/lib/routes";
 
 import { SignInForm } from "./sign-in-form";
 import { type SocialProvider, SocialSignIn } from "./social-sign-in";
@@ -88,7 +89,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
       </CardContent>
       <CardFooter className="flex-col gap-3 text-sm text-muted-foreground">
         <Link
-          href="/forgot-password"
+          href={routes.forgotPassword}
           className="font-medium text-primary underline underline-offset-4 hover:no-underline"
         >
           Forgot your password?
@@ -96,7 +97,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
         <div className="flex items-center justify-center gap-1">
           <span>No account yet?</span>
           <Link
-            href={redirectTo ? `/sign-up?redirectTo=${encodeURIComponent(redirectTo)}` : "/sign-up"}
+            href={signUpPath(redirectTo)}
             className="font-medium text-primary underline underline-offset-4 hover:no-underline"
           >
             Create one

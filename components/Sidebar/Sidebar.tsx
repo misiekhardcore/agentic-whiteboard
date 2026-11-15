@@ -11,6 +11,7 @@ import { Archive, CreditCard, LayoutGrid, Settings, Sparkles, Users } from "luci
 import { Suspense } from "react";
 
 import { CreateWorkspaceDialog } from "@/app/dashboard/_components/CreateWorkspaceDialog";
+import { routes } from "@/lib/routes";
 
 import { Loading } from "../Loading/Loading";
 
@@ -36,15 +37,15 @@ export function DashboardSidebar() {
           <SidebarGroupLabel>My workspaces</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuLink href="/workspaces">
+              <SidebarMenuLink href={routes.workspaces}>
                 <LayoutGrid />
                 All workspaces
               </SidebarMenuLink>
-              <SidebarMenuLink href="/dashboard/shared">
+              <SidebarMenuLink href={routes.dashboardShared}>
                 <Users />
                 Shared
               </SidebarMenuLink>
-              <SidebarMenuLink href="/dashboard/archive">
+              <SidebarMenuLink href={routes.dashboardArchive}>
                 <Archive />
                 Archived
               </SidebarMenuLink>
@@ -55,19 +56,19 @@ export function DashboardSidebar() {
           <SidebarGroupLabel>Others</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuLink href="/dashboard/organization">
+              <SidebarMenuLink href={routes.dashboardOrganization}>
                 <Users />
                 Organizations
               </SidebarMenuLink>
-              <SidebarMenuLink href="/dashboard/billing">
+              <SidebarMenuLink href={routes.dashboardBilling}>
                 <CreditCard />
                 Billing
               </SidebarMenuLink>
-              <SidebarMenuLink href={"/dashboard/ai-helper"}>
+              <SidebarMenuLink href={routes.dashboardAiHelper}>
                 <Sparkles />
                 AI Helper
               </SidebarMenuLink>
-              <SidebarMenuLink href="/dashboard/settings">
+              <SidebarMenuLink href={routes.dashboardSettings}>
                 <Settings />
                 Settings
               </SidebarMenuLink>

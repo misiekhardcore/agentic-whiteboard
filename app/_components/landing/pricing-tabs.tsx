@@ -16,6 +16,7 @@ import {
   planServesAudience,
 } from "@/lib/billing/plans";
 import type { TeamOption } from "@/lib/organizations";
+import { routes, signInPath } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 import { CheckoutSheet } from "./checkout-sheet";
@@ -68,7 +69,7 @@ export function PricingTabs({
   function choosePlan(plan: Plan) {
     if (!signedIn) {
       const next = `/?billing=${plan.id}#pricing`;
-      router.push(`/sign-in?redirectTo=${encodeURIComponent(next)}`);
+      router.push(signInPath(next));
       return;
     }
     setChosenPlanId(plan.id);
@@ -120,7 +121,7 @@ export function PricingTabs({
                       footer={
                         free ? (
                           <Button asChild variant="outline" className="w-full">
-                            <Link href={signedIn ? "/dashboard" : "/sign-up"}>
+                            <Link href={signedIn ? routes.dashboard : routes.signUp}>
                               {signedIn ? "Open dashboard" : "Start for free"}
                             </Link>
                           </Button>

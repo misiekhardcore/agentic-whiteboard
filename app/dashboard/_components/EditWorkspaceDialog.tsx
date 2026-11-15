@@ -101,7 +101,7 @@ function EditWorkspaceForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="workspaceId" value={id} />
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="editWorkspaceName">Workspace name</Label>

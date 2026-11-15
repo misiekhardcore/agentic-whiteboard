@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { signOutAction } from "@/lib/auth-actions";
 import { switchAccountAction } from "@/lib/organization-actions";
 import type { TeamOption } from "@/lib/organizations";
+import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 function initials(name: string): string {
@@ -138,14 +139,14 @@ export function AccountMenuPopover({
 
         <Separator className="my-1" />
 
-        <MenuLink href="/dashboard/settings" onNavigate={() => setOpen(false)}>
+        <MenuLink href={routes.dashboardSettings} onNavigate={() => setOpen(false)}>
           <Settings /> Account settings
         </MenuLink>
-        <MenuLink href="/dashboard/organization" onNavigate={() => setOpen(false)}>
+        <MenuLink href={routes.dashboardOrganization} onNavigate={() => setOpen(false)}>
           <Users />
           Organizations
         </MenuLink>
-        <MenuLink href="/dashboard/billing" onNavigate={() => setOpen(false)}>
+        <MenuLink href={routes.dashboardBilling} onNavigate={() => setOpen(false)}>
           <CreditCard />
           Billing
         </MenuLink>

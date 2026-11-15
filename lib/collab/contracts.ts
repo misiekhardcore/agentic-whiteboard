@@ -13,14 +13,20 @@ export type WorkspaceSurface = (typeof WORKSPACE_SURFACES)[number];
 export const WORKSPACE_PERMISSIONS = ["view", "edit"] as const;
 export type WorkspacePermission = (typeof WORKSPACE_PERMISSIONS)[number];
 
-export const AGENT_RUN_STATUSES = [
+/**
+ * The lifecycle of an accepted prompt. Queued work is a status rather than a
+ * second record, so the prompt row and its execution never diverge.
+ */
+export const AGENT_PROMPT_STATUSES = [
   "QUEUED",
   "RUNNING",
+  /** A tool is parked until the person answers its approval request. */
+  "AWAITING_APPROVAL",
   "COMPLETED",
   "FAILED",
   "CANCELLED",
 ] as const;
-export type AgentRunStatus = (typeof AGENT_RUN_STATUSES)[number];
+export type AgentPromptStatus = (typeof AGENT_PROMPT_STATUSES)[number];
 
 /**
  * Mirrors the AI SDK's `UIMessage["role"]`, upper-cased to match the Postgres
@@ -45,7 +51,7 @@ export type UserActor = {
  */
 export type AgentActor = {
   type: "agent";
-  runId: string;
+  promptId: string;
   requestedByUserId: string;
 };
 
@@ -93,7 +99,7 @@ export type WorkspaceGateway = {
     workspaceId: string;
     surface: WorkspaceSurface;
     actor: ActorRef;
-    /** Stable per tool call, e.g. `${runId}:${toolCallId}`. */
+    /** Stable per tool call, e.g. `${promptId}:${toolCallId}`. */
     idempotencyKey: string;
     mutations: WorkspaceMutation[];
   }): Promise<MutationResult>;
@@ -107,14 +113,14 @@ export type CollaborationClaims = {
   permission: WorkspacePermission;
   actorType: AgentActorType;
   /** Present when actorType is AGENT. */
-  runId?: string;
+  promptId?: string;
 };
 
 export type AgentStatusEvent = {
   type: "agent.status";
   workspaceId: string;
-  runId: string;
-  status: AgentRunStatus;
+  promptId: string;
+  status: AgentPromptStatus;
   requestedByUserId: string;
   /** Set while a tool is executing, for the "Buffy is…" label. */
   toolName?: string;
@@ -124,7 +130,7 @@ export type AgentStatusEvent = {
 export type AgentMessageEvent = {
   type: "agent.message";
   workspaceId: string;
-  runId: string;
+  promptId: string;
   messageId: string;
   role: AgentMessageRole;
   at: string;
