@@ -13,6 +13,7 @@ import { getOrganizationEntitlements, getUserEntitlements } from "@/lib/billing/
 import { approvalGatedCapabilityNames } from "@/lib/capabilities/registry";
 import type { SessionAccountContext } from "@/lib/identity/account";
 
+import { clearThreadStream, markThreadStream } from "./live";
 import {
   approvalReference,
   hasPendingApproval,
@@ -150,6 +151,7 @@ export async function runDashboardTurn({
 
     promptId = waiting.promptId;
     await resumePrompt(promptId);
+    markThreadStream(session.user.id, promptId);
   } else {
     const entitlements = organizationId
       ? await getOrganizationEntitlements(organizationId)
@@ -177,6 +179,9 @@ export async function runDashboardTurn({
     }
 
     promptId = opened.promptId;
+    // Marked before the next await, so a parallel send cannot mistake this
+    // QUEUED row for an orphan and retire it out from under the stream.
+    markThreadStream(session.user.id, promptId);
 
     try {
       const submitted = messages[messages.length - 1];
@@ -188,6 +193,7 @@ export async function runDashboardTurn({
       await markPromptRunning(promptId);
     } catch (error) {
       console.error("[ai] could not record the prompt:", error);
+      clearThreadStream(session.user.id, promptId);
       await closePrompt({ promptId, status: "FAILED", error: STREAM_ERROR });
       return jsonError(STREAM_ERROR, 500);
     }
@@ -259,14 +265,17 @@ export async function runDashboardTurn({
             error: failed ? STREAM_ERROR : null,
           });
         } catch (error) {
-          // The stream is already closed; the prompt row keeps its RUNNING
-          // status and the next send retires it as stale.
+          // The row may keep its RUNNING status if this write failed; releasing
+          // the stream is what lets the next send retire it.
           console.error("[ai] could not persist the prompt result:", error);
+        } finally {
+          clearThreadStream(session.user.id, promptId);
         }
       },
     });
   } catch (error) {
     console.error("[ai] could not start the prompt stream:", error);
+    clearThreadStream(session.user.id, promptId);
     await closePrompt({ promptId, status: "FAILED", error: STREAM_ERROR });
     return jsonError(STREAM_ERROR, 500);
   }

@@ -44,7 +44,7 @@ Wiring it up needed answers to four questions the schema did not settle:
 | Links                 | Every path comes from `lib/routes`, and `createWorkspace` returns the new workspace's `link`         | A route that moves is one edit rather than a search for string fragments, and the agent can point at what it created instead of describing where it might be.                                                                                                                          |
 | Concurrency           | One `QUEUED`/`RUNNING` prompt per person's dashboard thread                                          | Two streams over one conversation would interleave replies. A partial unique index enforces it; a second send gets 409 instead of a second run.                                                                                                                                        |
 | Prompt while busy     | Queued in the composer, sent when the turn ends                                                      | A prompt typed while the agent answers waits its turn, in the order it was written, rather than being dropped or refused. The server's 409 stays as the guard for anything that is not this composer.                                                                                  |
-| Stale prompts         | `QUEUED`/`RUNNING` older than 15 minutes is retired on the next send                                 | A crashed process must not block the thread permanently.                                                                                                                                                                                                                               |
+| Orphaned prompts      | A `QUEUED`/`RUNNING` prompt this process is not streaming is retired on the next send                | A restarted server must not block the thread, and no timestamp can tell a live stream from a dead one — a slow model holds its first token for minutes. The process that started a stream is the only thing that knows, so it keeps that fact in memory.                               |
 | Test provider         | `AI_PROVIDER=stub` scripted model                                                                    | E2E needs a deterministic model that can also call a tool, without a GPU or a hosted key. Every reply is prefixed so a demo is not mistaken for a real answer.                                                                                                                         |
 
 ### Why merge the run and the ledger
@@ -86,8 +86,13 @@ conversation into a workspace later is an update, not a second model.
 2. The route resolves the session and active account, validates the newest user
    message, checks the provider config and the prompt allowance. A refusal
    returns JSON and writes nothing.
+   Before inserting, any `QUEUED`/`RUNNING` prompt on this thread that this
+   process is not streaming is closed as `FAILED` — a server restarted mid-stream
+   leaves one behind, and it would otherwise block every later send.
 3. The prompt row is inserted as `QUEUED`; a partial unique violation means the
-   previous prompt is still running, so the route answers 409.
+   previous prompt is still running, so the route answers 409. The SQLSTATE is
+   read from the driver error under drizzle's query wrapper, because reading only
+   the wrapper turned a busy thread into a 500.
 4. The user message is stored, the prompt becomes `RUNNING`, and
    `createAgentUIStreamResponse` streams the reply. Tools are built for this
    request with the actor already bound.
@@ -111,6 +116,28 @@ conversation into a workspace later is an update, not a second model.
 8. The page reloads the thread from the database, so a refresh replays it; an
    answered request is dropped from the replay while the text around it stays.
 
+### Why liveness is not a timestamp
+
+A prompt row is a lease on the thread, and the stream that owns it is in the
+process that opened it. Two statuses cannot express "the process that wrote this
+is gone": a `RUNNING` row from ten seconds ago may be a healthy slow model, and
+one from an hour ago may be dead. The first version guessed with a 15-minute
+window, which meant that after every restart the person was locked out of their
+own thread until the window passed — and the row looked busy even though nothing
+was running.
+
+Instead, [lib/ai/thread/live.ts](../../lib/ai/thread/live.ts) keeps the prompts
+this process is streaming, per person. Anything `QUEUED`/`RUNNING` in the
+database that is not in that set was left by a server that has since gone, so the
+next send retires it. The registry is exact because only the streaming process
+can advance the row.
+
+That relies on the app running as **one server per environment**, which is the
+deployment it has today. Two instances would each see the other's live prompt as
+an orphan; running more than one would need the lease written in the database (a
+heartbeat column renewed during the stream) instead of in memory. That is the
+follow-up the day this app needs a second instance.
+
 ## Consequences
 
 - A prompt is the billing unit and the execution unit; there is no way to count
@@ -125,6 +152,8 @@ conversation into a workspace later is an update, not a second model.
   [ai-collaboration](ai-collaboration.md).
 - A parked approval is answerable for 24 hours and survives a reload, because the
   request is stored with the message rather than held in the stream.
+- Restarting the server mid-reply costs the reply, not the thread: the orphaned
+  row is retired on the next send and the person is told to send it again.
 - `AI_PROVIDER=stub` is a deployment-visible provider. Production must not set
   it; the scripted replies are deliberately obvious.
 - The dashboard thread is not shared with collaborators. Shared workspace chat

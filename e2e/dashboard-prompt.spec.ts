@@ -178,6 +178,57 @@ test("a prompt sent while the agent is answering waits its turn", async ({ page 
   }
 });
 
+test("a prompt left RUNNING by a restarted server does not block the thread", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-orphan-${id}@example.com`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    // A server killed mid-stream leaves its prompt QUEUED/RUNNING forever. The
+    // single-flight index then refuses every later send on the thread, and the
+    // process that could have finished the row is gone.
+    const orphanId = `orphan_${id}`;
+    const seeded = await withDb(async (db) => {
+      const { rowCount } = await db.query(
+        `insert into "agentPrompt" (id, "ownerId", "userId", status, provider, model, "startedAt")
+         select $1, u.id, u.id, 'RUNNING', 'stub', 'stub-model', now()
+           from "user" u where u.email = $2`,
+        [orphanId, email],
+      );
+
+      return rowCount ?? 0;
+    });
+    expect(seeded).toBe(1);
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+
+    await composer.fill("Anything new?");
+    await composer.press("Enter");
+
+    // The send goes through instead of failing on the index, and the reply is a
+    // real turn rather than the busy notice.
+    await expect(thread).toContainText("Stub agent: Anything new?");
+    await expect(thread).not.toContainText("still working on your previous prompt");
+
+    const orphan = await withDb(async (db) => {
+      const { rows } = await db.query<{ status: string; error: string | null }>(
+        `select status, error from "agentPrompt" where id = $1`,
+        [orphanId],
+      );
+
+      return rows[0];
+    });
+
+    expect(orphan?.status).toBe("FAILED");
+    expect(orphan?.error).toContain("stopped before finishing");
+    await expect.poll(() => promptCount(email)).toBe(2);
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
 test("the agent can create a workspace from a dashboard prompt", async ({ page }) => {
   const id = randomUUID().slice(0, 8);
   const email = `e2e-workspace-tool-${id}@example.com`;
