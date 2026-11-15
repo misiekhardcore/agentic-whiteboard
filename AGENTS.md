@@ -127,6 +127,8 @@ Write the failing test before the production code, for every behaviour change.
 | `lib/identity/`      | Actor, session → active account, roles, better-auth adapter, pre-auth actions.                              |
 | `lib/organizations/` | Membership, slug rule, invitations, organization settings and their capabilities.                           |
 | `lib/workspace/`     | The reference context: status/contracts/forms, rules, access, queries, service, capabilities, actions.      |
+| `lib/doc/`           | The workspace's document surface: its contract and the scoped read; content arrives with the gateway.       |
+| `lib/canvas/`        | The workspace's canvas surface: its contract and the scoped read.                                           |
 | `lib/ai/`            | Providers, runtime (agent + instructions), thread (rules, store, allowance, turn, composer), tools adapter. |
 | `lib/billing/`       | Plans, entitlements, usage rules (pure), subscriptions, checkout, Stripe adapter.                           |
 | `lib/shared/`        | Routes, form-data reading and date formatting — the only genuinely shared primitives.                       |
