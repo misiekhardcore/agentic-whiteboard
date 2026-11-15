@@ -1,27 +1,23 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import {
-  Alert,
-  AlertDescription,
-} from "@konopskidev/ui/components/alert";
+import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import { Textarea } from "@konopskidev/ui/components/textarea";
-import { DefaultChatTransport, type UIMessage } from "ai";
-import { ArrowUp, Square } from "lucide-react";
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
+  type UIMessage,
+} from "ai";
+import { ArrowUp, Square, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-  type KeyboardEvent,
-} from "react";
+import { type FormEvent, type KeyboardEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
   composerKeyIntent,
+  composerView,
   EXAMPLE_PROMPTS,
   submittedPrompt,
 } from "@/lib/ai/prompt-composer";
@@ -71,6 +67,9 @@ type PromptComposerProps = {
  * on Enter, keeps Shift+Enter for line breaks, and offers curated examples that
  * fill the field so they stay editable before sending. Replies stream in above
  * the box, and the thread survives a reload because the route stores it.
+ *
+ * Only one prompt runs at a time, so a prompt sent while the agent is answering
+ * waits in `useChat`'s queue and goes out when the current turn ends.
  */
 export function PromptComposer({ initialMessages }: PromptComposerProps) {
   const [draft, setDraft] = useState("");
@@ -79,13 +78,50 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
   const router = useRouter();
 
   const transport = useMemo(
-    () => new DefaultChatTransport({ api: routes.agentPromptsApi }),
+    () =>
+      new DefaultChatTransport({
+        api: routes.agentPromptsApi,
+        // Read at send time, so "this workspace" keeps working after a
+        // navigation; the server treats it as a hint and validates it.
+        prepareSendMessagesRequest: ({ messages }) => ({
+          body: {
+            messages,
+            uiContext: composerView(window.location.pathname),
+          },
+        }),
+      }),
     [],
   );
 
-  const { messages, sendMessage, status, stop, clearError } = useChat({
+  const {
+    messages,
+    sendMessage,
+    status,
+    stop,
+    clearError,
+    addToolApprovalResponse,
+    experimental_queuedMessages: queuedMessages = [],
+    experimental_removeQueuedMessage,
+  } = useChat({
     messages: initialMessages,
     transport,
+    // The thread runs one prompt at a time, so a prompt sent while the agent is
+    // still answering — or is parked on an approval — waits in this queue and
+    // goes out when the current turn ends. Stopping or a failed turn pauses it
+    // rather than replaying the queue against a thread that is not ready.
+    experimental_queue: true,
+    // Answering an approval is not a new prompt: once every outstanding
+    // decision is answered, the thread resumes the run that was parked.
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+    onToolCall: ({ toolCall }) => {
+      // The browser performs this one: the agent asked for a workspace to be
+      // opened, and the person lands on it.
+      if (toolCall.toolName !== "openWorkspace") return;
+      const input = toolCall.input as { workspaceId?: unknown } | undefined;
+      if (typeof input?.workspaceId === "string") {
+        router.push(routes.workspace(input.workspaceId));
+      }
+    },
     onError: (error) => {
       const next = promptFailure(error);
       setFailure(next);
@@ -102,16 +138,17 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
   // A reasoning model streams reasoning parts before any visible text, so the
   // thread would look empty even though the agent is working.
   const lastMessage = messages[messages.length - 1];
-  const awaitingText =
-    isBusy && (!lastMessage || threadText(lastMessage).trim().length === 0);
+  const awaitingText = isBusy && (!lastMessage || threadText(lastMessage).trim().length === 0);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!promptToSend || isBusy) return;
+    if (!promptToSend) return;
 
     setFailure(null);
     clearError();
-    sendMessage({ text: promptToSend });
+    // While the agent is busy `useChat` queues this and sends it as the thread's
+    // next prompt, so a prompt typed mid-reply is neither dropped nor refused.
+    void sendMessage({ text: promptToSend });
     setDraft("");
   }
 
@@ -136,16 +173,10 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
   }
 
   return (
-    <section
-      aria-labelledby="prompt-composer-title"
-      className="topo-bg px-2 py-10 sm:py-14"
-    >
-      <div className="mx-auto max-w-5xl flex w-full flex-col gap-6">
+    <section aria-labelledby="prompt-composer-title" className="topo-bg px-2 py-10 sm:py-14">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <div className="flex flex-col items-center gap-3 text-center">
-          <h1
-            id="prompt-composer-title"
-            className="page-title text-balance sm:text-display"
-          >
+          <h1 id="prompt-composer-title" className="page-title text-balance sm:text-display">
             What are we planning today?
           </h1>
           <p className="text-lead text-pretty text-muted-foreground">
@@ -153,10 +184,41 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
           </p>
         </div>
 
-        <PromptThread messages={messages} isDrafting={awaitingText} />
+        <PromptThread
+          messages={messages}
+          isDrafting={awaitingText}
+          onApproval={(approvalId, approved) => {
+            addToolApprovalResponse({ id: approvalId, approved });
+          }}
+        />
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="card flex flex-col p-1.5">
+          {queuedMessages.length > 0 && (
+            <ul aria-label="Queued prompts" className="flex flex-col gap-2">
+              {queuedMessages.map((message) => (
+                <li
+                  key={message.id}
+                  className="ml-auto flex max-w-[85%] items-start gap-2 rounded-2xl border border-dashed px-3 py-2 text-sm text-muted-foreground"
+                >
+                  <span className="whitespace-pre-wrap">{threadText(message).trim()}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Remove queued prompt"
+                    onClick={() => experimental_removeQueuedMessage(message.id)}
+                  >
+                    <X />
+                  </Button>
+                </li>
+              ))}
+              <li className="ml-auto text-xs text-muted-foreground">
+                Queued: the agent takes them one at a time.
+              </li>
+            </ul>
+          )}
+
+          <div className="flex flex-col card p-1.5">
             <Textarea
               ref={textareaRef}
               value={draft}
@@ -169,35 +231,35 @@ export function PromptComposer({ initialMessages }: PromptComposerProps) {
             />
 
             <div className="flex items-center justify-between gap-3 px-1.5">
-              <p
-                id="prompt-composer-hint"
-                className="text-xs text-muted-foreground"
-              >
-                Shift + Enter for a new line
+              <p id="prompt-composer-hint" className="text-xs text-muted-foreground">
+                {isBusy
+                  ? "Shift + Enter for a new line · Enter queues this prompt for the next turn"
+                  : "Shift + Enter for a new line"}
               </p>
-              {isBusy ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-lg"
-                  className="rounded-full shadow"
-                  aria-label="Stop prompt"
-                  onClick={() => stop()}
-                >
-                  <Square />
-                </Button>
-              ) : (
+              <div className="flex items-center gap-2">
+                {isBusy && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-lg"
+                    className="rounded-full shadow"
+                    aria-label="Stop prompt"
+                    onClick={() => void stop()}
+                  >
+                    <Square />
+                  </Button>
+                )}
                 <Button
                   type="submit"
                   variant="primary"
                   size="icon-lg"
                   className="rounded-full shadow"
-                  aria-label="Send prompt"
+                  aria-label={isBusy ? "Queue prompt" : "Send prompt"}
                   disabled={!promptToSend}
                 >
                   <ArrowUp />
                 </Button>
-              )}
+              </div>
             </div>
           </div>
 

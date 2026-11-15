@@ -17,6 +17,7 @@ export type AccountWorkspace = {
 export type ArchivedWorkspace = {
   id: string;
   name: string;
+  description: string | null;
   status: Workspace["status"];
   archivedAt: Date;
 };
@@ -106,6 +107,7 @@ export async function listArchivedWorkspaces(
     .select({
       id: workspaces.id,
       name: workspaces.name,
+      description: workspaces.description,
       status: workspaces.status,
       archivedAt: workspaces.archivedAt,
     })

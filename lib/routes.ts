@@ -40,9 +40,7 @@ export const routes = {
  * `safeRedirectTo`, which only accepts a same-origin path.
  */
 function withRedirect(page: string, redirectTo?: string): string {
-  return redirectTo
-    ? `${page}?redirectTo=${encodeURIComponent(redirectTo)}`
-    : page;
+  return redirectTo ? `${page}?redirectTo=${encodeURIComponent(redirectTo)}` : page;
 }
 
 export function signInPath(redirectTo?: string): string {

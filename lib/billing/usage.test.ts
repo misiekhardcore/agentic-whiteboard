@@ -180,15 +180,13 @@ describe("prompt limit message", () => {
   });
 
   it("uses the subscription period once one is mirrored", () => {
-    expect(
-      promptLimitMessage({ ...base, periodLabel: "this billing period" }),
-    ).toContain("prompts this billing period in Acme");
+    expect(promptLimitMessage({ ...base, periodLabel: "this billing period" })).toContain(
+      "prompts this billing period in Acme",
+    );
   });
 
   it("never blocks an unlimited plan", () => {
-    expect(
-      promptLimitMessage({ ...base, used: 900, limit: null }),
-    ).toBeNull();
+    expect(promptLimitMessage({ ...base, used: 900, limit: null })).toBeNull();
   });
 });
 

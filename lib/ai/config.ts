@@ -7,11 +7,7 @@
  * call time so hot reload picks up edits without a server restart.
  */
 
-export const AI_PROVIDER_IDS = [
-  "lmstudio",
-  "openai-compatible",
-  "stub",
-] as const;
+export const AI_PROVIDER_IDS = ["lmstudio", "openai-compatible", "stub"] as const;
 
 export type AiProviderId = (typeof AI_PROVIDER_IDS)[number];
 
@@ -26,6 +22,12 @@ export type AiConfig = {
   maxSteps: number;
   /** SDK retry count. Local servers fail fast by default. */
   maxRetries: number;
+  /**
+   * Signs each tool-approval request. Approval responses travel through the
+   * browser, so without this a client could approve its own call. When unset,
+   * approval-gated tools are not offered to the model at all.
+   */
+  toolApprovalSecret?: string;
 };
 
 export class AiConfigurationError extends Error {
@@ -125,11 +127,19 @@ export function resolveAiConfig(env: AiEnvironment = process.env): AiConfig {
     );
   }
 
+  const toolApprovalSecret = readValue(env.AI_TOOL_APPROVAL_SECRET);
+  if (toolApprovalSecret && toolApprovalSecret.length < 32) {
+    throw new AiConfigurationError(
+      "AI_TOOL_APPROVAL_SECRET must be at least 32 characters so an approval cannot be guessed.",
+    );
+  }
+
   return {
     provider: providerValue,
     model,
     baseURL,
     apiKey: readValue(env.AI_API_KEY) ?? defaults.apiKey,
+    toolApprovalSecret,
     maxSteps: readInteger("AI_MAX_STEPS", env.AI_MAX_STEPS, DEFAULT_MAX_STEPS, 1),
     maxRetries: readInteger("AI_MAX_RETRIES", env.AI_MAX_RETRIES, defaults.maxRetries, 0),
   };

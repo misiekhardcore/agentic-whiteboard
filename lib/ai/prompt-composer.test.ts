@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   composerKeyIntent,
+  composerView,
   EXAMPLE_PROMPTS,
   submittedPrompt,
 } from "./prompt-composer";
@@ -22,12 +23,8 @@ describe("composerKeyIntent", () => {
   });
 
   it("does not submit while an IME composition is in progress", () => {
-    expect(
-      composerKeyIntent({ key: "Enter", shiftKey: false, isComposing: true }),
-    ).toBe("ignore");
-    expect(
-      composerKeyIntent({ key: "Enter", shiftKey: true, isComposing: true }),
-    ).toBe("ignore");
+    expect(composerKeyIntent({ key: "Enter", shiftKey: false, isComposing: true })).toBe("ignore");
+    expect(composerKeyIntent({ key: "Enter", shiftKey: true, isComposing: true })).toBe("ignore");
   });
 });
 
@@ -41,6 +38,23 @@ describe("submittedPrompt", () => {
   it("has nothing to send for an empty or whitespace-only draft", () => {
     expect(submittedPrompt("")).toBeNull();
     expect(submittedPrompt("  \n\t ")).toBeNull();
+  });
+});
+
+describe("composerView", () => {
+  it("reports the dashboard without a workspace", () => {
+    expect(composerView("/dashboard")).toEqual({ pathname: "/dashboard" });
+  });
+
+  it("adds the workspace the person is looking at", () => {
+    expect(composerView("/workspace/ws_1")).toEqual({
+      pathname: "/workspace/ws_1",
+      workspaceId: "ws_1",
+    });
+  });
+
+  it("does not invent a workspace for a nested path", () => {
+    expect(composerView("/workspaces")).toEqual({ pathname: "/workspaces" });
   });
 });
 

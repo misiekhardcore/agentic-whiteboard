@@ -1,14 +1,12 @@
 import type { UIMessage } from "ai";
 
-import type {
-  AgentMessageRole,
-  AgentPromptStatus,
-} from "../collab/contracts";
+import type { AgentMessageRole, AgentPromptStatus } from "../collab/contracts";
 
 /**
  * Rules for the dashboard's prompt thread. Pure, so the route, the persistence
- * adapter and the composer can share one definition of a sendable prompt and
- * one mapping between stored messages and AI SDK messages.
+ * adapter and the composer can share one definition of a sendable prompt, one
+ * mapping between stored messages and AI SDK messages, and one answer to "is
+ * this a new prompt or the answer to one the agent is waiting on?".
  */
 
 export const PROMPT_MAX_LENGTH = 4000;
@@ -25,6 +23,19 @@ const ROLE_BY_STORED: Record<AgentMessageRole, UIMessage["role"]> = {
   USER: "user",
   ASSISTANT: "assistant",
 };
+
+type ToolPart = Extract<
+  UIMessage["parts"][number],
+  { type: `tool-${string}` } | { type: "dynamic-tool" }
+>;
+
+function isToolPart(part: UIMessage["parts"][number]): part is ToolPart {
+  return part.type === "dynamic-tool" || part.type.startsWith("tool-");
+}
+
+function toolCallIdOf(part: ToolPart): string {
+  return part.toolCallId;
+}
 
 /**
  * What is wrong with a draft, or `null` when it can be sent. The route re-checks
@@ -63,16 +74,135 @@ export function lastUserText(messages: UIMessage[]): string | null {
 }
 
 /**
+ * A message that still asks the person to decide. The run ends with the tool
+ * call parked in `approval-requested`, so the prompt is not finished — it is
+ * waiting.
+ */
+export function hasPendingApproval(message: UIMessage): boolean {
+  return message.parts.some((part) => isToolPart(part) && part.state === "approval-requested");
+}
+
+/**
+ * The reference the browser answers with. The SDK mints it per request (and
+ * signs it when a secret is configured), so it is also the safest thing to
+ * match a continuation against: the tool call id alone would let a second
+ * thread answer the first one's question.
+ */
+export function approvalReference(message: UIMessage): string | null {
+  for (const part of message.parts) {
+    if (!isToolPart(part)) continue;
+    if (part.state !== "approval-requested" && part.state !== "approval-responded") {
+      continue;
+    }
+    return part.approval.id;
+  }
+
+  return null;
+}
+
+export type PromptRequestKind = "new" | "continuation";
+
+/**
+ * A send either starts a prompt or answers the one the agent parked. An
+ * approval response lives on the assistant message it belongs to, so the last
+ * message tells the two apart; everything else is a new prompt.
+ */
+export function promptRequestKind(messages: UIMessage[]): PromptRequestKind {
+  const last = messages[messages.length - 1];
+  if (!last || last.role !== "assistant") return "new";
+
+  return last.parts.some(
+    (part) =>
+      isToolPart(part) &&
+      (part.state === "approval-requested" || part.state === "approval-responded"),
+  )
+    ? "continuation"
+    : "new";
+}
+
+/**
  * Replays a stored thread as AI SDK messages. The role is upper-cased in
  * Postgres to match the enum convention and lower-cased back here, because the
  * UI and the agent both speak the SDK's `UIMessage`.
  */
 export function threadMessages(rows: StoredPromptMessage[]): UIMessage[] {
-  return rows.map((row) => ({
+  return supersedeApprovals(rows).map((row) => ({
     id: row.id,
     role: ROLE_BY_STORED[row.role],
     parts: row.parts,
   }));
+}
+
+const SETTLED_STATES = new Set([
+  "output-available",
+  "output-error",
+  "output-denied",
+  "approval-responded",
+]);
+
+/**
+ * An approval request is stored with the message that made it, so a reload can
+ * still show the question. The answer arrives as a second message for the same
+ * tool call, which would otherwise replay a card whose answer is already below
+ * it — so the stale request is dropped from the thread, while the message's
+ * prose stays.
+ *
+ * Walks newest first: a call settled further down the thread settles the
+ * request above it.
+ */
+export function supersedeApprovals<T extends StoredPromptMessage>(rows: readonly T[]): T[] {
+  const settled = new Set<string>();
+  const kept = rows.map((row) => ({ ...row }));
+
+  for (let index = kept.length - 1; index >= 0; index -= 1) {
+    const row = kept[index];
+
+    const stale = row.parts.filter(
+      (part) =>
+        isToolPart(part) && part.state === "approval-requested" && settled.has(toolCallIdOf(part)),
+    );
+
+    if (stale.length > 0) {
+      const staleIds = new Set(stale.map((part) => toolCallIdOf(part as ToolPart)));
+      kept[index] = {
+        ...row,
+        parts: row.parts.filter((part) => !isToolPart(part) || !staleIds.has(toolCallIdOf(part))),
+      };
+    }
+
+    for (const part of row.parts) {
+      if (isToolPart(part) && SETTLED_STATES.has(part.state)) {
+        settled.add(toolCallIdOf(part));
+      }
+    }
+  }
+
+  return kept;
+}
+
+/**
+ * Adds two AI SDK usage objects leaf by leaf. An approval's continuation is
+ * part of the same prompt, so its tokens are added to what the first step
+ * already recorded instead of replacing them.
+ */
+export function addUsage(previous: unknown, next: unknown): unknown {
+  if (typeof previous !== "object" || previous === null) return next ?? previous;
+  if (typeof next !== "object" || next === null) return previous;
+
+  const added: Record<string, unknown> = { ...(previous as Record<string, unknown>) };
+
+  for (const [key, value] of Object.entries(next)) {
+    const before = added[key];
+    if (before === undefined) {
+      added[key] = value;
+    } else if (typeof before === "number" && typeof value === "number") {
+      added[key] = before + value;
+    } else if (typeof before === "object" && typeof value === "object") {
+      added[key] = addUsage(before, value);
+    }
+  }
+
+  return added;
 }
 
 export type PromptStreamOutcome = {
@@ -82,18 +212,23 @@ export type PromptStreamOutcome = {
   isCancelled?: true;
   /** The provider failed; `onError` ran during the stream. */
   failed: boolean;
+  /** The run parked a tool call until the person answers. */
+  awaitingApproval?: boolean;
 };
 
 /**
  * The status a prompt ends in. A failure wins over an abort so the operator can
- * tell a broken provider from someone pressing Stop.
+ * tell a broken provider from someone pressing Stop; a parking approval is not
+ * an ending, so it outranks a completion but never a failure.
  */
 export function promptStatusAfterStream({
   isAborted,
   isCancelled,
   failed,
+  awaitingApproval,
 }: PromptStreamOutcome): AgentPromptStatus {
   if (failed) return "FAILED";
   if (isAborted || isCancelled) return "CANCELLED";
+  if (awaitingApproval) return "AWAITING_APPROVAL";
   return "COMPLETED";
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@konopskidev/ui/components/button";
 import {
   Trace,
   TraceCollapsible,
@@ -22,12 +23,19 @@ function format(value: unknown): string {
 function Detail({ label, value }: { label: string; value: unknown }) {
   return (
     <div className="mt-1 first:mt-0">
-      <p className="text-xs font-medium uppercase tracking-[0.08em]">{label}</p>
-      <pre className="mt-1 whitespace-pre-wrap font-mono text-xs leading-relaxed">
+      <p className="text-xs font-medium tracking-[0.08em] uppercase">{label}</p>
+      <pre className="mt-1 font-mono text-xs leading-relaxed whitespace-pre-wrap">
         {format(value)}
       </pre>
     </div>
   );
+}
+
+/** The library's status vocabulary; a finished call asks for no decoration. */
+function lineStatus(trace: ToolTrace) {
+  if (trace.status === "awaiting-approval") return "pending" as const;
+  if (trace.status === "done") return undefined;
+  return trace.status;
 }
 
 /**
@@ -36,26 +44,61 @@ function Detail({ label, value }: { label: string; value: unknown }) {
  * behind it, because a dashboard chat should read as a conversation rather than
  * as a transcript of JSON. A failed call opens by itself — the reason is the
  * point.
+ *
+ * A call that needs the person's decision is never collapsed: the question and
+ * its two answers are the whole line until it is answered.
  */
-export function ToolCallLine({ trace }: { trace: ToolTrace }) {
-  // A finished call is the plain state; only a call still working or one that
-  // failed asks the line to say so.
-  const status = trace.status === "done" ? undefined : trace.status;
-
+export function ToolCallLine({
+  trace,
+  onApproval,
+}: {
+  trace: ToolTrace;
+  /** Answers an outstanding approval; absent when the thread is read-only. */
+  onApproval?: (approvalId: string, approved: boolean) => void;
+}) {
   const line = (
-    <TraceLine status={status}>
+    <TraceLine status={lineStatus(trace)}>
       <TraceIcon>
         <Wrench />
       </TraceIcon>
       <TraceTitle>{trace.title}</TraceTitle>
-      {trace.subject && (
-        <TraceTitle className="text-muted-foreground">{trace.subject}</TraceTitle>
-      )}
+      {trace.subject && <TraceTitle className="text-muted-foreground">{trace.subject}</TraceTitle>}
     </TraceLine>
   );
 
+  if (trace.status === "awaiting-approval") {
+    return (
+      <Trace>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {line}
+          {trace.approvalId && onApproval && (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onApproval(trace.approvalId as string, false)}
+              >
+                Deny
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => onApproval(trace.approvalId as string, true)}
+              >
+                Approve
+              </Button>
+            </div>
+          )}
+        </div>
+        {trace.error && <p className="text-xs text-muted-foreground">{trace.error}</p>}
+      </Trace>
+    );
+  }
+
   const hasDetail =
     trace.error !== null ||
+    trace.hint !== null ||
     trace.input !== undefined ||
     trace.output !== undefined;
 
@@ -67,12 +110,9 @@ export function ToolCallLine({ trace }: { trace: ToolTrace }) {
         <TraceCollapsibleTrigger>{line}</TraceCollapsibleTrigger>
         <TraceCollapsibleContent>
           {trace.error && <p className="text-destructive">{trace.error}</p>}
-          {trace.input !== undefined && (
-            <Detail label="Arguments" value={trace.input} />
-          )}
-          {trace.output !== undefined && (
-            <Detail label="Result" value={trace.output} />
-          )}
+          {trace.hint && <p className="text-xs text-muted-foreground">{trace.hint}</p>}
+          {trace.input !== undefined && <Detail label="Arguments" value={trace.input} />}
+          {trace.output !== undefined && <Detail label="Result" value={trace.output} />}
         </TraceCollapsibleContent>
       </TraceCollapsible>
     </Trace>

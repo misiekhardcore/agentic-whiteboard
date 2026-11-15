@@ -1,7 +1,8 @@
+import { Suspense } from "react";
+
 import { Loading } from "@/components/Loading/Loading";
 import { getSessionAccount } from "@/lib/account";
 import { loadDashboardPromptThread } from "@/lib/ai/prompts";
-import { Suspense } from "react";
 
 import { PromptComposer } from "./PromptComposer";
 
@@ -24,8 +25,6 @@ async function PromptSectionInner() {
   if (!account) return <PromptComposer initialMessages={[]} />;
 
   return (
-    <PromptComposer
-      initialMessages={await loadDashboardPromptThread(account.session.user.id)}
-    />
+    <PromptComposer initialMessages={await loadDashboardPromptThread(account.session.user.id)} />
   );
 }

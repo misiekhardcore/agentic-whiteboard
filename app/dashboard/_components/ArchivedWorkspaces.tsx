@@ -8,10 +8,11 @@ import {
 } from "@konopskidev/ui/components/card";
 import { Suspense } from "react";
 
+import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
 import { Loading } from "@/components/Loading/Loading";
 import { getSessionAccount } from "@/lib/account";
 import { formatDay } from "@/lib/formatDate";
-import { restoreWorkspaceAction } from "@/lib/workspace-actions";
+import { deleteWorkspaceAction, restoreWorkspaceAction } from "@/lib/workspace-actions";
 import { listArchivedWorkspaces } from "@/lib/workspaces";
 
 /**
@@ -56,12 +57,24 @@ async function ArchivedWorkspacesInner() {
                   Archived {formatDay(workspace.archivedAt)}
                 </p>
               </div>
-              <form action={restoreWorkspaceAction}>
-                <input type="hidden" name="id" value={workspace.id} />
-                <Button type="submit" variant="outline" size="sm">
-                  Restore
-                </Button>
-              </form>
+              <div className="flex items-center gap-2">
+                <form action={restoreWorkspaceAction}>
+                  <input type="hidden" name="workspaceId" value={workspace.id} />
+                  <Button type="submit" variant="outline" size="sm">
+                    Restore
+                  </Button>
+                </form>
+                <ConfirmAction
+                  action={deleteWorkspaceAction}
+                  fields={{ workspaceId: workspace.id }}
+                  title={`Delete ${workspace.name} permanently?`}
+                  description="The workspace and its documents, canvas and agent history are removed for good. This cannot be undone."
+                  confirmLabel="Delete workspace"
+                  pendingLabel="Deleting…"
+                  triggerLabel="Delete"
+                  triggerVariant="ghost"
+                />
+              </div>
             </li>
           ))}
         </ul>

@@ -44,11 +44,15 @@ describe("threadBlocks", () => {
     const blocks = threadBlocks(
       message([
         { type: "text", text: "Let me set that up." },
-        completedTool("createWorkspace", { name: "Food delivery" }, {
-          created: true,
-          workspaceId: "ws-1",
-          name: "Food delivery",
-        }),
+        completedTool(
+          "createWorkspace",
+          { name: "Food delivery" },
+          {
+            created: true,
+            workspaceId: "ws-1",
+            name: "Food delivery",
+          },
+        ),
         { type: "text", text: "**Done.** Open it from the list below." },
       ]),
     );
@@ -91,30 +95,102 @@ describe("threadBlocks", () => {
   it("marks a tool call that returned a created workspace as done", () => {
     const [block] = threadBlocks(
       message([
-        completedTool("createWorkspace", { name: "Food delivery" }, {
-          created: true,
-          workspaceId: "ws-1",
-          name: "Food delivery",
-        }),
+        completedTool(
+          "createWorkspace",
+          { name: "Food delivery" },
+          {
+            created: true,
+            workspaceId: "ws-1",
+            name: "Food delivery",
+          },
+        ),
       ]),
     );
 
     expect(block).toMatchObject({ kind: "tool", trace: { status: "done" } });
   });
 
-  it("reports a refusal the tool returned as an error", () => {
+  it("reports a refusal the tool returned as an error, with its hint", () => {
     const [block] = threadBlocks(
       message([
-        completedTool("createWorkspace", { name: "Food delivery" }, {
-          created: false,
-          error: "Name this workspace.",
-        }),
+        completedTool(
+          "createWorkspace",
+          { name: "Food delivery" },
+          {
+            ok: false,
+            error: "Name this workspace.",
+            hint: "Fix the field it names and call it again.",
+          },
+        ),
       ]),
     );
 
     expect(block).toMatchObject({
       kind: "tool",
-      trace: { status: "error", error: "Name this workspace." },
+      trace: {
+        status: "error",
+        error: "Name this workspace.",
+        hint: "Fix the field it names and call it again.",
+      },
+    });
+  });
+
+  it("marks a client tool as done once the model calls it", () => {
+    const [block] = threadBlocks(
+      message([runningTool("openWorkspace", { workspaceId: "ws-1", name: "Launch" })]),
+    );
+
+    expect(block).toMatchObject({
+      kind: "tool",
+      trace: {
+        title: "Open workspace",
+        subject: "“Launch”",
+        status: "done",
+        client: true,
+      },
+    });
+  });
+
+  it("parks a tool call until the person answers", () => {
+    const [block] = threadBlocks(
+      message([
+        {
+          type: "tool-archiveWorkspace",
+          toolCallId: "call-3",
+          state: "approval-requested",
+          input: { workspaceId: "ws-1" },
+          approval: { id: "approval-1", requestReason: "This hides it from the dashboard." },
+        },
+      ]),
+    );
+
+    expect(block).toMatchObject({
+      kind: "tool",
+      trace: {
+        title: "Archive workspace",
+        status: "awaiting-approval",
+        approvalId: "approval-1",
+        error: "This hides it from the dashboard.",
+      },
+    });
+  });
+
+  it("says a denied action did not run", () => {
+    const [block] = threadBlocks(
+      message([
+        {
+          type: "tool-deleteWorkspace",
+          toolCallId: "call-4",
+          state: "approval-responded",
+          input: { workspaceId: "ws-1" },
+          approval: { id: "approval-2", approved: false },
+        },
+      ]),
+    );
+
+    expect(block).toMatchObject({
+      kind: "tool",
+      trace: { status: "error", error: "You denied this action, so it did not run." },
     });
   });
 

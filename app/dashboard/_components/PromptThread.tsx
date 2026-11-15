@@ -12,7 +12,13 @@ import { ToolCallLine } from "./ToolCallLine";
  * agent's reply is markdown with its tool calls listed where they happened, so
  * the thread reads in the order the work was done.
  */
-function ThreadMessage({ message }: { message: UIMessage }) {
+function ThreadMessage({
+  message,
+  onApproval,
+}: {
+  message: UIMessage;
+  onApproval?: (approvalId: string, approved: boolean) => void;
+}) {
   const blocks = threadBlocks(message);
   if (blocks.length === 0) return null;
 
@@ -25,12 +31,12 @@ function ThreadMessage({ message }: { message: UIMessage }) {
   }
 
   return (
-    <li className="card flex max-w-[85%] flex-col gap-2 px-3 py-2 text-sm">
+    <li className="flex max-w-[85%] flex-col gap-2 card px-3 py-2 text-sm">
       {blocks.map((block) =>
         block.kind === "text" ? (
           <AgentMarkdown key={block.key}>{block.text}</AgentMarkdown>
         ) : (
-          <ToolCallLine key={block.key} trace={block.trace} />
+          <ToolCallLine key={block.key} trace={block.trace} onApproval={onApproval} />
         ),
       )}
     </li>
@@ -40,25 +46,22 @@ function ThreadMessage({ message }: { message: UIMessage }) {
 export function PromptThread({
   messages,
   isDrafting,
+  onApproval,
 }: {
   messages: UIMessage[];
   /** The agent is working and has not said anything yet. */
   isDrafting: boolean;
+  /** Answers an approval the agent is waiting on. */
+  onApproval?: (approvalId: string, approved: boolean) => void;
 }) {
   if (messages.length === 0) return null;
 
   return (
-    <ol
-      aria-label="Agent conversation"
-      className="flex flex-col gap-3"
-      aria-live="polite"
-    >
+    <ol aria-label="Agent conversation" className="flex flex-col gap-3" aria-live="polite">
       {messages.map((message) => (
-        <ThreadMessage key={message.id} message={message} />
+        <ThreadMessage key={message.id} message={message} onApproval={onApproval} />
       ))}
-      {isDrafting && (
-        <li className="text-sm text-muted-foreground">The agent is drafting…</li>
-      )}
+      {isDrafting && <li className="text-sm text-muted-foreground">The agent is drafting…</li>}
     </ol>
   );
 }

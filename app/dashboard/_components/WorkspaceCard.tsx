@@ -40,7 +40,7 @@ export function WorkspaceCard({ workspace }: { workspace: AccountWorkspace }) {
           />
           <ConfirmAction
             action={archiveWorkspaceAction}
-            fields={{ id: workspace.id }}
+            fields={{ workspaceId: workspace.id }}
             title={`Archive ${workspace.name}?`}
             description="The workspace leaves the dashboard and stops counting against your plan. Its documents, canvas and agent history are kept, and you can restore it at any time."
             confirmLabel="Archive workspace"

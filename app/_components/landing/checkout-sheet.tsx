@@ -242,9 +242,7 @@ export function CheckoutSheet({
               </ul>
               <Button asChild variant="primary" className="w-full" aria-busy={activating}>
                 <Link
-                  href={
-                    isTeamPlan ? routes.dashboardBilling : routes.dashboard
-                  }
+                  href={isTeamPlan ? routes.dashboardBilling : routes.dashboard}
                   aria-disabled={activating}
                   className={activating ? "pointer-events-none opacity-50" : undefined}
                 >

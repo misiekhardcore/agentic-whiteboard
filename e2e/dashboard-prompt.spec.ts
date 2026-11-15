@@ -1,6 +1,5 @@
+import { expect, type Page, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-
-import { expect, test, type Page } from "@playwright/test";
 import { Client } from "pg";
 
 /**
@@ -33,12 +32,46 @@ async function deleteAccount(email: string) {
         [email],
       )
       .catch(() => undefined);
-    await db
-      .query('delete from "user" where email = $1', [email])
-      .catch(() => undefined);
+    await db.query('delete from "user" where email = $1', [email]).catch(() => undefined);
   } finally {
     await db.end();
   }
+}
+
+async function withDb<T>(work: (db: Client) => Promise<T>): Promise<T> {
+  const db = new Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+  try {
+    return await work(db);
+  } finally {
+    await db.end();
+  }
+}
+
+/** `undefined` means the row is gone; `null` means it exists and is active. */
+async function workspaceArchivedAt(email: string, name: string): Promise<Date | null | undefined> {
+  return withDb(async (db) => {
+    const { rows } = await db.query(
+      `select "archivedAt" from workspace
+        where name = $1
+          and "creatorId" = (select id from "user" where email = $2)`,
+      [name, email],
+    );
+
+    return rows[0] ? (rows[0].archivedAt as Date | null) : undefined;
+  });
+}
+
+async function promptCount(email: string): Promise<number> {
+  return withDb(async (db) => {
+    const { rows } = await db.query(
+      `select count(*)::int as total from "agentPrompt"
+        where "userId" = (select id from "user" where email = $1)`,
+      [email],
+    );
+
+    return (rows[0]?.total as number | undefined) ?? 0;
+  });
 }
 
 test("the composer sends on Enter, keeps Shift+Enter for new lines and streams a reply", async ({
@@ -53,13 +86,9 @@ test("the composer sends on Enter, keeps Shift+Enter for new lines and streams a
     const composer = page.getByRole("textbox", { name: "Prompt" });
     const send = page.getByRole("button", { name: "Send prompt" });
 
+    await expect(page.getByRole("heading", { name: "What are we planning today?" })).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "What are we planning today?" }),
-    ).toBeVisible();
-    await expect(
-      page.getByText(
-        "Describe it, and the agent drafts the doc and the canvas for you.",
-      ),
+      page.getByText("Describe it, and the agent drafts the doc and the canvas for you."),
     ).toBeVisible();
     await expect(composer).toBeVisible();
     await expect(page.getByText("Shift + Enter for a new line")).toBeVisible();
@@ -86,17 +115,15 @@ test("the composer sends on Enter, keeps Shift+Enter for new lines and streams a
 
     // The thread is stored, so a reload replays it from the database.
     await page.reload();
-    await expect(
-      page.getByRole("list", { name: "Agent conversation" }),
-    ).toContainText("Stub agent: Plan the schema");
+    await expect(page.getByRole("list", { name: "Agent conversation" })).toContainText(
+      "Stub agent: Plan the schema",
+    );
     await expect(composer).toHaveValue("");
 
     await composer.fill("   ");
     await expect(send).toBeDisabled();
 
-    await page
-      .getByRole("button", { name: "Map out a user onboarding flow" })
-      .click();
+    await page.getByRole("button", { name: "Map out a user onboarding flow" }).click();
     await expect(composer).toHaveValue("Map out a user onboarding flow");
     await expect(composer).toBeFocused();
     await expect(send).toBeEnabled();
@@ -105,9 +132,53 @@ test("the composer sends on Enter, keeps Shift+Enter for new lines and streams a
   }
 });
 
-test("the agent can create a workspace from a dashboard prompt", async ({
-  page,
-}) => {
+test("a prompt sent while the agent is answering waits its turn", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-queue-${id}@example.com`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+    const queue = page.getByRole("list", { name: "Queued prompts" });
+
+    await composer.fill("First question");
+    await composer.press("Enter");
+
+    // The scripted provider holds its first chunk, so the agent is still busy
+    // when the next two prompts arrive.
+    await expect(page.getByRole("button", { name: "Stop prompt" })).toBeVisible();
+
+    await composer.fill("Second question");
+    await composer.press("Enter");
+    await expect(queue).toContainText("Second question");
+    await expect(composer).toHaveValue("");
+
+    await composer.fill("Third question");
+    await composer.press("Enter");
+    await expect(queue).toContainText("Third question");
+
+    // A queued prompt is not in the conversation yet: it has not been sent.
+    await expect(thread).not.toContainText("Second question");
+
+    // The person can take one back before it runs.
+    await queue.getByRole("button", { name: "Remove queued prompt" }).last().click();
+    await expect(queue).toContainText("Second question");
+    await expect(queue).not.toContainText("Third question");
+
+    // When the first reply ends, the waiting prompt is sent on its own.
+    await expect(thread).toContainText("Stub agent: First question");
+    await expect(thread).toContainText("Stub agent: Second question");
+    await expect(thread).not.toContainText("Third question");
+    await expect(queue).toHaveCount(0);
+    await expect.poll(() => promptCount(email)).toBe(2);
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("the agent can create a workspace from a dashboard prompt", async ({ page }) => {
   const id = randomUUID().slice(0, 8);
   const email = `e2e-workspace-tool-${id}@example.com`;
   const workspaceName = `E2E Workspace ${id}`;
@@ -132,18 +203,14 @@ test("the agent can create a workspace from a dashboard prompt", async ({
 
     await toolCall.click();
     await expect(thread).toContainText(`"name": "${workspaceName}"`);
-    await expect(thread).toContainText("\"created\": true");
+    await expect(thread).toContainText('"ok": true');
     // The tool hands the agent the workspace's path, so a reply can link to it.
     await expect(thread).toContainText('"link": "/workspace/');
 
     // `onFinish` refreshes the server components, so the new workspace joins
     // the account's latest list without a reload.
-    await expect(
-      page.getByRole("heading", { name: "Latest in Personal account" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: workspaceName }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Latest in Personal account" })).toBeVisible();
+    await expect(page.getByRole("link", { name: workspaceName })).toBeVisible();
 
     // The tool call was stored with the reply, so a reload still lists it.
     await page.reload();
@@ -152,6 +219,95 @@ test("the agent can create a workspace from a dashboard prompt", async ({
         .getByRole("list", { name: "Agent conversation" })
         .getByRole("button", { name: /Create workspace/ }),
     ).toContainText(workspaceName);
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("the agent archives and deletes only after the person approves", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-approval-${id}@example.com`;
+  const workspaceName = `Approval Workspace ${id}`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+
+    await composer.fill(`Create a workspace called "${workspaceName}"`);
+    await composer.press("Enter");
+    await expect(page.getByRole("list", { name: "Agent conversation" })).toContainText(
+      "The workspace is ready.",
+    );
+    await expect.poll(() => workspaceArchivedAt(email, workspaceName)).toBeNull();
+
+    await composer.fill(`Archive the workspace called "${workspaceName}"`);
+    await composer.press("Enter");
+
+    // The tool is parked: the person sees the question, and nothing has
+    // changed in the database yet.
+    await expect(page.getByRole("button", { name: "Approve" })).toBeVisible();
+    expect(await workspaceArchivedAt(email, workspaceName)).toBeNull();
+
+    await page.getByRole("button", { name: "Approve" }).click();
+    await expect(page.getByRole("list", { name: "Agent conversation" })).toContainText("Archived.");
+    await expect.poll(() => workspaceArchivedAt(email, workspaceName)).not.toBeNull();
+
+    // Two prompts were sent; answering an approval is not a third.
+    await expect.poll(() => promptCount(email)).toBe(2);
+
+    // The answered card is gone from the replay; its reply is not.
+    await page.reload();
+    await expect(page.getByRole("list", { name: "Agent conversation" })).toContainText("Archived.");
+    await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
+
+    await page
+      .getByRole("textbox", { name: "Prompt" })
+      .fill(`Delete the workspace called "${workspaceName}"`);
+    await page.getByRole("textbox", { name: "Prompt" }).press("Enter");
+
+    await expect(page.getByRole("button", { name: "Approve" })).toBeVisible();
+    expect(await workspaceArchivedAt(email, workspaceName)).not.toBeNull();
+
+    await page.getByRole("button", { name: "Approve" }).click();
+    await expect.poll(() => workspaceArchivedAt(email, workspaceName)).toBeUndefined();
+    await expect.poll(() => promptCount(email)).toBe(3);
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("denying an approval leaves the workspace exactly as it was", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-deny-${id}@example.com`;
+  const workspaceName = `Denied Workspace ${id}`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+
+    await composer.fill(`Create a workspace called "${workspaceName}"`);
+    await composer.press("Enter");
+    await expect(thread).toContainText("The workspace is ready.");
+
+    await composer.fill(`Archive the workspace called "${workspaceName}"`);
+    await composer.press("Enter");
+    await expect(page.getByRole("button", { name: "Deny" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Deny" }).click();
+    await expect(thread).toContainText("Nothing changed.");
+
+    expect(await workspaceArchivedAt(email, workspaceName)).toBeNull();
+    await expect.poll(() => promptCount(email)).toBe(2);
+
+    // The denial is recorded as the card's outcome, not as a second question.
+    await page.reload();
+    await expect(page.getByRole("list", { name: "Agent conversation" })).toContainText(
+      "Nothing changed.",
+    );
+    await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
   } finally {
     await deleteAccount(email);
   }

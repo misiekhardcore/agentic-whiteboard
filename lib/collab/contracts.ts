@@ -20,6 +20,8 @@ export type WorkspacePermission = (typeof WORKSPACE_PERMISSIONS)[number];
 export const AGENT_PROMPT_STATUSES = [
   "QUEUED",
   "RUNNING",
+  /** A tool is parked until the person answers its approval request. */
+  "AWAITING_APPROVAL",
   "COMPLETED",
   "FAILED",
   "CANCELLED",

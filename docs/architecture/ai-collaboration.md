@@ -157,7 +157,11 @@ rewrite document history; an explicit "undo this prompt" feature is future work.
 - The gateway uses a separate service credential and re-checks the run,
   workspace and actor on every mutation. The network path is internal only.
 - The agent inherits the requester's permissions. It cannot invite members,
-  change billing, delete a workspace, or cross tenant boundaries.
+  change billing or cross tenant boundaries. Archiving and permanent deletion
+  are proposed by the agent only through an approval-gated capability, and the
+  person's signed answer is what runs them; deletion is still only possible for
+  an archived workspace ([capabilities](capabilities.md),
+  [workspace-lifecycle](workspace-lifecycle.md)).
 - Supabase Realtime private channels will use short-lived app-minted JWTs with
   `sub`, `role: "authenticated"` and `exp`. Better Auth ids are text, not UUIDs,
   so RLS must read `auth.jwt()->>'sub'`; `auth.uid()` would fail. Channel access
@@ -193,8 +197,9 @@ rewrite document history; an explicit "undo this prompt" feature is future work.
    endpoint, persistence hooks, two-client integration test.
 3. **Surfaces and Realtime:** doc/canvas editors, Hocuspocus awareness, restore
    self-hosted Supabase Realtime, private channels/JWT/RLS, shared chat history.
-4. **Agent tools and UI:** the dashboard prompt thread, `createWorkspace` tool,
-   `useChat` streaming, cancellation and quota enforcement are in place
+4. **Agent tools and UI:** the dashboard prompt thread, the workspace tool
+   catalog (create, list, read, update, restore), `useChat` streaming,
+   cancellation and quota enforcement are in place
    ([agent-prompt-thread](agent-prompt-thread.md)); typed canvas/doc mutations
    and the workspace chat API remain.
 5. **Hardening:** update log/compaction, stale-run reaper, Redis scaling/sticky
