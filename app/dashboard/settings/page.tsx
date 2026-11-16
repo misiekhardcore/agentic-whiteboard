@@ -9,7 +9,7 @@ import {
 import { redirect } from "next/navigation";
 
 import { getSessionAccount } from "@/lib/identity/account";
-import { readReadAloudPreference } from "@/lib/identity/preferences";
+import { readPersonalSettings } from "@/lib/identity/settings";
 import { canManageTeam } from "@/lib/organizations/membership";
 import { routes, signInPath } from "@/lib/shared/routes";
 
@@ -37,7 +37,7 @@ export default async function SettingsPage() {
   const { activeTeam, session } = account;
   // Preferences belong to the person, not the active account, so they are read
   // and edited the same way whichever profile is on screen.
-  const readAloud = await readReadAloudPreference(session.user.id);
+  const settings = await readPersonalSettings(session.user.id);
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
@@ -104,7 +104,7 @@ export default async function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <PreferencesForm initialReadAloud={readAloud} />
+          <PreferencesForm initialReadAloud={settings.readAloud} />
         </CardContent>
       </Card>
     </div>

@@ -26,7 +26,7 @@ vi.mock("@/lib/db", () => ({ db: dbMocks.db }));
 
 import { userSettings } from "@/lib/db/schema";
 
-import { readReadAloudPreference, setReadAloudPreference } from "./preferences";
+import { DEFAULT_PERSONAL_SETTINGS, readPersonalSettings, saveReadAloud } from "./settings";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -34,38 +34,46 @@ beforeEach(() => {
   dbMocks.onConflictDoUpdate.mockResolvedValue(undefined);
 });
 
-describe("readReadAloudPreference", () => {
-  it("is off when the person has no stored choice", async () => {
-    await expect(readReadAloudPreference("user_1")).resolves.toBe(false);
+describe("readPersonalSettings", () => {
+  it("answers every preference with its default when the person has no settings row", async () => {
+    await expect(readPersonalSettings("user_1")).resolves.toEqual(DEFAULT_PERSONAL_SETTINGS);
+    expect(DEFAULT_PERSONAL_SETTINGS.readAloud).toBe(false);
   });
 
-  it("returns the stored choice", async () => {
+  it("returns the stored choices", async () => {
     dbMocks.limit.mockResolvedValue([{ readAloud: true }]);
 
-    await expect(readReadAloudPreference("user_1")).resolves.toBe(true);
+    await expect(readPersonalSettings("user_1")).resolves.toEqual({ readAloud: true });
   });
 
-  it("looks the choice up in the person's settings row", async () => {
-    await readReadAloudPreference("user_1");
+  it("looks the choices up in the person's settings row", async () => {
+    await readPersonalSettings("user_1");
 
     expect(dbMocks.select).toHaveBeenCalledWith({ readAloud: userSettings.readAloud });
     expect(dbMocks.from).toHaveBeenCalledWith(userSettings);
     expect(dbMocks.selectWhere).toHaveBeenCalledTimes(1);
     expect(dbMocks.limit).toHaveBeenCalledWith(1);
   });
+
+  it("returns a fresh object, so a caller cannot mutate the defaults", async () => {
+    const first = await readPersonalSettings("user_1");
+    first.readAloud = true;
+
+    await expect(readPersonalSettings("user_1")).resolves.toEqual(DEFAULT_PERSONAL_SETTINGS);
+  });
 });
 
-describe("setReadAloudPreference", () => {
+describe("saveReadAloud", () => {
   it("inserts the choice when the person has no settings row yet", async () => {
-    await setReadAloudPreference("user_1", true);
+    await saveReadAloud("user_1", true);
 
     expect(dbMocks.insert).toHaveBeenCalledWith(userSettings);
     expect(dbMocks.values).toHaveBeenCalledWith({ userId: "user_1", readAloud: true });
     expect(dbMocks.onConflictDoUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it("updates the existing settings row for the person", async () => {
-    await setReadAloudPreference("user_1", false);
+  it("updates only the read aloud column of an existing row", async () => {
+    await saveReadAloud("user_1", false);
 
     expect(dbMocks.values).toHaveBeenCalledWith({ userId: "user_1", readAloud: false });
     expect(dbMocks.onConflictDoUpdate).toHaveBeenCalledWith({

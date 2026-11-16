@@ -28,21 +28,22 @@ which this app has. The question was which parts are worth adopting.
 
 ## Decisions
 
-| Area                 | Decision                                                                                                                                                 | Why                                                                                                                                                                 |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Contexts             | One folder per bounded context under `lib/<context>/`: `identity`, `organizations`, `workspace`, `collab`, `ai`, `billing`, `notifications`              | `lib/<context>` is already the documented layout; a second `modules/` tree would give one concept two homes                                                         |
-| Layering             | Layers are filenames inside a context: `status`/`forms`/`contracts`/`presentation` → `rules` → `queries`/`access`/`service` → `capabilities` → `actions` | Folders per layer cost four levels for a ~10k-line codebase; the order is what matters, and it is enforced by lint rather than by nesting                           |
-| No `src/` move       | The repo root stays the Next app                                                                                                                         | A move rewrites every import and gains nothing; Next's file conventions are already satisfied                                                                       |
-| Mutations            | Every user-facing mutation is a capability, including ones the agent must never call (`callers: ["human"]`)                                              | One validation/authorization/revalidation pipeline; letting the agent do it later is a one-line change and a review question instead of a refactor                  |
-| Pre-auth flows       | Sign-in, sign-up, password reset and OAuth stay thin server actions over `identity/authentication.ts`                                                    | A capability is invoked with an authenticated actor; there is no actor before sign-in, so forcing them through `humanContext()` would fake one                      |
-| Result contract      | Domain services return the kernel's failure shape; capabilities add the success payload                                                                  | One refusal shape removes a translation layer per context and keeps `{ ok: false, error, hint?, fieldErrors?, limitReached? }` as the only refusal a caller handles |
-| One rule, one module | Quota copy, roles, slugs and lifecycle invariants each live in one module and are imported                                                               | Three copies of the slug rule and two role checks is how a permissive path appears                                                                                  |
-| Kernel imports       | `lib/capabilities` imports no context; each context registers itself and `registry.ts` aggregates                                                        | The kernel is the seam every entry point uses, so it must not depend on any one domain                                                                              |
-| Context boundary     | A context may import another context's published functions and contracts, never its `actions.ts`, schema or SQL                                          | A context that queries another's tables is coupled to a schema it does not own; the type system cannot see it                                                       |
-| Cross-context reads  | A read model that needs several contexts (billing overview, recent items) lives beside the one that presents it                                          | Some screens legitimately need several contexts; the rule is that it composes published functions, it does not re-derive a rule                                     |
-| Client safety        | Presentation, form state, DTOs and status vocabulary import no server module                                                                             | The thread is a client component; a presenter that reaches for `db` pulls `pg` into the browser bundle — the reason presentation was separated in the first place   |
-| Enforcement          | Lint zones plus `lib/architecture.test.ts` and a presenter-map drift test                                                                                | A dependency rule nobody can fail is a convention; these gates fail a build                                                                                         |
-| Deferred layers      | No container, command bus, repository interfaces, event bus/outbox, `workers/` or `platform/` split                                                      | Nothing dispatches them today; the composition root is per request (`action(capability)`, `createWorkspaceTools(actor)`), and Hocuspocus will be its own service    |
+| Area                 | Decision                                                                                                                                                 | Why                                                                                                                                                                       |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contexts             | One folder per bounded context under `lib/<context>/`: `identity`, `organizations`, `workspace`, `collab`, `ai`, `billing`, `notifications`              | `lib/<context>` is already the documented layout; a second `modules/` tree would give one concept two homes                                                               |
+| Layering             | Layers are filenames inside a context: `status`/`forms`/`contracts`/`presentation` → `rules` → `queries`/`access`/`service` → `capabilities` → `actions` | Folders per layer cost four levels for a ~10k-line codebase; the order is what matters, and it is enforced by lint rather than by nesting                                 |
+| No `src/` move       | The repo root stays the Next app                                                                                                                         | A move rewrites every import and gains nothing; Next's file conventions are already satisfied                                                                             |
+| Mutations            | Every user-facing mutation is a capability, including ones the agent must never call (`callers: ["human"]`)                                              | One validation/authorization/revalidation pipeline; letting the agent do it later is a one-line change and a review question instead of a refactor                        |
+| Pre-auth flows       | Sign-in, sign-up, password reset and OAuth stay thin server actions over `identity/authentication.ts`                                                    | A capability is invoked with an authenticated actor; there is no actor before sign-in, so forcing them through `humanContext()` would fake one                            |
+| Result contract      | Domain services return the kernel's failure shape; capabilities add the success payload                                                                  | One refusal shape removes a translation layer per context and keeps `{ ok: false, error, hint?, fieldErrors?, limitReached? }` as the only refusal a caller handles       |
+| One rule, one module | Quota copy, roles, slugs and lifecycle invariants each live in one module and are imported                                                               | Three copies of the slug rule and two role checks is how a permissive path appears                                                                                        |
+| Kernel imports       | `lib/capabilities` imports no context; each context registers itself and `registry.ts` aggregates                                                        | The kernel is the seam every entry point uses, so it must not depend on any one domain                                                                                    |
+| Context boundary     | A context may import another context's published functions and contracts, never its `actions.ts`, schema or SQL                                          | A context that queries another's tables is coupled to a schema it does not own; the type system cannot see it                                                             |
+| Cross-context reads  | A read model that needs several contexts (billing overview, recent items) lives beside the one that presents it                                          | Some screens legitimately need several contexts; the rule is that it composes published functions, it does not re-derive a rule                                           |
+| Settings ownership   | Person settings in `identity`, organization settings in `organizations`; the meaning of a value stays with the context that consumes it                  | A setting is an attribute of the person or the team that owns the row, not of the feature that happens to read it; one owner per row is what stops a `settings/` grab bag |
+| Client safety        | Presentation, form state, DTOs and status vocabulary import no server module                                                                             | The thread is a client component; a presenter that reaches for `db` pulls `pg` into the browser bundle — the reason presentation was separated in the first place         |
+| Enforcement          | Lint zones plus `lib/architecture.test.ts` and a presenter-map drift test                                                                                | A dependency rule nobody can fail is a convention; these gates fail a build                                                                                               |
+| Deferred layers      | No container, command bus, repository interfaces, event bus/outbox, `workers/` or `platform/` split                                                      | Nothing dispatches them today; the composition root is per request (`action(capability)`, `createWorkspaceTools(actor)`), and Hocuspocus will be its own service          |
 
 ### Why capabilities, not commands and queries
 
@@ -65,6 +66,24 @@ it. `callers: ["human"]` says the interface may do this and the agent may not;
 adding `"agent"` later is the review that promotes it. Keeping the same handler
 means the promoted operation still validates, authorizes and revalidates
 identically on both paths.
+
+### Why settings live with the owner, not with the feature
+
+A setting is stored value plus a rule, and the two have different owners. The
+value is an attribute of whoever it belongs to: read aloud follows the person,
+so it lives in `identity` beside the `user` row it cascades from, and a future
+team-wide default belongs to `organizations`. The rule is the consuming
+context's: `lib/ai/thread` decides which sentences are safe to speak and never
+learns how the preference is stored. Pages compose the two by reading the
+preference and passing it in, so `ai` does not import identity's settings.
+
+That is why there is no `lib/settings/`. A context that only forwards reads and
+writes is a bucket with no language or invariant of its own, and it would become
+the home of every future preference regardless of which domain governs it. The
+trigger to revisit this is a preference several contexts must agree on, with its
+own lifecycle and events; until then the owner holds the data, the consumer
+holds the meaning, and the setting's name is the owner's (`settings`, matching
+the `userSettings` table and the settings route).
 
 ### Why the pre-auth exception is written down
 

@@ -10,7 +10,7 @@ import {
 import { routes } from "@/lib/shared/routes";
 
 import { updatePersonalProfile as updatePersonalProfileFor } from "./authentication";
-import { setReadAloudPreference } from "./preferences";
+import { saveReadAloud } from "./settings";
 
 /**
  * The person's own profile, as a capability. `callers: ["human"]` is the policy:
@@ -49,7 +49,7 @@ export const setReadAloud = defineCapability({
   invalidates: () => [routes.dashboard],
   handler: async (ctx, input) => {
     try {
-      await setReadAloudPreference(ctx.actor.userId, input.enabled);
+      await saveReadAloud(ctx.actor.userId, input.enabled);
     } catch {
       return failure("Could not save the read aloud setting. Try again.");
     }
