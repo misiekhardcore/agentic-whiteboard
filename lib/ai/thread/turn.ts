@@ -13,8 +13,10 @@ import { getOrganizationEntitlements, getUserEntitlements } from "@/lib/billing/
 import { approvalGatedCapabilityNames } from "@/lib/capabilities/registry";
 import type { SessionAccountContext } from "@/lib/identity/account";
 
+import { loadPromptHistory } from "./conversations";
 import { clearThreadStream, markThreadStream } from "./live";
 import {
+  applyApprovalAnswer,
   approvalReference,
   conversationIdProblem,
   hasPendingApproval,
@@ -49,6 +51,11 @@ import {
  * not charged twice. The fourth, answering a parked approval, is not a prompt at
  * all: it continues the row that is waiting.
  *
+ * The body is only a submission: the prompt being sent, or the answer to the
+ * parked approval. What the model is shown comes from the stored turns, so a
+ * body that carries a discarded branch or invented history is answered exactly
+ * like a clean one.
+ *
  * The route above this owns only the session and the request body; everything
  * that reads the conversation lives here, which is what keeps the endpoint thin
  * and lets a second surface (a workspace conversation) reuse the same turn.
@@ -62,10 +69,11 @@ const notConfigured = (reason: string) => `The agent is not configured yet. ${re
 const BUSY =
   "The agent is still working on your previous prompt. Stop it or wait for it to finish.";
 const APPROVAL_EXPIRED = "That approval is no longer waiting. Send a new prompt to try again.";
+const APPROVAL_MISMATCH =
+  "That approval does not match the prompt waiting for it. Reload the dashboard and answer it again.";
 const RETRY_EXPIRED = "That prompt is no longer the one to retry. Send it again as a new prompt.";
-const CONVERSATION_MISSING = "That conversation could not be found. Start a new one.";
-
-/** The browser may pick a message id; the database only takes a plain one. */
+const CONVERSATION_MISSING =
+  "That conversation could not be found. Start a new one."; /** The browser may pick a message id; the database only takes a plain one. */
 const MESSAGE_ID_PATTERN = /^[A-Za-z0-9_.:-]{1,100}$/;
 
 function jsonError(error: string, status: number, extra: Record<string, unknown> = {}): Response {
@@ -111,6 +119,46 @@ function readUiContext(payload: unknown): UiContext | null {
   const parsed = uiContextSchema.safeParse((payload as { uiContext?: unknown }).uiContext);
 
   return parsed.success ? parsed.data : null;
+}
+
+/**
+ * Records the accepted prompt — its user message, when this send has one — and
+ * reads the turn's history back from the store. A failure closes the prompt
+ * here, so nothing is left looking live to the single-flight rule.
+ */
+async function recordTurn({
+  promptId,
+  userId,
+  submitted,
+  keepMessageId,
+}: {
+  promptId: string;
+  userId: string;
+  /** The message to store; absent when a retry re-runs a stored one. */
+  submitted?: UIMessage;
+  keepMessageId?: boolean;
+}): Promise<{ history: UIMessage[] } | { error: Response }> {
+  try {
+    if (submitted) {
+      await appendUserPromptMessage({
+        promptId,
+        userId,
+        parts: submitted.parts,
+        messageId:
+          keepMessageId && MESSAGE_ID_PATTERN.test(submitted.id) ? submitted.id : undefined,
+      });
+      await markPromptRunning(promptId);
+    }
+
+    // Read back after the prompt is stored: the history then contains the
+    // message just written and excludes every turn the send replaced.
+    return { history: await loadPromptHistory({ promptId, userId }) };
+  } catch (error) {
+    console.error("[ai] could not record the prompt:", error);
+    clearThreadStream(userId, promptId);
+    await closePrompt({ promptId, status: "FAILED", error: STREAM_ERROR });
+    return { error: jsonError(STREAM_ERROR, 500) };
+  }
 }
 
 export async function runDashboardTurn({
@@ -180,6 +228,8 @@ export async function runDashboardTurn({
   /** A retry and an approval answer reuse their prompt, so its usage accrues. */
   let continuing = kind === "continuation";
   let promptId: string;
+  /** The turn's history, replayed from the store rather than from the body. */
+  let history: UIMessage[];
 
   if (kind === "continuation" && reference) {
     const waiting = await findAwaitingApprovalPrompt(session.user.id, reference);
@@ -188,6 +238,15 @@ export async function runDashboardTurn({
     }
 
     promptId = waiting.promptId;
+    // Answered before the prompt is resumed, so a body that does not answer the
+    // stored question leaves the parked turn exactly as it was.
+    const stored = await loadPromptHistory({ promptId, userId: session.user.id });
+    const answered = applyApprovalAnswer({ history: stored, answer: newest, reference });
+    if (!answered) {
+      return jsonError(APPROVAL_MISMATCH, 400);
+    }
+    history = answered;
+
     await resumePrompt(promptId);
     markThreadStream(session.user.id, promptId);
   } else {
@@ -213,10 +272,15 @@ export async function runDashboardTurn({
       if (!resumed) {
         return jsonError(RETRY_EXPIRED, 409);
       }
-
       promptId = intent.promptId;
       continuing = true;
       markThreadStream(session.user.id, promptId);
+
+      // A retry re-runs a stored prompt: there is no message to write, but the
+      // turn is replayed the same way an appended one is.
+      const replayed = await recordTurn({ promptId, userId: session.user.id });
+      if ("error" in replayed) return replayed.error;
+      history = replayed.history;
     } else {
       const entitlements = organizationId
         ? await getOrganizationEntitlements(organizationId)
@@ -256,26 +320,17 @@ export async function runDashboardTurn({
       // QUEUED row for an orphan and retire it out from under the stream.
       markThreadStream(session.user.id, promptId);
 
-      try {
-        await appendUserPromptMessage({
-          promptId,
-          userId: session.user.id,
-          parts: submitted.parts,
-          // A rewind replaces a stored message whose id the browser still
-          // holds, so the new row needs its own id; an append keeps the
-          // browser's, which is what makes the just-sent prompt editable.
-          messageId:
-            intent.kind === "append" && MESSAGE_ID_PATTERN.test(submitted.id)
-              ? submitted.id
-              : undefined,
-        });
-        await markPromptRunning(promptId);
-      } catch (error) {
-        console.error("[ai] could not record the prompt:", error);
-        clearThreadStream(session.user.id, promptId);
-        await closePrompt({ promptId, status: "FAILED", error: STREAM_ERROR });
-        return jsonError(STREAM_ERROR, 500);
-      }
+      const recorded = await recordTurn({
+        promptId,
+        userId: session.user.id,
+        submitted,
+        // A rewind replaces a stored message whose id the browser still holds,
+        // so the new row needs its own id; an append keeps the browser's, which
+        // is what makes the just-sent prompt editable.
+        keepMessageId: intent.kind === "append",
+      });
+      if ("error" in recorded) return recorded.error;
+      history = recorded.history;
     }
   }
 
@@ -294,8 +349,8 @@ export async function runDashboardTurn({
         toolsRequiringApproval: allowApprovalTools ? approvalGatedCapabilityNames : undefined,
         toolApprovalSecret: config.toolApprovalSecret,
       }),
-      uiMessages: messages,
-      originalMessages: messages,
+      uiMessages: history,
+      originalMessages: history,
       generateMessageId: generateId,
       abortSignal: signal,
       onStepEnd: ({ usage: stepUsage }) => {

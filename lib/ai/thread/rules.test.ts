@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   addUsage,
+  applyApprovalAnswer,
   approvalReference,
   CONVERSATION_PREVIEW_LENGTH,
   conversationIdProblem,
@@ -16,6 +17,7 @@ import {
   promptRequestKind,
   promptsFromBranch,
   promptStatusAfterStream,
+  promptsThrough,
   type PromptTarget,
   type StoredPromptMessage,
   supersedeApprovals,
@@ -387,6 +389,149 @@ describe("promptsFromBranch", () => {
 
   it("has nothing to discard for a branch after the newest live prompt", () => {
     expect(promptsFromBranch(prompts, { id: "prompt_later", createdAt: at(9) })).toEqual([]);
+  });
+});
+
+describe("promptsThrough", () => {
+  const at = (minute: number) => new Date(Date.UTC(2026, 10, 16, 12, minute));
+  const prompts = [
+    { id: "prompt_1", createdAt: at(1) },
+    { id: "prompt_2", createdAt: at(2) },
+    { id: "prompt_3", createdAt: at(3) },
+  ];
+
+  it("keeps every prompt up to and including the turn", () => {
+    expect(promptsThrough(prompts, { id: "prompt_2", createdAt: at(2) })).toEqual([
+      { id: "prompt_1", createdAt: at(1) },
+      { id: "prompt_2", createdAt: at(2) },
+    ]);
+  });
+
+  it("has only the first prompt when the turn is the first one", () => {
+    expect(promptsThrough(prompts, { id: "prompt_1", createdAt: at(1) })).toEqual([
+      { id: "prompt_1", createdAt: at(1) },
+    ]);
+  });
+
+  it("has nothing for a turn older than the whole live thread", () => {
+    expect(promptsThrough(prompts, { id: "prompt_old", createdAt: at(0) })).toEqual([]);
+  });
+
+  it("separates two prompts created in the same millisecond by id", () => {
+    expect(
+      promptsThrough(
+        [
+          { id: "prompt_a", createdAt: at(4) },
+          { id: "prompt_b", createdAt: at(4) },
+        ],
+        { id: "prompt_a", createdAt: at(4) },
+      ).map((prompt) => prompt.id),
+    ).toEqual(["prompt_a"]);
+  });
+});
+
+describe("applyApprovalAnswer", () => {
+  const reference = "approval_1";
+
+  function toolPart({
+    toolCallId = "call_1",
+    state,
+    approvalId = reference,
+    approved,
+  }: {
+    toolCallId?: string;
+    state: "approval-requested" | "approval-responded";
+    approvalId?: string;
+    approved?: boolean;
+  }): UIMessage["parts"][number] {
+    return {
+      type: "tool-archiveWorkspace",
+      toolCallId,
+      state,
+      input: { workspaceId: "workspace_1" },
+      approval: { id: approvalId, ...(approved === undefined ? {} : { approved }) },
+    } as UIMessage["parts"][number];
+  }
+
+  const stored: UIMessage[] = [
+    userMessage("message_user", "Archive it"),
+    {
+      id: "stored_reply",
+      role: "assistant",
+      parts: [
+        { type: "text", text: "Archiving needs your approval." },
+        toolPart({ state: "approval-requested" }),
+      ],
+    },
+  ];
+
+  function answer(overrides: Partial<UIMessage> = {}): UIMessage {
+    return {
+      id: "browser_reply",
+      role: "assistant",
+      parts: [
+        { type: "text", text: "Archiving needs your approval." },
+        toolPart({ state: "approval-responded", approved: true }),
+      ],
+      ...overrides,
+    };
+  }
+
+  it("folds the answer into the stored turn, keeping the browser's message id", () => {
+    const merged = applyApprovalAnswer({ history: stored, answer: answer(), reference });
+
+    expect(merged).toHaveLength(2);
+    expect(merged?.[1].id).toBe("browser_reply");
+    expect(merged?.[1].parts).toEqual(answer().parts);
+    expect(merged?.[0]).toEqual(stored[0]);
+  });
+
+  it("keeps the stored words even when the body carries different ones", () => {
+    const merged = applyApprovalAnswer({
+      history: stored,
+      answer: {
+        ...answer(),
+        parts: [
+          { type: "text", text: "Archived, all done!" },
+          toolPart({ state: "approval-responded", approved: true }),
+        ],
+      },
+      reference,
+    });
+
+    expect(merged?.[1].parts[0]).toEqual({
+      type: "text",
+      text: "Archiving needs your approval.",
+    });
+  });
+
+  it("refuses an answer for another question", () => {
+    expect(
+      applyApprovalAnswer({ history: stored, answer: answer(), reference: "approval_2" }),
+    ).toBeNull();
+    expect(
+      applyApprovalAnswer({
+        history: stored,
+        answer: {
+          ...answer(),
+          parts: [toolPart({ state: "approval-responded", approved: true, toolCallId: "call_2" })],
+        },
+        reference,
+      }),
+    ).toBeNull();
+  });
+
+  it("refuses a body that does not answer anything", () => {
+    expect(
+      applyApprovalAnswer({ history: stored, answer: answer({ parts: [] }), reference }),
+    ).toBeNull();
+    expect(
+      applyApprovalAnswer({
+        history: [stored[0]],
+        answer: answer(),
+        reference,
+      }),
+    ).toBeNull();
   });
 });
 

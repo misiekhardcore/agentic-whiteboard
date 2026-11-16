@@ -97,9 +97,15 @@ conversation resolves to nothing, and the send becomes a plain append.
    messages filtered out), whether its tip failed, the five recent conversations
    and the person's reading preference, then mounts the composer with them.
 3. "New conversation" navigates to a fresh UUID. Nothing is written.
-4. Sending posts the whole UI thread, the conversation id and the newest message.
-   The route resolves the account, validates the newest user message against the
+4. Sending posts the UI thread, the conversation id and the newest message. The
+   route resolves the account, validates the newest user message against the
    provider config, and resolves the submitter's stored prompt by message id.
+   The posted thread is a mirror, not the model's input: the turn reads the
+   conversation's live turns back from the store (up to and including the prompt
+   it just recorded), so a body that carries a discarded branch or an invented
+   reply is answered exactly like a clean one. The only things a body
+   contributes are the prompt being sent and, for a parked approval, the
+   answer — which is matched to the stored request before the turn resumes.
 5. `promptIntent` decides append, retry or rewind. A retry reuses its row; an
    append checks the allowance and opens a counted prompt; a rewind checks the
    allowance, supersedes every live prompt from the branch point and opens a new
@@ -118,7 +124,8 @@ conversation resolves to nothing, and the send becomes a plain append.
 - History is never destroyed by an edit. The database keeps every discarded turn
   and its messages; only the thread and the model look away.
 - A page reload replays the live thread, so an abandoned edit branch cannot come
-  back.
+  back. A second tab that still holds one cannot replay it either: what the model
+  is shown is read from the stored turns, not from the browser.
 - The conversation list is per person, not per account: switching the active
   account does not hide a conversation, and the allowance still follows the
   account that ran each prompt.

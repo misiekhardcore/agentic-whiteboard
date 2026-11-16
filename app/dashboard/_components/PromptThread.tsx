@@ -155,7 +155,10 @@ export function PromptThread({
     const element = scrollRef.current;
     if (!element) return;
 
-    element.scrollTop = element.scrollHeight;
+    // Instant, not the page's smooth scrolling: a long thread must open at its
+    // newest message rather than roll down to it, and following a stream cannot
+    // animate behind the words.
+    element.scrollTo({ top: element.scrollHeight, behavior: "instant" });
     lastTop.current = element.scrollTop;
   };
 
