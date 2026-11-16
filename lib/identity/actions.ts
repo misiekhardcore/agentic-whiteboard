@@ -17,7 +17,7 @@ import {
   signUp,
   startProviderSignIn,
 } from "./authentication";
-import { setReadAloud, updatePersonalProfile } from "./capabilities";
+import { setReadAloud, setReadAloudVoice, updatePersonalProfile } from "./capabilities";
 import { type AuthFormState, initialAuthState, type ProfileFormState } from "./forms";
 import { DEFAULT_REDIRECT, safeRedirectTo } from "./redirect";
 
@@ -31,6 +31,7 @@ import { DEFAULT_REDIRECT, safeRedirectTo } from "./redirect";
 
 const saveProfile = action(updatePersonalProfile);
 const saveReadAloud = action(setReadAloud);
+const saveReadAloudVoicePreference = action(setReadAloudVoice);
 
 export async function signInAction(
   _previousState: AuthFormState,
@@ -138,4 +139,12 @@ export async function updatePersonalProfileAction(
  */
 export async function setReadAloudAction(enabled: boolean) {
   return saveReadAloud({ enabled });
+}
+
+/**
+ * The voice choice. Like the toggle it applies as soon as it is picked, so a
+ * refusal comes back as a value for the picker to revert.
+ */
+export async function setReadAloudVoiceAction(voice: string) {
+  return saveReadAloudVoicePreference({ voice });
 }

@@ -104,7 +104,10 @@ export default async function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <PreferencesForm initialReadAloud={settings.readAloud} />
+          <PreferencesForm
+            initialReadAloud={settings.readAloud}
+            initialReadAloudVoice={settings.readAloudVoice}
+          />
         </CardContent>
       </Card>
     </div>

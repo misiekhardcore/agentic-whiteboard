@@ -26,7 +26,12 @@ vi.mock("@/lib/db", () => ({ db: dbMocks.db }));
 
 import { userSettings } from "@/lib/db/schema";
 
-import { DEFAULT_PERSONAL_SETTINGS, readPersonalSettings, saveReadAloud } from "./settings";
+import {
+  DEFAULT_PERSONAL_SETTINGS,
+  readPersonalSettings,
+  saveReadAloud,
+  saveReadAloudVoice,
+} from "./settings";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -38,18 +43,26 @@ describe("readPersonalSettings", () => {
   it("answers every preference with its default when the person has no settings row", async () => {
     await expect(readPersonalSettings("user_1")).resolves.toEqual(DEFAULT_PERSONAL_SETTINGS);
     expect(DEFAULT_PERSONAL_SETTINGS.readAloud).toBe(false);
+    // An empty voice is not a choice: it means the browser's own default.
+    expect(DEFAULT_PERSONAL_SETTINGS.readAloudVoice).toBe("");
   });
 
   it("returns the stored choices", async () => {
-    dbMocks.limit.mockResolvedValue([{ readAloud: true }]);
+    dbMocks.limit.mockResolvedValue([{ readAloud: true, readAloudVoice: "Daniel" }]);
 
-    await expect(readPersonalSettings("user_1")).resolves.toEqual({ readAloud: true });
+    await expect(readPersonalSettings("user_1")).resolves.toEqual({
+      readAloud: true,
+      readAloudVoice: "Daniel",
+    });
   });
 
   it("looks the choices up in the person's settings row", async () => {
     await readPersonalSettings("user_1");
 
-    expect(dbMocks.select).toHaveBeenCalledWith({ readAloud: userSettings.readAloud });
+    expect(dbMocks.select).toHaveBeenCalledWith({
+      readAloud: userSettings.readAloud,
+      readAloudVoice: userSettings.readAloudVoice,
+    });
     expect(dbMocks.from).toHaveBeenCalledWith(userSettings);
     expect(dbMocks.selectWhere).toHaveBeenCalledTimes(1);
     expect(dbMocks.limit).toHaveBeenCalledWith(1);
@@ -79,6 +92,36 @@ describe("saveReadAloud", () => {
     expect(dbMocks.onConflictDoUpdate).toHaveBeenCalledWith({
       target: userSettings.userId,
       set: { readAloud: false },
+    });
+  });
+});
+
+describe("saveReadAloudVoice", () => {
+  it("stores the chosen voice beside the toggle, creating the row if needed", async () => {
+    await saveReadAloudVoice("user_1", "Google UK English Male");
+
+    expect(dbMocks.insert).toHaveBeenCalledWith(userSettings);
+    expect(dbMocks.values).toHaveBeenCalledWith({
+      userId: "user_1",
+      readAloudVoice: "Google UK English Male",
+    });
+  });
+
+  it("updates only the voice column, so a choice made elsewhere survives", async () => {
+    await saveReadAloudVoice("user_1", "Daniel");
+
+    expect(dbMocks.onConflictDoUpdate).toHaveBeenCalledWith({
+      target: userSettings.userId,
+      set: { readAloudVoice: "Daniel" },
+    });
+  });
+
+  it("clears back to the browser's own default voice", async () => {
+    await saveReadAloudVoice("user_1", "");
+
+    expect(dbMocks.onConflictDoUpdate).toHaveBeenCalledWith({
+      target: userSettings.userId,
+      set: { readAloudVoice: "" },
     });
   });
 });

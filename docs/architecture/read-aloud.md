@@ -29,6 +29,11 @@ exposes the read and the mutation.
 | Not a boundary    | Terminators without trailing whitespace, decimals, common abbreviations and initials                  | "3.14", "e.g." and "Dr. Smith" must stay in one utterance. A wrong boundary that merges two sentences is the lesser defect, so the abbreviation list stays short and explicit.                                                                                                                                                                                                                                                                                |
 | What is spoken    | Assistant prose only                                                                                  | The person's prompt, the agent's reasoning and its tool calls are not the answer. Reasoning is the model's working and is already hidden in the thread.                                                                                                                                                                                                                                                                                                       |
 | Markdown          | Stripped to words; fenced code skipped whole                                                          | Hearing "asterisk asterisk" or "h t t p s colon slash slash" is noise. Code is not prose; a heading, list item or link keeps its text and loses its syntax.                                                                                                                                                                                                                                                                                                   |
+| Emoji             | Removed from the spoken text, never named                                                             | A reply's "🎉" is decoration. Reading "party popper" says a word the reply never contained, and some synthesizers only pause around it, so the whole sequence goes — keycaps, flags, skin tones and joined people included, not just the base pictograph.                                                                                                                                                                                                     |
+| Tables            | The separator row is skipped; every cell keeps its words                                              | `\| --- \| --- \|` is table syntax, not content, and hearing "dash dash dash" between rows is noise. The heading row still names the columns, which is what a listener needs.                                                                                                                                                                                                                                                                                 |
+| Replaying         | A speaker on every reply card, independent of the preference                                          | The preference decides what is read as it arrives; the card's speaker decides what is read now, so a thread heard before the preference was on can still be listened to. Asking for one reply takes over the queue from whatever is being read, and pressing it again while that reply is being read stops it rather than starting it over.                                                                                                                   |
+| Voice             | A `readAloudVoice` name on `userSettings`, resolved against the browser's own list                    | Which voice speaks is a personal choice and follows the person, but voice names belong to a browser and OS, so the stored name is a hint: a device without that voice reads in its platform default instead of falling silent.                                                                                                                                                                                                                                |
+| Voice list        | Read with `getVoices()` in the browser, re-read on `voiceschanged`                                    | The server cannot know the installed voices, and Chromium answers an empty list until it has loaded them, so the list is read again on the event. The picker offers the reply language's voices, default first, and still shows the stored choice when this device lacks it.                                                                                                                                                                                  |
 | Offsets           | A per-message spoken offset, advanced only by consumed text                                           | Every stream chunk re-parses the reply, so the offset is what prevents saying the same words twice. It also lets the rule stay pure and directly testable.                                                                                                                                                                                                                                                                                                    |
 | History           | Every message present at mount is marked spoken; only new replies are read                            | A reload must not start reading a stored conversation from the top. The composer passes the loaded thread, so the hook seeds offsets before the first stream.                                                                                                                                                                                                                                                                                                 |
 | Enabling mid-turn | Starts at the next complete sentence                                                                  | Text already on screen was not heard and re-reading it would be surprising; the offsets advance while the preference is off.                                                                                                                                                                                                                                                                                                                                  |
@@ -40,7 +45,7 @@ exposes the read and the mutation.
 | Saving feedback   | The settings switch announces the confirmed choice (`Saved. Read aloud is on.`)                       | The optimistic switch can show a state the server has not stored yet, so the status names the value the server accepted rather than a bare "Saved" that a stale render could satisfy.                                                                                                                                                                                                                                                                         |
 | Stopping          | Toggle-off, Stop prompt and unmount cancel the queue and mark the reply read                          | Speech outlives a component, and a stopped reply must not be spoken by the end-of-turn flush.                                                                                                                                                                                                                                                                                                                                                                 |
 | Streaming         | The existing transport, made observable                                                               | The route already streams UI message parts; with a real provider its visible text arrives progressively. The scripted stub sent its whole answer as one delta, so it now streams a word per chunk and the e2e server spaces those chunks out.                                                                                                                                                                                                                 |
-| Boundaries        | `useReadAloud` is the only module that touches `speechSynthesis`                                      | The API is absent on the server, so support is read through `useSyncExternalStore` and the hook runs in effects, never at module scope. The pure rule is listed as a client-safe module, so the boundary test holds it to that.                                                                                                                                                                                                                               |
+| Boundaries        | `useReadAloud` and `useSpeechVoices` are the only modules that touch `speechSynthesis`                | The API is absent on the server, so support is read through `useSyncExternalStore` and the hook runs in effects, never at module scope. The pure rule is listed as a client-safe module, so the boundary test holds it to that.                                                                                                                                                                                                                               |
 
 ## Flow
 
@@ -50,18 +55,27 @@ exposes the read and the mutation.
 2. The agent's reply streams in. On each update the hook takes the last
    assistant message's prose, joins its text parts and asks `pendingSpeech` for
    the sentences past its offset. Complete sentences go to
-   `speechSynthesis.speak`, in order; the incomplete tail waits.
+   `speechSynthesis.speak`, in order; the incomplete tail waits. The utterance
+   carries the stored voice when this browser has it, and the platform default
+   when it does not.
 3. The end of the turn (`isBusy` false) flushes the tail, so a reply without a
    final period is still read. Fenced code never reaches the synthesizer.
 4. Stop prompt, toggling the speaker off, or leaving the composer calls
-   `cancel()`, which empties the browser queue and marks the reply as read.
-5. The speaker button, or the switch on the settings page, flips the preference
-   optimistically and calls `setReadAloudAction`, which runs the human-only
-   capability: authenticate, validate, `saveReadAloud`, revalidate the
-   dashboard. On refusal the control returns to the stored value and explains
-   it — a toast in the composer, an inline alert in settings. The settings page
-   then announces the confirmed choice, so a navigation cannot outrun the save.
-6. Failure codes from the synthesizer are mapped by `speechErrorMessage` into
+   `cancel()`, which empties the browser queue and marks the reply as read. Late
+   end and error events from the cancelled queue are ignored, so they cannot
+   clear the state of speech that replaced it.
+5. A reply's own speaker calls `readMessage`, which takes over the queue and
+   reads that reply from the top. Listening to a stored conversation therefore
+   does not need the preference to be on.
+6. The composer's speaker, or the switch on the settings page, flips the
+   preference optimistically and calls `setReadAloudAction`, which runs the
+   human-only capability: authenticate, validate, `saveReadAloud`, revalidate
+   the dashboard. The voice select beside it does the same through
+   `setReadAloudVoiceAction` and `saveReadAloudVoice`. On refusal the control
+   returns to the stored value and explains it — a toast in the composer, an
+   inline alert in settings. The settings page then announces the confirmed
+   choice, so a navigation cannot outrun the save.
+7. Failure codes from the synthesizer are mapped by `speechErrorMessage` into
    the hint line under the field; the person's own Stop stays quiet.
 
 ## Consequences
@@ -77,7 +91,14 @@ exposes the read and the mutation.
   when the answer starts, not when the model starts working. The composer's
   "The agent is drafting…" line covers that window.
 - `speechSynthesis` is not available everywhere; the button stays visible,
-  disabled, with the reason in its tooltip.
+  disabled, with the reason in its tooltip, and a reply card carries no speaker.
+- Voice names are per browser and operating system, so a stored choice can name
+  a voice another device does not have. That device reads in its own default and
+  the picker still shows the saved name, marked as unavailable there, rather
+  than silently dropping the preference.
+- Asking for one reply to be read again takes over the queue: speech already
+  playing is cancelled, and a reply that is still streaming is not resumed
+  afterwards. One voice, one thing being said at a time.
 - The e2e suite installs a fake synthesizer, so it proves the chunking,
   persistence and stop behaviour but not the vendor voice. Listening to one real
   reply is still the only check of the audio itself.
@@ -91,7 +112,7 @@ exposes the read and the mutation.
 
 ## Deferred
 
-- Choosing a voice, rate or language per person.
+- A speaking rate, and a different voice per language.
 - Per-surface scope (a workspace chat could have its own preference).
 - On-device synthesis and non-English replies.
 - Reading the prompt or tool results on request.

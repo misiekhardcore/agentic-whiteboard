@@ -17,6 +17,12 @@ export const userSettings = pgTable("userSettings", {
     .references(() => user.id, { onDelete: "cascade" }),
   /** Whether the agent's replies are read out loud as they stream. */
   readAloud: boolean("read_aloud").default(false).notNull(),
+  /**
+   * The browser voice the person chose, by name, or "" for the platform's own
+   * default. Names are per browser and operating system, so the value is stored
+   * as a hint: a device without that voice falls back to its default.
+   */
+  readAloudVoice: text("read_aloud_voice").default("").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

@@ -22,11 +22,17 @@ import { userSettings } from "@/lib/db/schema";
 export type PersonalSettings = {
   /** Whether the agent's replies are read out loud as they stream. */
   readAloud: boolean;
+  /** The browser voice to read with, or "" for the platform's own default. */
+  readAloudVoice: string;
 };
+
+/** A browser voice name is short, so a stored one is capped rather than trusted. */
+export const MAX_READ_ALOUD_VOICE_NAME = 120;
 
 /** What an absent row means. Read aloud is opt-in: nobody is spoken to unasked. */
 export const DEFAULT_PERSONAL_SETTINGS: PersonalSettings = {
   readAloud: false,
+  readAloudVoice: "",
 };
 
 /**
@@ -36,13 +42,17 @@ export const DEFAULT_PERSONAL_SETTINGS: PersonalSettings = {
  */
 export async function readPersonalSettings(userId: string): Promise<PersonalSettings> {
   const [row] = await db
-    .select({ readAloud: userSettings.readAloud })
+    .select({
+      readAloud: userSettings.readAloud,
+      readAloudVoice: userSettings.readAloudVoice,
+    })
     .from(userSettings)
     .where(eq(userSettings.userId, userId))
     .limit(1);
 
   return {
     readAloud: row?.readAloud ?? DEFAULT_PERSONAL_SETTINGS.readAloud,
+    readAloudVoice: row?.readAloudVoice ?? DEFAULT_PERSONAL_SETTINGS.readAloudVoice,
   };
 }
 
@@ -58,5 +68,20 @@ export async function saveReadAloud(userId: string, enabled: boolean): Promise<v
     .onConflictDoUpdate({
       target: userSettings.userId,
       set: { readAloud: enabled },
+    });
+}
+
+/**
+ * The voice a reply is read in. An empty name clears the choice back to the
+ * browser's default rather than deleting the row, so the toggle beside it keeps
+ * its value.
+ */
+export async function saveReadAloudVoice(userId: string, voice: string): Promise<void> {
+  await db
+    .insert(userSettings)
+    .values({ userId, readAloudVoice: voice })
+    .onConflictDoUpdate({
+      target: userSettings.userId,
+      set: { readAloudVoice: voice },
     });
 }

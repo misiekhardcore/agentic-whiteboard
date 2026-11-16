@@ -10,7 +10,7 @@ import {
 import { routes } from "@/lib/shared/routes";
 
 import { updatePersonalProfile as updatePersonalProfileFor } from "./authentication";
-import { saveReadAloud } from "./settings";
+import { MAX_READ_ALOUD_VOICE_NAME, saveReadAloud, saveReadAloudVoice } from "./settings";
 
 /**
  * The person's own profile, as a capability. `callers: ["human"]` is the policy:
@@ -52,6 +52,29 @@ export const setReadAloud = defineCapability({
       await saveReadAloud(ctx.actor.userId, input.enabled);
     } catch {
       return failure("Could not save the read aloud setting. Try again.");
+    }
+
+    return success({});
+  },
+});
+
+/**
+ * The voice a reply is read in, stored by name. Human-only like the toggle it
+ * sits beside: which voice speaks through the person's speakers is their choice,
+ * not the agent's. An empty name means the browser's own default.
+ */
+export const setReadAloudVoice = defineCapability({
+  name: "setReadAloudVoice",
+  description: "Choose which browser voice reads agent replies aloud.",
+  input: z.object({ voice: z.string().trim().max(MAX_READ_ALOUD_VOICE_NAME) }),
+  output: z.discriminatedUnion("ok", [z.object({ ok: z.literal(true) }), capabilityFailureSchema]),
+  callers: ["human"] as const,
+  invalidates: () => [routes.dashboard],
+  handler: async (ctx, input) => {
+    try {
+      await saveReadAloudVoice(ctx.actor.userId, input.voice);
+    } catch {
+      return failure("Could not save the read aloud voice. Try again.");
     }
 
     return success({});

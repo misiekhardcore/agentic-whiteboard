@@ -10,63 +10,85 @@ import { Client } from "pg";
  * arriving when its first sentence is spoken.
  */
 
-type SpokenUtterance = { text: string; at: number };
+type FakeVoice = { name: string; lang: string; default: boolean };
+
+type SpokenUtterance = { text: string; voice: string | null; at: number };
 
 type SpeechScope = {
   __spoken?: SpokenUtterance[];
   __cancelled?: number;
 };
 
-async function installFakeSynthesis(page: Page) {
-  await page.addInitScript(() => {
-    const scope = window as unknown as SpeechScope;
-    scope.__spoken = [];
-    scope.__cancelled = 0;
+/**
+ * A voice the browser offers. Nothing is installed by default, which is also
+ * what a headless browser reports: every reply then uses the platform default.
+ * `endDelayMs` holds a spoken utterance open, so a spec can act while one is
+ * still playing; by default each finishes immediately.
+ */
+async function installFakeSynthesis(page: Page, voices: FakeVoice[] = [], endDelayMs = 0) {
+  await page.addInitScript(
+    (options: { available: FakeVoice[]; delay: number }) => {
+      const scope = window as unknown as SpeechScope;
+      scope.__spoken = [];
+      scope.__cancelled = 0;
 
-    class FakeUtterance {
-      text: string;
-      lang = "";
-      onstart: (() => void) | null = null;
-      onend: (() => void) | null = null;
-      onerror: ((event: { error: string }) => void) | null = null;
+      class FakeUtterance {
+        text: string;
+        lang = "";
+        voice: FakeVoice | null = null;
+        onstart: (() => void) | null = null;
+        onend: (() => void) | null = null;
+        onerror: ((event: { error: string }) => void) | null = null;
 
-      constructor(text: string) {
-        this.text = text;
+        constructor(text: string) {
+          this.text = text;
+        }
       }
-    }
 
-    const synthesis = {
-      speaking: false,
-      pending: false,
-      speak(utterance: FakeUtterance) {
-        scope.__spoken?.push({ text: utterance.text, at: Date.now() });
-        utterance.onstart?.();
-        window.setTimeout(() => utterance.onend?.(), 0);
-      },
-      cancel() {
-        scope.__cancelled = (scope.__cancelled ?? 0) + 1;
-      },
-      pause() {},
-      resume() {},
-      getVoices() {
-        return [];
-      },
-    };
+      const synthesis = {
+        speaking: false,
+        pending: false,
+        speak(utterance: FakeUtterance) {
+          scope.__spoken?.push({
+            text: utterance.text,
+            voice: utterance.voice?.name ?? null,
+            at: Date.now(),
+          });
+          utterance.onstart?.();
+          window.setTimeout(() => utterance.onend?.(), options.delay);
+        },
+        cancel() {
+          scope.__cancelled = (scope.__cancelled ?? 0) + 1;
+        },
+        pause() {},
+        resume() {},
+        getVoices() {
+          return options.available;
+        },
+      };
 
-    Object.defineProperty(window, "speechSynthesis", {
-      configurable: true,
-      value: synthesis,
-    });
-    Object.defineProperty(window, "SpeechSynthesisUtterance", {
-      configurable: true,
-      value: FakeUtterance,
-    });
-  });
+      Object.defineProperty(window, "speechSynthesis", {
+        configurable: true,
+        value: synthesis,
+      });
+      Object.defineProperty(window, "SpeechSynthesisUtterance", {
+        configurable: true,
+        value: FakeUtterance,
+      });
+    },
+    { available: voices, delay: endDelayMs },
+  );
 }
 
 async function spoken(page: Page): Promise<string[]> {
   return page.evaluate(
     () => (window as unknown as SpeechScope).__spoken?.map((item) => item.text) ?? [],
+  );
+}
+
+async function spokenVoices(page: Page): Promise<(string | null)[]> {
+  return page.evaluate(
+    () => (window as unknown as SpeechScope).__spoken?.map((item) => item.voice) ?? [],
   );
 }
 
@@ -203,6 +225,113 @@ test("the settings page changes the preference the composer follows", async ({ p
       "aria-pressed",
       "false",
     );
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("a reply can be read again from its own speaker", async ({ page }) => {
+  await installFakeSynthesis(page);
+
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-read-aloud-replay-${id}@example.com`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    await composer.fill("Plan the schema. Then ship it.");
+    await composer.press("Enter");
+
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+    await expect(thread).toContainText("Stub agent: Plan the schema");
+    // The preference is off, so nothing was read while the reply streamed.
+    expect(await spoken(page)).toEqual([]);
+
+    // A reply that is still arriving cannot be read again yet, because that
+    // would take over the queue from the live reading it is not getting. The
+    // speaker appears once the turn is over.
+    const replay = page.getByRole("button", { name: "Read this reply aloud" });
+    await expect(replay).toBeVisible();
+
+    // The card's own speaker reads the stored reply from the top, one sentence
+    // at a time, without the preference being on.
+    await replay.click();
+    await expect
+      .poll(() => spoken(page))
+      .toEqual(["Stub agent: Plan the schema.", "Then ship it."]);
+    await expect.poll(() => openPrompts(email)).toBe(0);
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("a reply's speaker stops it instead of starting it again", async ({ page }) => {
+  // Holding each utterance open keeps the reply being read long enough to press
+  // Stop on the card it belongs to.
+  await installFakeSynthesis(page, [], 5000);
+
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-read-aloud-stop-${id}@example.com`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    await composer.fill("Plan the schema. Then ship it.");
+    await composer.press("Enter");
+
+    const replay = page.getByRole("button", { name: "Read this reply aloud" });
+    await expect(replay).toBeVisible();
+    await replay.click();
+    await expect(page.getByRole("button", { name: "Stop reading this reply" })).toBeVisible();
+    const queued = await spoken(page);
+    expect(queued).toEqual(["Stub agent: Plan the schema.", "Then ship it."]);
+
+    await page.getByRole("button", { name: "Stop reading this reply" }).click();
+    // Stopping must not re-queue the reply: the label returns to Read, and
+    // nothing new was handed to the synthesizer.
+    await expect(page.getByRole("button", { name: "Read this reply aloud" })).toBeVisible();
+    expect(await spoken(page)).toEqual(queued);
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("the voice chosen in settings is the one that reads replies", async ({ page }) => {
+  await installFakeSynthesis(page, [
+    { name: "Test Male", lang: "en-GB", default: false },
+    { name: "Test Female", lang: "en-US", default: true },
+  ]);
+
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-read-aloud-voice-${id}@example.com`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    await page.goto("/dashboard/settings");
+    const picker = page.getByLabel("Voice");
+    // Nothing chosen yet means the browser's own default.
+    await expect(picker).toHaveValue("");
+    await picker.selectOption("Test Male");
+    await expect(page.getByRole("status")).toHaveText("Saved. Replies will be read in Test Male.");
+
+    // The choice follows the person to the next page load.
+    await page.reload();
+    await expect(page.getByLabel("Voice")).toHaveValue("Test Male");
+
+    await page.goto("/dashboard");
+    await page.getByRole("button", { name: "Turn on read aloud" }).click();
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    await composer.fill("Plan the schema");
+    await composer.press("Enter");
+
+    await expect.poll(() => spoken(page)).not.toHaveLength(0);
+    expect(await spokenVoices(page)).toContain("Test Male");
+    // The platform default is only a fallback, not what an explicit choice means.
+    expect(await spokenVoices(page)).not.toContain("Test Female");
   } finally {
     await deleteAccount(email);
   }

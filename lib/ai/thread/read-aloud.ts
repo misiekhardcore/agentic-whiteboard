@@ -11,6 +11,19 @@
 /** Matches the dictation language: the composer's copy is English. */
 export const READ_ALOUD_LANGUAGE = "en-US";
 
+/**
+ * The slice of a browser voice this app reads or compares. Structural, so the
+ * `SpeechSynthesisVoice` a browser hands over is used without a cast, and a test
+ * can hand over a plain object.
+ */
+export type SpeechVoice = {
+  name: string;
+  /** A BCP 47 tag, e.g. "en-GB". */
+  lang: string;
+  /** The platform's own default voice. */
+  default: boolean;
+};
+
 const TERMINATORS = new Set([".", "!", "?", "…"]);
 
 /**
@@ -97,7 +110,31 @@ const HEADING = /^\s{0,3}#{1,6}\s+/gm;
 const QUOTE = /^\s{0,3}>\s?/gm;
 const LIST_MARKER = /^\s*(?:[-*+]|\d+[.)])\s+/gm;
 const RULE = /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/gm;
+/**
+ * The dashes and pipes a markdown table puts between its heading and its rows.
+ * It has to contain a pipe to be that row, so a line of dashes inside prose is
+ * left to the rule above instead. `[ \t|:-]` excludes newlines on purpose: the
+ * character class must never swallow the rows that follow it.
+ */
+const TABLE_DELIMITER = /^(?=[^\n]*\|)[ \t|:-]*-[ \t|:-]*$/gm;
 const EMPHASIS = /[*_~]{1,3}/g;
+
+/**
+ * Emoji are decoration, not words. Left in, the synthesizer either says a name
+ * the reply never contained ("party popper") or pauses around something silent,
+ * so they are removed. Keycaps are matched first because their base character is
+ * an ordinary digit, and the marks that join a sequence — the variation
+ * selector, the zero-width joiner, skin tones and regional indicators — go with
+ * the pictographs rather than being left behind as noise.
+ */
+const KEYCAP = /[0-9#*]\uFE0F?\u20E3/gu;
+const EMOJI = /\p{Extended_Pictographic}/gu;
+/**
+ * The code points that build a sequence around a pictograph: flags, skin tones,
+ * the selector that makes a symbol emoji, and the joiner between people. They
+ * are removed after the pictographs so no fragment of a sequence is left behind.
+ */
+const EMOJI_SEQUENCE_MARKS = /\p{Regional_Indicator}|\p{Emoji_Modifier}|\uFE0F|\u200D/gu;
 
 /**
  * One chunk of markdown as the words a voice should say. Syntax is dropped
@@ -114,6 +151,10 @@ function spokenProse(markdown: string): string {
     .replace(QUOTE, "")
     .replace(LIST_MARKER, "")
     .replace(RULE, "")
+    .replace(TABLE_DELIMITER, "")
+    .replace(KEYCAP, "")
+    .replace(EMOJI, "")
+    .replace(EMOJI_SEQUENCE_MARKS, "")
     .replace(EMPHASIS, "")
     .replace(/\|/g, " ")
     .replace(/\s+/g, " ")
@@ -203,6 +244,53 @@ export function pendingSpeech(reply: string, spoken: number, final: boolean): Pe
   }
 
   return { utterances, spoken: consumed };
+}
+
+/** "en-GB" → "en": a voice may read the reply from any region of its language. */
+function baseLanguage(tag: string): string {
+  return tag.toLowerCase().split("-")[0] ?? "";
+}
+
+/**
+ * The voices a person may choose for the reply: the reply language's variants,
+ * with the platform default first and the rest by name. A voice from another
+ * language is left out because it would mangle the reply, and a name appears
+ * once because the choice is stored by name rather than by index.
+ */
+export function speechVoiceChoices<T extends SpeechVoice>(
+  voices: readonly T[],
+  language: string = READ_ALOUD_LANGUAGE,
+): T[] {
+  const languageBase = baseLanguage(language);
+  const seen = new Set<string>();
+  const choices: T[] = [];
+
+  for (const voice of voices) {
+    if (baseLanguage(voice.lang) !== languageBase || seen.has(voice.name)) continue;
+    seen.add(voice.name);
+    choices.push(voice);
+  }
+
+  return choices.sort((left, right) =>
+    left.default === right.default ? left.name.localeCompare(right.name) : left.default ? -1 : 1,
+  );
+}
+
+/**
+ * The voice to speak a reply with: the stored choice when this browser still has
+ * it, otherwise the platform default. A preference is made on one device and
+ * followed to another whose voices differ, and a missing voice must degrade to
+ * something audible rather than to silence or an error.
+ */
+export function chooseSpeechVoice<T extends SpeechVoice>(
+  voices: readonly T[],
+  language: string,
+  preferredName: string,
+): T | null {
+  const choices = speechVoiceChoices(voices, language);
+  const preferred = preferredName.trim();
+
+  return choices.find((voice) => voice.name === preferred) ?? choices[0] ?? null;
 }
 
 /**

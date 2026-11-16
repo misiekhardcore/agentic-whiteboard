@@ -93,6 +93,7 @@ export function useDictation({ draft, setDraft, fieldRef }: DictationField): Dic
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
+    recognition.unspokenPunctuation = true;
 
     recognition.onstart = () => setIsListening(true);
 

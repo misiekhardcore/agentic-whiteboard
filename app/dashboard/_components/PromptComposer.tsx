@@ -68,6 +68,8 @@ type PromptComposerProps = {
   initialMessages: UIMessage[];
   /** The person's stored read-aloud preference. */
   initialReadAloud: boolean;
+  /** The stored browser voice, or "" for the platform's own default. */
+  initialReadAloudVoice: string;
 };
 
 /**
@@ -85,10 +87,15 @@ type PromptComposerProps = {
  * when the session ends.
  *
  * Read aloud is the reverse: `useReadAloud` speaks new agent replies sentence
- * by sentence as they stream, and the speaker's preference is the person's
- * stored choice, so it follows them between devices.
+ * by sentence as they stream, and both the switch and the voice are the person's
+ * stored choices, so they follow them between devices. Each reply also carries
+ * its own speaker, so a stored reply can be heard again on demand.
  */
-export function PromptComposer({ initialMessages, initialReadAloud }: PromptComposerProps) {
+export function PromptComposer({
+  initialMessages,
+  initialReadAloud,
+  initialReadAloudVoice,
+}: PromptComposerProps) {
   const [draft, setDraft] = useState("");
   const [failure, setFailure] = useState<PromptFailure | null>(null);
   const [readAloud, setReadAloud] = useState(initialReadAloud);
@@ -160,7 +167,12 @@ export function PromptComposer({ initialMessages, initialReadAloud }: PromptComp
   // thread would look empty even though the agent is working.
   const lastMessage = messages[messages.length - 1];
   const awaitingText = isBusy && (!lastMessage || threadText(lastMessage).trim().length === 0);
-  const speech = useReadAloud({ messages, isBusy, enabled: readAloud });
+  const speech = useReadAloud({
+    messages,
+    isBusy,
+    enabled: readAloud,
+    voiceName: initialReadAloudVoice,
+  });
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -247,6 +259,12 @@ export function PromptComposer({ initialMessages, initialReadAloud }: PromptComp
         <PromptThread
           messages={messages}
           isDrafting={awaitingText}
+          onRead={speech.supported ? speech.readMessage : undefined}
+          onStop={speech.supported ? speech.cancel : undefined}
+          speakingId={speech.speakingId}
+          // Only the reply still arriving is off limits: reading it now would
+          // take over the queue and leave the rest of it unheard.
+          streamingId={isBusy ? messages[messages.length - 1]?.id : null}
           onApproval={(approvalId, approved) => {
             addToolApprovalResponse({ id: approvalId, approved });
           }}

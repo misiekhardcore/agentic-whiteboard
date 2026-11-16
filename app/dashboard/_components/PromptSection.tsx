@@ -23,7 +23,11 @@ export function PromptSection() {
 
 async function PromptSectionInner() {
   const account = await getSessionAccount();
-  if (!account) return <PromptComposer initialMessages={[]} initialReadAloud={false} />;
+  if (!account) {
+    return (
+      <PromptComposer initialMessages={[]} initialReadAloud={false} initialReadAloudVoice="" />
+    );
+  }
 
   const userId = account.session.user.id;
   const [messages, settings] = await Promise.all([
@@ -31,5 +35,11 @@ async function PromptSectionInner() {
     readPersonalSettings(userId),
   ]);
 
-  return <PromptComposer initialMessages={messages} initialReadAloud={settings.readAloud} />;
+  return (
+    <PromptComposer
+      initialMessages={messages}
+      initialReadAloud={settings.readAloud}
+      initialReadAloudVoice={settings.readAloudVoice}
+    />
+  );
 }

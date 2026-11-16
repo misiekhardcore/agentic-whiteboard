@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { pendingSpeech, READ_ALOUD_LANGUAGE, speechErrorMessage } from "./read-aloud";
+import {
+  chooseSpeechVoice,
+  pendingSpeech,
+  READ_ALOUD_LANGUAGE,
+  speechErrorMessage,
+  speechVoiceChoices,
+} from "./read-aloud";
 
 function spoken(reply: string): string[] {
   return pendingSpeech(reply, 0, true).utterances;
@@ -92,6 +98,38 @@ describe("pendingSpeech", () => {
     expect(spoken("| Name | Type |\nOK.")).toEqual(["Name Type", "OK."]);
   });
 
+  it("skips the separator row a markdown table puts under its heading", () => {
+    expect(spoken("| Name | Type |\n| --- | --- |\n| doc | text |\n")).toEqual([
+      "Name Type",
+      "doc text",
+    ]);
+    expect(spoken("Name | Type\n--- | ---\ndoc | text")).toEqual(["Name Type", "doc text"]);
+  });
+
+  it("keeps a row of dashes that is not a table separator", () => {
+    expect(spoken("---\nDone.")).toEqual(["Done."]);
+    expect(spoken("Use --- to separate sections.\nDone.")).toEqual([
+      "Use --- to separate sections.",
+      "Done.",
+    ]);
+  });
+
+  it("drops emojis rather than reading their names", () => {
+    expect(spoken("Great job! 🎉")).toEqual(["Great job!"]);
+    expect(spoken("✅ Done. Then go. 🚀")).toEqual(["Done.", "Then go."]);
+  });
+
+  it("drops emoji sequences built from several code points", () => {
+    expect(spoken("1️⃣ Step one.")).toEqual(["Step one."]);
+    expect(spoken("👨‍👩‍👧‍👦 family")).toEqual(["family"]);
+    expect(spoken("👍🏽 Well done.")).toEqual(["Well done."]);
+    expect(spoken("🇵🇱 Poland.")).toEqual(["Poland."]);
+  });
+
+  it("has nothing to say for a reply that is only emoji", () => {
+    expect(spoken("🎉🎉")).toEqual([]);
+  });
+
   it("keeps a link's text and drops a bare URL", () => {
     expect(spoken("Read the [guide](https://example.com/x). Then go.")).toEqual([
       "Read the guide.",
@@ -115,6 +153,61 @@ describe("pendingSpeech", () => {
 
   it("clamps an offset past the end of the reply", () => {
     expect(pendingSpeech("Done.", 99, true)).toEqual({ utterances: [], spoken: 5 });
+  });
+});
+
+const VOICES = [
+  { name: "Google UK English Male", lang: "en-GB", default: false },
+  { name: "Samantha", lang: "en-US", default: true },
+  { name: "Daniel", lang: "en-GB", default: false },
+  { name: "Anna", lang: "de-DE", default: false },
+];
+
+describe("speechVoiceChoices", () => {
+  it("offers the reply language's voices, with the platform default first", () => {
+    expect(speechVoiceChoices(VOICES, "en-US").map((voice) => voice.name)).toEqual([
+      "Samantha",
+      "Daniel",
+      "Google UK English Male",
+    ]);
+  });
+
+  it("leaves out a voice that cannot read the reply language", () => {
+    expect(speechVoiceChoices(VOICES, "en-US")).not.toContainEqual(
+      expect.objectContaining({ name: "Anna" }),
+    );
+  });
+
+  it("offers each voice name once, because the choice is stored by name", () => {
+    const doubled = [...VOICES, { name: "Samantha", lang: "en-GB", default: false }];
+
+    expect(speechVoiceChoices(doubled, "en-US")).toHaveLength(3);
+  });
+});
+
+describe("chooseSpeechVoice", () => {
+  it("uses the person's stored voice", () => {
+    expect(chooseSpeechVoice(VOICES, "en-US", "Google UK English Male")?.name).toBe(
+      "Google UK English Male",
+    );
+  });
+
+  it("ignores the spaces a stored name may carry", () => {
+    expect(chooseSpeechVoice(VOICES, "en-US", "  Daniel ")?.name).toBe("Daniel");
+  });
+
+  it("falls back to the platform default when this browser lacks the stored voice", () => {
+    expect(chooseSpeechVoice(VOICES, "en-US", "Microsoft David")?.name).toBe("Samantha");
+  });
+
+  it("uses the platform default when no voice was chosen", () => {
+    expect(chooseSpeechVoice(VOICES, "en-US", "")?.name).toBe("Samantha");
+  });
+
+  it("has no voice to offer when this browser has none for the reply language", () => {
+    expect(
+      chooseSpeechVoice([{ name: "Anna", lang: "de-DE", default: false }], "en-US", "Daniel"),
+    ).toBeNull();
   });
 });
 

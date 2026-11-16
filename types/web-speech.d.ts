@@ -3,11 +3,18 @@
  * so the composer declares the slice it drives. Keep this narrow: only what the
  * dictation hook reads or sets, rather than a full mirror of the specification.
  */
+
 interface SpeechRecognition extends EventTarget {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
   maxAlternatives: number;
+  /**
+   * Newer Chromium builds infer punctuation marks from the way a phrase was
+   * spoken. Assigning it where the browser does not know it is harmless, and it
+   * is optional here for that reason.
+   */
+  unspokenPunctuation?: boolean;
   start(): void;
   stop(): void;
   abort(): void;
