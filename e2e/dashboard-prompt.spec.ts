@@ -394,3 +394,350 @@ test("denying an approval leaves the workspace exactly as it was", async ({ page
     await deleteAccount(email);
   }
 });
+
+/** The conversations this person owns, newest first. */
+async function conversationCount(email: string): Promise<number> {
+  return withDb(async (db) => {
+    const { rows } = await db.query<{ total: number }>(
+      `select count(*)::int as total from "agentConversation"
+        where "userId" = (select id from "user" where email = $1)`,
+      [email],
+    );
+
+    return rows[0]?.total ?? 0;
+  });
+}
+
+/** Every prompt this person ever wrote, superseded ones included. */
+async function promptRows(
+  email: string,
+): Promise<{ status: string; supersededAt: Date | null; conversationId: string | null }[]> {
+  return withDb(async (db) => {
+    const { rows } = await db.query<{
+      status: string;
+      supersededAt: Date | null;
+      conversationId: string | null;
+    }>(
+      `select status, "supersededAt", "conversationId" from "agentPrompt"
+        where "userId" = (select id from "user" where email = $1)
+        order by "createdAt"`,
+      [email],
+    );
+
+    return rows;
+  });
+}
+
+/**
+ * A conversation whose newest prompt failed, with the partial reply the failed
+ * attempt stored. The thread must offer a retry without the person retyping
+ * anything, and the retry must reuse that prompt.
+ */
+async function seedFailedPrompt(
+  email: string,
+  conversationId: string,
+  text: string,
+  reply: string,
+): Promise<void> {
+  await withDb(async (db) => {
+    await db.query(
+      `insert into "agentConversation" (id, "userId")
+        select $1, id from "user" where email = $2`,
+      [conversationId, email],
+    );
+    await db.query(
+      `insert into "agentPrompt" (id, "ownerId", "userId", "conversationId", status, provider, model)
+        select $1, u.id, u.id, $2, 'FAILED', 'stub', 'stub-model'
+          from "user" u where u.email = $3`,
+      [`${conversationId}-prompt`, conversationId, email],
+    );
+    await db.query(
+      `insert into "agentMessage" (id, "promptId", role, content, "actorType", "userId")
+        select $1, $2, 'USER', $3::jsonb, 'USER', id from "user" where email = $4`,
+      [
+        `${conversationId}-user`,
+        `${conversationId}-prompt`,
+        JSON.stringify({ parts: [{ type: "text", text }] }),
+        email,
+      ],
+    );
+    await db.query(
+      `insert into "agentMessage" (id, "promptId", role, content, "actorType", "createdAt")
+        values ($1, $2, 'ASSISTANT', $3::jsonb, 'AGENT', now() + interval '1 second')`,
+      [
+        `${conversationId}-reply`,
+        `${conversationId}-prompt`,
+        JSON.stringify({ parts: [{ type: "text", text: reply }] }),
+      ],
+    );
+  });
+}
+
+/** A conversation long enough that its thread has to scroll. */
+async function seedScrollThread(email: string, conversationId: string): Promise<void> {
+  await withDb(async (db) => {
+    await db.query(
+      `insert into "agentConversation" (id, "userId")
+        select $1, id from "user" where email = $2`,
+      [conversationId, email],
+    );
+    await db.query(
+      `insert into "agentPrompt" (id, "ownerId", "userId", "conversationId", status, provider, model, "createdAt")
+        select $1 || '-p' || g, u.id, u.id, $1, 'COMPLETED', 'stub', 'stub-model',
+               now() + (g || ' seconds')::interval
+          from "user" u, generate_series(1, 15) g
+          where u.email = $2`,
+      [conversationId, email],
+    );
+    await db.query(
+      `insert into "agentMessage" (id, "promptId", role, content, "actorType", "userId", "createdAt")
+        select $1 || '-u' || g, $1 || '-p' || g, 'USER',
+               jsonb_build_object('parts', jsonb_build_array(
+                 jsonb_build_object('type', 'text', 'text', 'Scroll prompt ' || g)
+               )),
+               'USER', u.id, now() + (g || ' seconds')::interval
+          from "user" u, generate_series(1, 15) g
+          where u.email = $2`,
+      [conversationId, email],
+    );
+    await db.query(
+      `insert into "agentMessage" (id, "promptId", role, content, "actorType", "createdAt")
+        select $1 || '-a' || g, $1 || '-p' || g, 'ASSISTANT',
+               jsonb_build_object('parts', jsonb_build_array(
+                 jsonb_build_object('type', 'text', 'text',
+                   'Scroll reply ' || g || ', long enough to take a line or two of the thread so the box has to scroll.')
+               )),
+               'AGENT', now() + (g || ' seconds')::interval + interval '500 milliseconds'
+          from generate_series(1, 15) g`,
+      [conversationId],
+    );
+  });
+}
+
+test("a new conversation starts empty and the switcher brings the last one back", async ({
+  page,
+}) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-new-thread-${id}@example.com`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+
+    await composer.fill("First thread");
+    await composer.press("Enter");
+    await expect(thread).toContainText("Stub agent: First thread");
+
+    await page.getByRole("button", { name: "New conversation" }).click();
+
+    // The new thread is a place, not a blank page: the URL names it, the thread
+    // has nothing in it, and the composer is ready for its first prompt.
+    await expect(page).toHaveURL(/conversation=/);
+    await expect(thread).toHaveCount(0);
+    await expect(composer).toHaveValue("");
+
+    await composer.fill("Second thread");
+    await composer.press("Enter");
+    await expect(thread).toContainText("Stub agent: Second thread");
+
+    const switcher = page.getByRole("group", { name: "Recent conversations" });
+    await expect(switcher.getByRole("button", { name: "First thread" })).toBeVisible();
+    await switcher.getByRole("button", { name: "First thread" }).click();
+
+    await expect(thread).toContainText("Stub agent: First thread");
+    await expect(thread).not.toContainText("Second thread");
+
+    // The conversation is what the URL names, so a reload keeps it.
+    await page.reload();
+    await expect(page.getByRole("list", { name: "Agent conversation" })).toContainText(
+      "Stub agent: First thread",
+    );
+
+    expect(await conversationCount(email)).toBe(2);
+    await expect.poll(() => promptCount(email)).toBe(2);
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("editing an earlier prompt replaces it and the turns after it", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-rewind-${id}@example.com`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+
+    await composer.fill("Plan the schema");
+    await composer.press("Enter");
+    await expect(thread).toContainText("Stub agent: Plan the schema");
+
+    await composer.fill("Now the API");
+    await composer.press("Enter");
+    await expect(thread).toContainText("Stub agent: Now the API");
+    await expect.poll(() => promptCount(email)).toBe(2);
+
+    // Edit the first prompt: it fills the composer and says what sending does.
+    await thread.getByRole("button", { name: "Edit this prompt" }).first().click();
+    await expect(composer).toHaveValue("Plan the schema");
+    await expect(page.getByText(/Editing an earlier prompt/)).toBeVisible();
+
+    await composer.fill("Plan the cache");
+    await composer.press("Enter");
+
+    // The conversation continues from the edited turn: the later prompt and the
+    // old reply are gone, and only one prompt is left to edit.
+    await expect(thread).toContainText("Stub agent: Plan the cache");
+    await expect(thread).not.toContainText("Now the API");
+    await expect(thread).not.toContainText("Stub agent: Plan the schema");
+    await expect(thread.getByRole("button", { name: "Edit this prompt" })).toHaveCount(1);
+    await expect(page.getByText(/Editing an earlier prompt/)).toHaveCount(0);
+
+    // Nothing was deleted: both discarded prompts still count.
+    await expect.poll(() => promptCount(email)).toBe(3);
+    const rows = await promptRows(email);
+    expect(rows.filter((row) => row.supersededAt !== null)).toHaveLength(2);
+    expect(new Set(rows.map((row) => row.conversationId)).size).toBe(1);
+    expect(await conversationCount(email)).toBe(1);
+
+    await page.reload();
+    await expect(page.getByRole("list", { name: "Agent conversation" })).toContainText(
+      "Stub agent: Plan the cache",
+    );
+    await expect(page.getByRole("list", { name: "Agent conversation" })).not.toContainText(
+      "Now the API",
+    );
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("a failed send can be retried without retyping the prompt", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-retry-failed-${id}@example.com`;
+
+  let attempts = 0;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+
+    // The first attempt fails before it reaches the route, which is what an
+    // outage looks like from the browser.
+    await page.route("**/api/agent/prompts", async (route) => {
+      attempts += 1;
+      if (attempts === 1) {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: "The agent could not finish that prompt. Try again in a moment.",
+          }),
+        });
+        return;
+      }
+      await route.continue();
+    });
+
+    await composer.fill("Plan the schema");
+    await composer.press("Enter");
+
+    await expect(
+      page.getByText("The agent could not finish that prompt. Try again in a moment.").first(),
+    ).toBeVisible();
+    await expect.poll(() => promptCount(email)).toBe(0);
+
+    await page.getByRole("button", { name: "Retry" }).click();
+
+    await expect(thread).toContainText("Stub agent: Plan the schema");
+    // One prompt bubble, not the failed one plus a second copy.
+    await expect(thread.getByRole("button", { name: "Edit this prompt" })).toHaveCount(1);
+    await expect.poll(() => promptCount(email)).toBe(1);
+  } finally {
+    await page.unroute("**/api/agent/prompts");
+    await deleteAccount(email);
+  }
+});
+
+test("a prompt that failed on the server is retryable after a reload, for free", async ({
+  page,
+}) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-retry-stored-${id}@example.com`;
+  const conversationId = `seed-failed-${id}`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+    await seedFailedPrompt(email, conversationId, "Seed prompt", "Stub agent: partial");
+
+    await page.goto(`/dashboard?conversation=${conversationId}`);
+
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+    await expect(thread).toContainText("Seed prompt");
+    await expect(thread).toContainText("Stub agent: partial");
+
+    // The stored prompt failed, so the thread itself offers the retry.
+    await expect(page.getByText(/The last prompt did not finish/)).toBeVisible();
+    await page.getByRole("button", { name: "Retry" }).click();
+
+    await expect(thread).toContainText("Stub agent: Seed prompt");
+    await expect.poll(async () => (await promptRows(email))[0]?.status).toBe("COMPLETED");
+    // A retry is not a new prompt: the person already paid for it.
+    expect(await promptCount(email)).toBe(1);
+
+    await page.reload();
+    await expect(page.getByRole("list", { name: "Agent conversation" })).toContainText(
+      "Stub agent: Seed prompt",
+    );
+    // The failed attempt's reply is superseded, not deleted.
+    await expect(page.getByRole("list", { name: "Agent conversation" })).not.toContainText(
+      "Stub agent: partial",
+    );
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("the conversation scrolls in its own box instead of growing the page", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-scroll-${id}@example.com`;
+  const conversationId = `seed-scroll-${id}`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+    await seedScrollThread(email, conversationId);
+
+    await page.goto(`/dashboard?conversation=${conversationId}`);
+
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+    await expect(thread).toContainText("Scroll reply 15");
+
+    const box = thread.locator("xpath=..");
+    const metrics = await box.evaluate((element) => ({
+      overflowY: getComputedStyle(element).overflowY,
+      maxHeight: getComputedStyle(element).maxHeight,
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      distanceFromBottom: element.scrollHeight - element.scrollTop - element.clientHeight,
+    }));
+
+    expect(metrics.overflowY).toBe("auto");
+    expect(metrics.maxHeight).not.toBe("none");
+    expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+    // The newest message is in view without scrolling the page at all.
+    expect(metrics.distanceFromBottom).toBeLessThanOrEqual(2);
+
+    const documentScrolls = await page.evaluate(
+      () => document.documentElement.scrollHeight > window.innerHeight,
+    );
+    expect(documentScrolls).toBe(false);
+  } finally {
+    await deleteAccount(email);
+  }
+});

@@ -6,6 +6,10 @@ Date: 2026-11-13
 > The paths in this record are the ones that existed when it was written. The
 > modules have since moved into per-context folders; see
 > [module-boundaries](module-boundaries.md) for where they live now.
+>
+> A person may now hold several dashboard conversations, and a turn can be
+> retried or rewound; see [agent-conversations](agent-conversations.md), which
+> supersedes this record's "one conversation per person" consequence.
 
 ## Context
 
@@ -142,9 +146,11 @@ follow-up the day this app needs a second instance.
 
 - A prompt is the billing unit and the execution unit; there is no way to count
   a prompt that never ran.
-- One conversation per person per dashboard thread. A prompt typed while the
-  first runs is queued by the composer; a second concurrent request from
-  anywhere else still gets 409 until the run finishes or is stopped.
+- One conversation per person per dashboard thread — since
+  [agent-conversations](agent-conversations.md), one conversation per prompt
+  thread, with several per person. A prompt typed while the first runs is queued
+  by the composer; a second concurrent request from anywhere else still gets 409
+  until the run finishes or is stopped.
 - The agent manages workspaces (create, list, read, update, restore, open) and
   may propose archiving or deleting one; the person's approval is what executes
   it ([capabilities](capabilities.md)). It cannot yet edit docs or canvases;

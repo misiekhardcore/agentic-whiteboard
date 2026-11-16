@@ -16,8 +16,10 @@ import type { SessionAccountContext } from "@/lib/identity/account";
 import { clearThreadStream, markThreadStream } from "./live";
 import {
   approvalReference,
+  conversationIdProblem,
   hasPendingApproval,
   lastUserText,
+  promptIntent,
   promptProblem,
   promptRequestKind,
   promptStatusAfterStream,
@@ -28,10 +30,12 @@ import {
   appendUserPromptMessage,
   closePrompt,
   findAwaitingApprovalPrompt,
+  findUserPromptTarget,
   markPromptRunning,
   openDashboardPrompt,
   promptAllowance,
   resumePrompt,
+  retryFailedPrompt,
 } from "./store";
 
 /**
@@ -39,9 +43,11 @@ import {
  * which account pays, whether the allowance has room, and how the prompt is
  * recorded — plus the stream that answers it.
  *
- * A POST is either a new prompt or the answer to an approval the agent parked.
- * The second kind is not a new prompt: it continues the row that is waiting, so
- * approving an action does not consume another prompt from the allowance.
+ * A POST is one of three things: a new prompt appended to a conversation, a
+ * rewind that replaces an earlier turn (the person edited the prompt), or a
+ * retry of the newest prompt that failed, which reuses its row so the person is
+ * not charged twice. The fourth, answering a parked approval, is not a prompt at
+ * all: it continues the row that is waiting.
  *
  * The route above this owns only the session and the request body; everything
  * that reads the conversation lives here, which is what keeps the endpoint thin
@@ -56,6 +62,11 @@ const notConfigured = (reason: string) => `The agent is not configured yet. ${re
 const BUSY =
   "The agent is still working on your previous prompt. Stop it or wait for it to finish.";
 const APPROVAL_EXPIRED = "That approval is no longer waiting. Send a new prompt to try again.";
+const RETRY_EXPIRED = "That prompt is no longer the one to retry. Send it again as a new prompt.";
+const CONVERSATION_MISSING = "That conversation could not be found. Start a new one.";
+
+/** The browser may pick a message id; the database only takes a plain one. */
+const MESSAGE_ID_PATTERN = /^[A-Za-z0-9_.:-]{1,100}$/;
 
 function jsonError(error: string, status: number, extra: Record<string, unknown> = {}): Response {
   return Response.json({ error, ...extra }, { status });
@@ -77,6 +88,21 @@ function readMessages(payload: unknown): UIMessage[] | null {
   const messages = (payload as { messages?: unknown }).messages;
   if (!Array.isArray(messages) || messages.length === 0) return null;
   return messages.every(isUIMessage) ? messages : null;
+}
+
+/**
+ * The conversation the composer is on. Its id is chosen before the first prompt
+ * (a UUID the browser makes for "New conversation"), so the route creates the
+ * row with the first accepted prompt.
+ */
+function readConversationId(payload: unknown): { id: string } | { error: string } {
+  const raw =
+    typeof payload === "object" && payload !== null
+      ? (payload as { conversationId?: unknown }).conversationId
+      : undefined;
+  const problem = conversationIdProblem(typeof raw === "string" ? raw : "");
+
+  return problem ? { error: problem } : { id: raw as string };
 }
 
 /** The view the browser says the person is on; an invalid one is ignored. */
@@ -101,8 +127,18 @@ export async function runDashboardTurn({
     return jsonError("Send at least one prompt to the agent.", 400);
   }
 
+  const conversation = readConversationId(payload);
+  if ("error" in conversation) {
+    return jsonError(conversation.error, 400);
+  }
+  const conversationId = conversation.id;
+
   const kind = promptRequestKind(messages);
   const newest = messages[messages.length - 1];
+
+  if (kind === "new" && newest.role !== "user") {
+    return jsonError("Send a prompt to the agent.", 400);
+  }
 
   if (kind === "new") {
     const prompt = lastUserText(messages);
@@ -141,6 +177,8 @@ export async function runDashboardTurn({
     accountName,
   };
 
+  /** A retry and an approval answer reuse their prompt, so its usage accrues. */
+  let continuing = kind === "continuation";
   let promptId: string;
 
   if (kind === "continuation" && reference) {
@@ -153,49 +191,91 @@ export async function runDashboardTurn({
     await resumePrompt(promptId);
     markThreadStream(session.user.id, promptId);
   } else {
-    const entitlements = organizationId
-      ? await getOrganizationEntitlements(organizationId)
-      : await getUserEntitlements(session.user.id);
+    const submitted = messages[messages.length - 1];
+    const prompt = lastUserText(messages) ?? "";
 
-    const allowance = await promptAllowance({
-      ownerId: organizationId ?? session.user.id,
+    // The newest user message may repeat one the conversation already stored:
+    // editing a turn and retrying a failed one both send it again. The stored
+    // prompt says which of the two this is.
+    const target = await findUserPromptTarget({
+      conversationId,
+      messageId: submitted.id,
       userId: session.user.id,
-      subscription: entitlements.subscription,
-      limits: entitlements.limits,
-      accountName,
     });
-    if (allowance.message) {
-      return jsonError(allowance.message, 402, { limitReached: true });
-    }
+    const intent = promptIntent({ text: prompt, target });
 
-    const opened = await openDashboardPrompt({
-      ownerId: organizationId ?? session.user.id,
-      userId: session.user.id,
-      provider: config.provider,
-      model: config.model,
-    });
-    if (opened.kind === "busy") {
-      return jsonError(BUSY, 409);
-    }
-
-    promptId = opened.promptId;
-    // Marked before the next await, so a parallel send cannot mistake this
-    // QUEUED row for an orphan and retire it out from under the stream.
-    markThreadStream(session.user.id, promptId);
-
-    try {
-      const submitted = messages[messages.length - 1];
-      await appendUserPromptMessage({
-        promptId,
+    if (intent.kind === "retry") {
+      const resumed = await retryFailedPrompt({
+        conversationId,
+        promptId: intent.promptId,
         userId: session.user.id,
-        parts: submitted.parts,
       });
-      await markPromptRunning(promptId);
-    } catch (error) {
-      console.error("[ai] could not record the prompt:", error);
-      clearThreadStream(session.user.id, promptId);
-      await closePrompt({ promptId, status: "FAILED", error: STREAM_ERROR });
-      return jsonError(STREAM_ERROR, 500);
+      if (!resumed) {
+        return jsonError(RETRY_EXPIRED, 409);
+      }
+
+      promptId = intent.promptId;
+      continuing = true;
+      markThreadStream(session.user.id, promptId);
+    } else {
+      const entitlements = organizationId
+        ? await getOrganizationEntitlements(organizationId)
+        : await getUserEntitlements(session.user.id);
+
+      const allowance = await promptAllowance({
+        ownerId: organizationId ?? session.user.id,
+        userId: session.user.id,
+        subscription: entitlements.subscription,
+        limits: entitlements.limits,
+        accountName,
+      });
+      if (allowance.message) {
+        return jsonError(allowance.message, 402, { limitReached: true });
+      }
+
+      const opened = await openDashboardPrompt({
+        conversationId,
+        ownerId: organizationId ?? session.user.id,
+        userId: session.user.id,
+        provider: config.provider,
+        model: config.model,
+        discardFrom:
+          intent.kind === "rewind" && target
+            ? { id: intent.fromPromptId, createdAt: target.createdAt }
+            : undefined,
+      });
+      if (opened.kind === "busy") {
+        return jsonError(BUSY, 409);
+      }
+      if (opened.kind === "missing") {
+        return jsonError(CONVERSATION_MISSING, 404);
+      }
+
+      promptId = opened.promptId;
+      // Marked before the next await, so a parallel send cannot mistake this
+      // QUEUED row for an orphan and retire it out from under the stream.
+      markThreadStream(session.user.id, promptId);
+
+      try {
+        await appendUserPromptMessage({
+          promptId,
+          userId: session.user.id,
+          parts: submitted.parts,
+          // A rewind replaces a stored message whose id the browser still
+          // holds, so the new row needs its own id; an append keeps the
+          // browser's, which is what makes the just-sent prompt editable.
+          messageId:
+            intent.kind === "append" && MESSAGE_ID_PATTERN.test(submitted.id)
+              ? submitted.id
+              : undefined,
+        });
+        await markPromptRunning(promptId);
+      } catch (error) {
+        console.error("[ai] could not record the prompt:", error);
+        clearThreadStream(session.user.id, promptId);
+        await closePrompt({ promptId, status: "FAILED", error: STREAM_ERROR });
+        return jsonError(STREAM_ERROR, 500);
+      }
     }
   }
 
@@ -245,7 +325,7 @@ export async function runDashboardTurn({
             awaitingApproval: hasPendingApproval(responseMessage),
           });
 
-          if (kind === "continuation") {
+          if (continuing) {
             // The prompt already counted; only its cost grows.
             if (usageFromStream !== null) {
               await accruePromptUsage(promptId, usageFromStream);

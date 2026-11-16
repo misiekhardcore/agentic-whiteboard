@@ -1,6 +1,12 @@
-import { and, count, desc, eq, gt, gte, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, inArray, isNull, sql } from "drizzle-orm";
 
-import { addUsage, type StoredPromptMessage, threadMessages } from "@/lib/ai/thread/rules";
+import {
+  addUsage,
+  type PromptPosition,
+  promptsFromBranch,
+  type PromptTarget,
+  type StoredPromptMessage,
+} from "@/lib/ai/thread/rules";
 import type { PlanLimits } from "@/lib/billing/plans";
 import type { SubscriptionRow } from "@/lib/billing/subscriptions";
 import {
@@ -11,7 +17,7 @@ import {
 } from "@/lib/billing/usage";
 import type { AgentPromptStatus } from "@/lib/collab/contracts";
 import { db } from "@/lib/db";
-import { agentMessages, agentPrompts } from "@/lib/db/schema";
+import { agentConversations, agentMessages, agentPrompts } from "@/lib/db/schema";
 
 import { streamingPromptIds } from "./live";
 
@@ -19,10 +25,11 @@ import { streamingPromptIds } from "./live";
  * Persistence for the dashboard's prompt thread. A prompt row is created when a
  * prompt is accepted and carries its own execution status and usage, so the
  * per-member allowance counts exactly the prompts that ran.
+ *
+ * A prompt belongs to a conversation, and an edit or a rewind does not delete
+ * the turns it replaces: they are marked superseded, which keeps the allowance
+ * count and the audit trail while taking them out of the thread.
  */
-
-/** How many recent messages the dashboard reloads. */
-export const DASHBOARD_THREAD_LIMIT = 40;
 
 /** How many prompts this member used in the paying account since `since`. */
 export async function countPromptsForMember({
@@ -59,6 +66,9 @@ export type PromptAllowance = {
  * Whether this member may send another prompt. The count belongs to this
  * context (it owns the prompt rows); the window and the copy belong to billing,
  * so the dashboard and the agent endpoint answer the allowance the same way.
+ *
+ * Superseded prompts are counted: an edit replaced a turn the person already
+ * spent a prompt on, and the new one is its own execution.
  */
 export async function promptAllowance({
   ownerId,
@@ -97,7 +107,11 @@ export async function promptAllowance({
 const ORPHANED_PROMPT_ERROR =
   "The agent stopped before finishing this prompt. Send it again to retry.";
 
-export type OpenPromptResult = { kind: "opened"; promptId: string } | { kind: "busy" };
+export type OpenPromptResult =
+  | { kind: "opened"; promptId: string }
+  | { kind: "busy" }
+  /** The conversation id belongs to somebody else, or vanished. */
+  | { kind: "missing" };
 
 type StoredContent = { parts: StoredPromptMessage["parts"] };
 
@@ -109,51 +123,6 @@ function storedParts(content: unknown): StoredPromptMessage["parts"] {
   if (typeof content !== "object" || content === null) return [];
   const parts = (content as Partial<StoredContent>).parts;
   return Array.isArray(parts) ? parts : [];
-}
-
-/**
- * The signed-in person's dashboard thread, oldest first. Messages of a
- * workspace conversation are excluded: this thread belongs to the person, not
- * to a workspace.
- */
-export async function loadDashboardPromptThread(userId: string, limit = DASHBOARD_THREAD_LIMIT) {
-  const rows = await db
-    .select({
-      id: agentMessages.id,
-      role: agentMessages.role,
-      content: agentMessages.content,
-      createdAt: agentMessages.createdAt,
-    })
-    .from(agentMessages)
-    .innerJoin(agentPrompts, eq(agentMessages.promptId, agentPrompts.id))
-    .where(and(eq(agentPrompts.userId, userId), isNull(agentPrompts.workspaceId)))
-    .orderBy(desc(agentMessages.createdAt), desc(agentMessages.id))
-    .limit(limit);
-
-  return threadMessages(
-    rows.reverse().map((row) => ({
-      id: row.id,
-      role: row.role,
-      parts: storedParts(row.content),
-    })),
-  );
-}
-
-/**
- * The active prompts on a person's thread that nothing is streaming.
- *
- * A prompt is only alive while the request that created it holds its stream, so
- * anything missing from this process's registry was left behind by a server that
- * has since gone. Deliberately not a timestamp comparison: a slow model can hold
- * one prompt for longer than any lease we would pick, and two times were ever
- * guesswork.
- */
-export function deadThreadPrompts(
-  active: readonly { id: string }[],
-  streaming: readonly string[],
-): string[] {
-  const live = new Set(streaming);
-  return active.filter((prompt) => !live.has(prompt.id)).map((prompt) => prompt.id);
 }
 
 const UNIQUE_VIOLATION = "23505";
@@ -177,26 +146,44 @@ function isUniqueViolation(error: unknown): boolean {
   return false;
 }
 
+/** The active prompts on a person's thread that nothing is streaming. */
+export function deadThreadPrompts(
+  active: readonly { id: string }[],
+  streaming: readonly string[],
+): string[] {
+  const live = new Set(streaming);
+  return active.filter((prompt) => !live.has(prompt.id)).map((prompt) => prompt.id);
+}
+
 /**
- * Records an accepted prompt and returns its id. A partial unique index allows
- * one QUEUED/RUNNING prompt per person's dashboard thread; a second send while
- * the agent is working reports `busy` instead of running two streams over the
- * same conversation.
+ * Records an accepted prompt and returns its id. `discardFrom` is the turn an
+ * edit replaced: that prompt and every live one after it are marked superseded
+ * in the same transaction as the insert, so a reload never shows both the old
+ * branch and the new one.
+ *
+ * A partial unique index allows one QUEUED/RUNNING prompt per person's dashboard
+ * thread; a second send while the agent is working reports `busy` instead of
+ * running two streams over the same conversation.
  *
  * Retiring an orphan first is what makes a restart recoverable: the row a killed
  * server left behind would otherwise block every send until someone cleared it by
  * hand.
  */
 export async function openDashboardPrompt({
+  conversationId,
   ownerId,
   userId,
   provider,
   model,
+  discardFrom,
 }: {
+  conversationId: string;
   ownerId: string;
   userId: string;
   provider: string;
   model: string;
+  /** The prompt an edit branched from, if this send replaces a turn. */
+  discardFrom?: PromptPosition;
 }): Promise<OpenPromptResult> {
   const active = await db
     .select({ id: agentPrompts.id })
@@ -223,13 +210,70 @@ export async function openDashboardPrompt({
   }
 
   try {
-    const [created] = await db
-      .insert(agentPrompts)
-      .values({ ownerId, userId, provider, model })
-      .returning({ id: agentPrompts.id });
+    return await db.transaction(async (tx) => {
+      // The first prompt of a conversation creates it. A conflict means the id
+      // already exists, so it is only usable when it is this person's.
+      await tx
+        .insert(agentConversations)
+        .values({ id: conversationId, userId })
+        .onConflictDoNothing();
 
-    if (!created) throw new Error("The prompt row was not created.");
-    return { kind: "opened", promptId: created.id };
+      const [conversation] = await tx
+        .select({ userId: agentConversations.userId })
+        .from(agentConversations)
+        .where(eq(agentConversations.id, conversationId))
+        .limit(1);
+
+      if (!conversation || conversation.userId !== userId) {
+        return { kind: "missing" };
+      }
+
+      // Read before inserting: the new prompt must not be part of its own
+      // discard set, and the old branch is still live at this point.
+      const discarded = discardFrom
+        ? promptsFromBranch(
+            await tx
+              .select({ id: agentPrompts.id, createdAt: agentPrompts.createdAt })
+              .from(agentPrompts)
+              .where(
+                and(
+                  eq(agentPrompts.conversationId, conversationId),
+                  isNull(agentPrompts.supersededAt),
+                ),
+              )
+              .orderBy(asc(agentPrompts.createdAt), asc(agentPrompts.id)),
+            discardFrom,
+          )
+        : [];
+
+      const [created] = await tx
+        .insert(agentPrompts)
+        .values({ ownerId, userId, conversationId, provider, model })
+        .returning({ id: agentPrompts.id });
+
+      if (!created) throw new Error("The prompt row was not created.");
+
+      const now = new Date();
+
+      if (discarded.length > 0) {
+        await tx
+          .update(agentPrompts)
+          .set({ supersededAt: now })
+          .where(
+            inArray(
+              agentPrompts.id,
+              discarded.map((prompt) => prompt.id),
+            ),
+          );
+      }
+
+      await tx
+        .update(agentConversations)
+        .set({ updatedAt: now })
+        .where(eq(agentConversations.id, conversationId));
+
+      return { kind: "opened", promptId: created.id };
+    });
   } catch (error) {
     if (isUniqueViolation(error)) return { kind: "busy" };
     throw error;
@@ -243,17 +287,152 @@ export async function markPromptRunning(promptId: string): Promise<void> {
     .where(eq(agentPrompts.id, promptId));
 }
 
+/**
+ * Re-runs a prompt that failed, reusing its row so the person is not charged
+ * twice for one request. Only the conversation's newest prompt that failed is
+ * eligible; the caller decides that from the intent rule before asking.
+ *
+ * The failed attempt's replies are superseded rather than deleted — the prompt's
+ * own text stays — so the reloaded thread shows one prompt with one answer.
+ */
+export async function retryFailedPrompt({
+  conversationId,
+  promptId,
+  userId,
+}: {
+  conversationId: string;
+  promptId: string;
+  userId: string;
+}): Promise<boolean> {
+  const now = new Date();
+
+  return db.transaction(async (tx) => {
+    const [prompt] = await tx
+      .select({ id: agentPrompts.id })
+      .from(agentPrompts)
+      .where(
+        and(
+          eq(agentPrompts.id, promptId),
+          eq(agentPrompts.userId, userId),
+          eq(agentPrompts.conversationId, conversationId),
+          isNull(agentPrompts.workspaceId),
+          isNull(agentPrompts.supersededAt),
+          eq(agentPrompts.status, "FAILED"),
+        ),
+      )
+      .limit(1);
+
+    if (!prompt) return false;
+
+    await tx
+      .update(agentMessages)
+      .set({ supersededAt: now })
+      .where(
+        and(
+          eq(agentMessages.promptId, promptId),
+          eq(agentMessages.role, "ASSISTANT"),
+          isNull(agentMessages.supersededAt),
+        ),
+      );
+
+    await tx
+      .update(agentPrompts)
+      .set({ status: "RUNNING", error: null, finishedAt: null, startedAt: now })
+      .where(eq(agentPrompts.id, promptId));
+
+    await tx
+      .update(agentConversations)
+      .set({ updatedAt: now })
+      .where(eq(agentConversations.id, conversationId));
+
+    return true;
+  });
+}
+
+export type UserPromptTarget = PromptTarget & {
+  /** The prompt's place in the conversation, for a rewind's discard set. */
+  createdAt: Date;
+};
+
+/**
+ * The stored user message a send repeats, if any. The browser sends its own
+ * message ids, and the composer stores them, so a message the person just sent
+ * is findable without a round trip.
+ *
+ * A superseded prompt still matches: editing the same prompt twice in one
+ * session resends the id of the prompt the first edit replaced, and the rewind
+ * that follows discards by position.
+ */
+export async function findUserPromptTarget({
+  conversationId,
+  messageId,
+  userId,
+}: {
+  conversationId: string;
+  messageId: string;
+  userId: string;
+}): Promise<UserPromptTarget | null> {
+  const [row] = await db
+    .select({
+      promptId: agentPrompts.id,
+      promptCreatedAt: agentPrompts.createdAt,
+      status: agentPrompts.status,
+      content: agentMessages.content,
+    })
+    .from(agentMessages)
+    .innerJoin(agentPrompts, eq(agentMessages.promptId, agentPrompts.id))
+    .where(
+      and(
+        eq(agentMessages.id, messageId),
+        eq(agentMessages.role, "USER"),
+        isNull(agentMessages.supersededAt),
+        eq(agentPrompts.userId, userId),
+        eq(agentPrompts.conversationId, conversationId),
+        isNull(agentPrompts.workspaceId),
+      ),
+    )
+    .limit(1);
+
+  if (!row) return null;
+
+  const live = await db
+    .select({ id: agentPrompts.id, createdAt: agentPrompts.createdAt })
+    .from(agentPrompts)
+    .where(and(eq(agentPrompts.conversationId, conversationId), isNull(agentPrompts.supersededAt)))
+    .orderBy(asc(agentPrompts.createdAt), asc(agentPrompts.id));
+
+  const tip = live[live.length - 1];
+
+  return {
+    promptId: row.promptId,
+    createdAt: row.promptCreatedAt,
+    status: row.status,
+    isTip: tip?.id === row.promptId,
+    text: storedParts(row.content)
+      .flatMap((part) => (part.type === "text" ? [part.text] : []))
+      .join("\n"),
+  };
+}
+
 /** Stores the human message before the response starts, so it survives a reload. */
 export async function appendUserPromptMessage({
   promptId,
   userId,
   parts,
+  messageId,
 }: {
   promptId: string;
   userId: string;
   parts: StoredPromptMessage["parts"];
+  /**
+   * The browser's message id, kept so the same message can be edited or retried
+   * in the session it was sent from. Omitted when a rewind replaces an earlier
+   * prompt: that id already names the message being replaced.
+   */
+  messageId?: string;
 }): Promise<void> {
   await db.insert(agentMessages).values({
+    ...(messageId ? { id: messageId } : {}),
     promptId,
     workspaceId: null,
     role: "USER",
@@ -312,7 +491,8 @@ export const APPROVAL_WINDOW_MS = 24 * 60 * 60 * 1000;
 /**
  * The prompt whose approval the browser just answered. Matched through the
  * message that stored the request, by the reference the answer carries, so an
- * answer cannot be attached to a different conversation's question.
+ * answer cannot be attached to a different conversation's question. A turn an
+ * edit discarded is not answerable, even if its card is still in a stale tab.
  */
 export async function findAwaitingApprovalPrompt(
   userId: string,
@@ -327,6 +507,8 @@ export async function findAwaitingApprovalPrompt(
       and(
         eq(agentPrompts.userId, userId),
         isNull(agentPrompts.workspaceId),
+        isNull(agentPrompts.supersededAt),
+        isNull(agentMessages.supersededAt),
         eq(agentPrompts.status, "AWAITING_APPROVAL"),
         sql`${agentMessages.content} -> 'parts' @> ${JSON.stringify([
           { approval: { id: reference } },

@@ -17,6 +17,8 @@ export const routes = {
   resetPassword: "/reset-password",
 
   dashboard: "/dashboard",
+  /** The dashboard with one agent conversation open. */
+  dashboardConversation: (id: string) => `/dashboard?conversation=${encodeURIComponent(id)}`,
   dashboardArchive: "/dashboard/archive",
   dashboardShared: "/dashboard/shared",
   dashboardOrganization: "/dashboard/organization",

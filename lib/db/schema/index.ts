@@ -1,4 +1,5 @@
 export * from "./auth";
+export * from "./agentConversation";
 export * from "./agentPrompt";
 export * from "./agentMessage";
 export * from "./billing";

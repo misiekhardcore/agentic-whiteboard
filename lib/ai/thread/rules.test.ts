@@ -4,12 +4,19 @@ import { describe, expect, it } from "vitest";
 import {
   addUsage,
   approvalReference,
+  CONVERSATION_PREVIEW_LENGTH,
+  conversationIdProblem,
+  conversationPreview,
   hasPendingApproval,
+  lastUserMessage,
   lastUserText,
   PROMPT_MAX_LENGTH,
+  promptIntent,
   promptProblem,
   promptRequestKind,
+  promptsFromBranch,
   promptStatusAfterStream,
+  type PromptTarget,
   type StoredPromptMessage,
   supersedeApprovals,
   threadMessages,
@@ -88,6 +95,16 @@ describe("lastUserText", () => {
   it("has nothing to send without a user message", () => {
     expect(lastUserText([])).toBeNull();
     expect(lastUserText([assistantMessage("assistant_1", "Hi")])).toBeNull();
+  });
+
+  it("names the message so it can be edited or retried", () => {
+    expect(
+      lastUserMessage([
+        userMessage("user_1", "First prompt"),
+        assistantMessage("assistant_1", "First reply"),
+      ])?.id,
+    ).toBe("user_1");
+    expect(lastUserMessage([assistantMessage("assistant_1", "Hi")])).toBeNull();
   });
 });
 
@@ -261,6 +278,145 @@ describe("supersedeApprovals", () => {
     ]);
 
     expect(rows[0].parts).toHaveLength(1);
+  });
+});
+
+function target(overrides: Partial<PromptTarget> = {}): PromptTarget {
+  return {
+    promptId: "prompt_1",
+    status: "COMPLETED",
+    isTip: true,
+    text: "Plan the schema",
+    ...overrides,
+  };
+}
+
+describe("promptIntent", () => {
+  it("appends when the sent message is not in the conversation yet", () => {
+    expect(promptIntent({ text: "Anything new?", target: null })).toEqual({ kind: "append" });
+  });
+
+  it("retries the newest prompt that failed, without a second prompt", () => {
+    expect(
+      promptIntent({
+        text: "Plan the schema",
+        target: target({ status: "FAILED" }),
+      }),
+    ).toEqual({ kind: "retry", promptId: "prompt_1" });
+  });
+
+  it("ignores surrounding whitespace when deciding a retry", () => {
+    expect(
+      promptIntent({
+        text: "  Plan the schema \n",
+        target: target({ status: "FAILED" }),
+      }),
+    ).toEqual({ kind: "retry", promptId: "prompt_1" });
+  });
+
+  it("rewinds when the failed prompt's text was edited", () => {
+    expect(
+      promptIntent({
+        text: "Plan the cache instead",
+        target: target({ status: "FAILED" }),
+      }),
+    ).toEqual({ kind: "rewind", fromPromptId: "prompt_1" });
+  });
+
+  it("rewinds when the matched prompt is not the newest live one", () => {
+    expect(
+      promptIntent({
+        text: "Plan the schema",
+        target: target({ status: "FAILED", isTip: false }),
+      }),
+    ).toEqual({ kind: "rewind", fromPromptId: "prompt_1" });
+  });
+
+  it("rewinds a successful reply the person sent again", () => {
+    expect(
+      promptIntent({ text: "Plan the schema", target: target({ status: "COMPLETED" }) }),
+    ).toEqual({ kind: "rewind", fromPromptId: "prompt_1" });
+  });
+
+  it("rewinds a prompt that was stopped or is parked on an approval", () => {
+    expect(
+      promptIntent({ text: "Plan the schema", target: target({ status: "CANCELLED" }) }),
+    ).toEqual({ kind: "rewind", fromPromptId: "prompt_1" });
+    expect(
+      promptIntent({ text: "Plan the schema", target: target({ status: "AWAITING_APPROVAL" }) }),
+    ).toEqual({ kind: "rewind", fromPromptId: "prompt_1" });
+  });
+});
+
+describe("promptsFromBranch", () => {
+  const at = (minute: number) => new Date(Date.UTC(2026, 10, 16, 12, minute));
+  const prompts = [
+    { id: "prompt_1", createdAt: at(1) },
+    { id: "prompt_2", createdAt: at(2) },
+    { id: "prompt_3", createdAt: at(3) },
+  ];
+
+  it("keeps the branch prompt and every live prompt after it", () => {
+    expect(promptsFromBranch(prompts, { id: "prompt_2", createdAt: at(2) })).toEqual([
+      { id: "prompt_2", createdAt: at(2) },
+      { id: "prompt_3", createdAt: at(3) },
+    ]);
+  });
+
+  it("keeps the whole conversation when the first prompt is the branch", () => {
+    expect(promptsFromBranch(prompts, { id: "prompt_1", createdAt: at(1) })).toEqual(prompts);
+  });
+
+  it("discards from a branch whose prompt an earlier edit already replaced", () => {
+    const replaced = { id: "prompt_old", createdAt: at(1.5) };
+
+    expect(promptsFromBranch([prompts[1], prompts[2]], replaced)).toEqual([prompts[1], prompts[2]]);
+  });
+
+  it("separates two prompts created in the same millisecond by id", () => {
+    expect(
+      promptsFromBranch(
+        [
+          { id: "prompt_a", createdAt: at(4) },
+          { id: "prompt_b", createdAt: at(4) },
+        ],
+        { id: "prompt_a", createdAt: at(4) },
+      ).map((prompt) => prompt.id),
+    ).toEqual(["prompt_a", "prompt_b"]);
+  });
+
+  it("has nothing to discard for a branch after the newest live prompt", () => {
+    expect(promptsFromBranch(prompts, { id: "prompt_later", createdAt: at(9) })).toEqual([]);
+  });
+});
+
+describe("conversationPreview", () => {
+  it("collapses the prompt's line breaks into one line", () => {
+    expect(conversationPreview("Plan the schema\nand the API")).toBe("Plan the schema and the API");
+  });
+
+  it("truncates a long prompt instead of wrapping the switcher", () => {
+    const preview = conversationPreview("a".repeat(CONVERSATION_PREVIEW_LENGTH + 10));
+
+    expect(preview).toHaveLength(CONVERSATION_PREVIEW_LENGTH);
+    expect(preview.endsWith("…")).toBe(true);
+  });
+
+  it("names an empty conversation", () => {
+    expect(conversationPreview("  \n ")).toBe("New conversation");
+  });
+});
+
+describe("conversationIdProblem", () => {
+  it("accepts the ids the composer and the migration produce", () => {
+    expect(conversationIdProblem("0b8f0df2-5b4a-4b4d-8a4e-2f0f0e6c9a11")).toBeNull();
+    expect(conversationIdProblem("legacy-user_2f0f0e6c9a11")).toBeNull();
+  });
+
+  it("refuses an id that is empty, padded or the wrong shape", () => {
+    for (const id of ["", "  ", " id with spaces ", "-leading", "a", "x".repeat(65)]) {
+      expect(conversationIdProblem(id)).toBe("Send the conversation this prompt belongs to.");
+    }
   });
 });
 

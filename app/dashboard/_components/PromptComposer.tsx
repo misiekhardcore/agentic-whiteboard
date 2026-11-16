@@ -9,7 +9,7 @@ import {
   lastAssistantMessageIsCompleteWithApprovalResponses,
   type UIMessage,
 } from "ai";
-import { ArrowUp, Square, X } from "lucide-react";
+import { ArrowUp, Plus, RotateCcw, Square, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { KeyboardEvent, SubmitEvent } from "react";
@@ -23,9 +23,11 @@ import {
   submittedPrompt,
 } from "@/lib/ai/thread/composer";
 import { threadText } from "@/lib/ai/thread/parts";
+import { type DashboardConversation, lastUserMessage } from "@/lib/ai/thread/rules";
 import { setReadAloudAction } from "@/lib/identity/actions";
 import { routes } from "@/lib/shared/routes";
 
+import { ConversationSwitcher } from "./ConversationSwitcher";
 import { DictationButton } from "./DictationButton";
 import { PromptThread } from "./PromptThread";
 import { ReadAloudButton } from "./ReadAloudButton";
@@ -64,8 +66,14 @@ function promptFailure(error: Error): PromptFailure {
 }
 
 type PromptComposerProps = {
-  /** The person's dashboard thread, loaded on the server. */
+  /** The conversation this composer sends into; its id is chosen before it exists. */
+  initialConversationId: string;
+  /** The person's stored thread for that conversation. */
   initialMessages: UIMessage[];
+  /** The newest stored prompt failed, so it can be retried for free. */
+  initialCanRetry: boolean;
+  /** The person's recent conversations, for the switcher. */
+  initialConversations: DashboardConversation[];
   /** The person's stored read-aloud preference. */
   initialReadAloud: boolean;
   /** The stored browser voice, or "" for the platform's own default. */
@@ -77,6 +85,13 @@ type PromptComposerProps = {
  * on Enter, keeps Shift+Enter for line breaks, and offers curated examples that
  * fill the field so they stay editable before sending. Replies stream in above
  * the box, and the thread survives a reload because the route stores it.
+ *
+ * The conversation is the unit a person moves around in. A new conversation is a
+ * URL state with a fresh id, so the thread starts empty and the first prompt
+ * creates it; the switcher reopens an earlier one. Editing a past prompt sends it
+ * again with its own message id, which tells the route to replace that turn and
+ * everything after it. Retrying re-sends the last prompt's message, and a failed
+ * prompt's retry reuses its row instead of consuming another.
  *
  * Only one prompt runs at a time, so a prompt sent while the agent is answering
  * waits in `useChat`'s queue and goes out when the current turn ends.
@@ -92,12 +107,22 @@ type PromptComposerProps = {
  * its own speaker, so a stored reply can be heard again on demand.
  */
 export function PromptComposer({
+  initialConversationId,
   initialMessages,
+  initialCanRetry,
+  initialConversations,
   initialReadAloud,
   initialReadAloudVoice,
 }: PromptComposerProps) {
+  // The id is fixed for this mount: a server refresh re-renders the page with a
+  // new id when no conversation exists yet, and adopting it would abandon the
+  // conversation the browser is already sending into.
+  const [conversationId] = useState(initialConversationId);
   const [draft, setDraft] = useState("");
   const [failure, setFailure] = useState<PromptFailure | null>(null);
+  // The message whose turn a send replaces, if the person is editing one.
+  const [editing, setEditing] = useState<{ messageId: string } | null>(null);
+  const [canRetry, setCanRetry] = useState(initialCanRetry);
   const [readAloud, setReadAloud] = useState(initialReadAloud);
   const [, startTransition] = useTransition();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -113,11 +138,12 @@ export function PromptComposer({
         prepareSendMessagesRequest: ({ messages }) => ({
           body: {
             messages,
+            conversationId,
             uiContext: composerView(window.location.pathname),
           },
         }),
       }),
-    [],
+    [conversationId],
   );
 
   const {
@@ -174,6 +200,22 @@ export function PromptComposer({
     voiceName: initialReadAloudVoice,
   });
 
+  /**
+   * Sends the last prompt again. The message id is the one the route needs to
+   * recognise a retry: the stored prompt is reused when it failed, so the retry
+   * does not cost another prompt.
+   */
+  function retryLastPrompt() {
+    const last = lastUserMessage(messages);
+    const text = last ? threadText(last).trim() : "";
+    if (!last || !text || isBusy) return;
+
+    setFailure(null);
+    setCanRetry(false);
+    clearError();
+    void sendMessage({ text, messageId: last.id });
+  }
+
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -182,11 +224,17 @@ export function PromptComposer({
     if (dictation.isListening) dictation.discard();
     if (!promptToSend) return;
 
+    const editId = editing?.messageId ?? null;
+
     setFailure(null);
+    setCanRetry(false);
+    setEditing(null);
     clearError();
-    // While the agent is busy `useChat` queues this and sends it as the thread's
-    // next prompt, so a prompt typed mid-reply is neither dropped nor refused.
-    void sendMessage({ text: promptToSend });
+    // A rewind replaces the edited message and drops the turns after it; an
+    // ordinary send appends. While the agent is busy `useChat` queues it and
+    // sends it as the thread's next prompt, so a prompt typed mid-reply is
+    // neither dropped nor refused.
+    void sendMessage(editId ? { text: promptToSend, messageId: editId } : { text: promptToSend });
     setDraft("");
   }
 
@@ -203,6 +251,37 @@ export function PromptComposer({
 
     event.preventDefault();
     event.currentTarget.form?.requestSubmit();
+  }
+
+  function editPrompt(message: UIMessage) {
+    if (isBusy) return;
+    if (dictation.isListening) dictation.discard();
+
+    setEditing({ messageId: message.id });
+    setDraft(threadText(message).trim());
+    textareaRef.current?.focus();
+  }
+
+  function cancelEdit() {
+    setEditing(null);
+    setDraft("");
+    textareaRef.current?.focus();
+  }
+
+  /**
+   * Starts an empty thread. The id is made here so the empty conversation is a
+   * place the URL can return to, and the first prompt is what creates it.
+   */
+  function startNewConversation() {
+    if (isBusy) return;
+    if (dictation.isListening) dictation.discard();
+    speech.cancel();
+
+    setDraft("");
+    setEditing(null);
+    setFailure(null);
+    setCanRetry(false);
+    router.push(routes.dashboardConversation(crypto.randomUUID()));
   }
 
   function toggleReadAloud() {
@@ -256,9 +335,28 @@ export function PromptComposer({
           </p>
         </div>
 
+        {initialConversations.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <ConversationSwitcher conversations={initialConversations} currentId={conversationId} />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              onClick={startNewConversation}
+              disabled={isBusy}
+            >
+              <Plus />
+              New conversation
+            </Button>
+          </div>
+        )}
+
         <PromptThread
           messages={messages}
           isDrafting={awaitingText}
+          onEdit={isBusy ? undefined : editPrompt}
+          editingId={editing?.messageId ?? null}
           onRead={speech.supported ? speech.readMessage : undefined}
           onStop={speech.supported ? speech.cancel : undefined}
           speakingId={speech.speakingId}
@@ -269,6 +367,24 @@ export function PromptComposer({
             addToolApprovalResponse({ id: approvalId, approved });
           }}
         />
+
+        {canRetry && !failure && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed px-3 py-2 text-sm">
+            <span className="text-muted-foreground">
+              The last prompt did not finish. Retrying it does not use another prompt.
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={retryLastPrompt}
+              disabled={isBusy}
+            >
+              <RotateCcw />
+              Retry
+            </Button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           {queuedMessages.length > 0 && (
@@ -294,6 +410,18 @@ export function PromptComposer({
                 Queued: the agent takes them one at a time.
               </li>
             </ul>
+          )}
+
+          {editing && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-muted px-3 py-2 text-xs">
+              <span>
+                Editing an earlier prompt. Sending replaces it and everything the agent answered
+                after it.
+              </span>
+              <Button type="button" variant="ghost" size="sm" onClick={cancelEdit}>
+                Cancel
+              </Button>
+            </div>
           )}
 
           <div className="flex flex-col card p-1.5">
@@ -365,6 +493,16 @@ export function PromptComposer({
             <Alert variant="destructive">
               <AlertDescription className="flex flex-wrap items-center gap-2">
                 <span>{failure.message}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={retryLastPrompt}
+                  disabled={isBusy}
+                >
+                  <RotateCcw />
+                  Retry
+                </Button>
                 {failure.limitReached && (
                   <Link
                     href={routes.dashboardBilling}
