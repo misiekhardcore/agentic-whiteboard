@@ -7,7 +7,15 @@ import {
   SidebarHeader,
   SidebarMenu,
 } from "@konopskidev/ui/components/sidebar";
-import { Archive, CreditCard, LayoutGrid, Settings, Sparkles, Users } from "lucide-react";
+import {
+  Archive,
+  CreditCard,
+  LayoutDashboard,
+  LayoutGrid,
+  Settings,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import { Suspense } from "react";
 
 import { CreateWorkspaceDialog } from "@/app/dashboard/_components/CreateWorkspaceDialog";
@@ -31,6 +39,18 @@ export function DashboardSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <CreateWorkspaceDialog size="sm" className="w-full" />
+          </SidebarGroupContent>
+        </SidebarGroup>
+        {/* The dashboard is the home surface, so it is named before the lists
+            that live under it. */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuLink href={routes.dashboard} exact>
+                <LayoutDashboard />
+                Dashboard
+              </SidebarMenuLink>
+            </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>

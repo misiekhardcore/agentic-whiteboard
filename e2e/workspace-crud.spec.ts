@@ -192,10 +192,17 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await expect(page.getByRole("listitem").filter({ hasText: renamedWorkspace })).toHaveCount(1);
     });
 
-    await test.step("a restored workspace comes back with its stage", async () => {
+    await test.step("the archive page restores a workspace", async () => {
+      await page.goto("/dashboard/archive");
+      await expect(page.getByRole("heading", { name: "Archived workspaces" })).toBeVisible();
+
       const archived = page.getByRole("listitem").filter({ hasText: renamedWorkspace }).first();
       await archived.getByRole("button", { name: "Restore" }).click();
 
+      await expect(page.getByText("Nothing archived in Personal account")).toBeVisible();
+      await expect(page.getByRole("listitem").filter({ hasText: renamedWorkspace })).toHaveCount(0);
+
+      await page.goto("/dashboard");
       await expect(page.getByText("Archived workspaces")).toHaveCount(0);
       await expect(page.getByText(renamedWorkspace).first()).toBeVisible();
       await expect(page.getByText("1 / 3")).toBeVisible();
@@ -259,11 +266,24 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
         .click();
       await expect(card).toHaveCount(0);
 
-      await page.goto("/dashboard");
-      await expect(page.getByText("Archived workspaces")).toBeVisible();
-      await expect(page.getByText("2 / 3")).toBeVisible();
+      await expect
+        .poll(
+          async () => {
+            const { rows } = await db.query<{ archivedAt: Date | null }>(
+              'select "archivedAt" from workspace where id = $1',
+              [workspaceId],
+            );
+            return rows[0]?.archivedAt instanceof Date;
+          },
+          { message: "the archive action commits before the page is opened" },
+        )
+        .toBe(true);
 
-      // Only the archived row offers Delete; the cards offer Edit and Archive.
+      // Only the archive page offers Delete; the cards offer Edit and Archive.
+      await page.goto("/dashboard/archive");
+      await expect(page.getByText("2 / 3")).toBeVisible();
+      await expect(page.getByRole("listitem").filter({ hasText: renamedWorkspace })).toHaveCount(1);
+
       await openDialog(
         page,
         page.getByRole("button", { name: "Delete", exact: true }),
@@ -274,9 +294,9 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await expect(dialog.getByText(`Delete ${renamedWorkspace} permanently?`)).toBeVisible();
       await dialog.getByRole("button", { name: "Delete workspace" }).click();
 
-      // The archive list disappears with its last row, and the row is gone from
-      // the database rather than merely hidden.
-      await expect(page.getByText("Archived workspaces")).toHaveCount(0);
+      // The archive page empties with its last row, and the row is gone from the
+      // database rather than merely hidden.
+      await expect(page.getByText("Nothing archived in Personal account")).toBeVisible();
       const { rows } = await db.query("select id from workspace where id = $1", [workspaceId]);
       expect(rows).toHaveLength(0);
     });
@@ -293,6 +313,103 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
     await db
       .query('delete from "user" where email = any($1)', [[email, otherEmail]])
       .catch(() => undefined);
+    await db.end();
+  }
+});
+
+test("a workspace is archived, restored and deleted from its own page", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-workspace-page-${id}@example.com`;
+  const password = `e2e-pass-${id}`;
+  const workspaceName = `Detail page ${id}`;
+
+  const db = new Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+
+  let userId: string | null = null;
+
+  try {
+    await signUp(page, { name: "Detail Tester", email, password });
+    userId = await findUserId(db, email);
+    const creatorId = userId;
+    await createWorkspace(page, { name: workspaceName });
+
+    await page.getByRole("link", { name: workspaceName }).click();
+    await page.waitForURL("**/workspace/**");
+
+    await test.step("archiving from the workspace page shows the archived state", async () => {
+      await openDialog(
+        page,
+        page.getByRole("button", { name: "Archive", exact: true }),
+        "alertdialog",
+      );
+      await page
+        .getByRole("alertdialog")
+        .getByRole("button", { name: "Archive workspace" })
+        .click();
+
+      // The sidebar's "Archived" link also matches the bare text, so the badge
+      // is read inside the page's main region.
+      await expect(page.getByRole("main").getByText("Archived", { exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Restore" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Delete", exact: true })).toBeVisible();
+    });
+
+    await test.step("restoring brings the workspace back to the dashboard", async () => {
+      await page.getByRole("button", { name: "Restore" }).click();
+
+      await expect(page.getByRole("main").getByText("Archived", { exact: true })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Archive", exact: true })).toBeVisible();
+      // Deleting is only ever offered once the workspace is archived.
+      await expect(page.getByRole("button", { name: "Delete", exact: true })).toHaveCount(0);
+
+      await page.goto("/dashboard");
+      await expect(page.getByText(workspaceName).first()).toBeVisible();
+    });
+
+    await test.step("deleting the archived workspace removes it for good", async () => {
+      await page.getByRole("link", { name: workspaceName }).click();
+      await page.waitForURL("**/workspace/**");
+
+      await openDialog(
+        page,
+        page.getByRole("button", { name: "Archive", exact: true }),
+        "alertdialog",
+      );
+      await page
+        .getByRole("alertdialog")
+        .getByRole("button", { name: "Archive workspace" })
+        .click();
+      await expect(page.getByRole("main").getByText("Archived", { exact: true })).toBeVisible();
+
+      await openDialog(
+        page,
+        page.getByRole("button", { name: "Delete", exact: true }),
+        "alertdialog",
+      );
+
+      const dialog = page.getByRole("alertdialog");
+      await expect(dialog.getByText(`Delete ${workspaceName} permanently?`)).toBeVisible();
+      await dialog.getByRole("button", { name: "Delete workspace" }).click();
+
+      // The page it was showing no longer exists, and the row is gone from the
+      // database rather than merely hidden.
+      await expect(
+        page.getByRole("heading", { name: "This page could not be found." }),
+      ).toBeVisible();
+      const { rows } = await db.query<{ id: string }>(
+        'select id from workspace where name = $1 and "creatorId" = $2',
+        [workspaceName, creatorId],
+      );
+      expect(rows).toHaveLength(0);
+    });
+  } finally {
+    if (userId) {
+      await db
+        .query('delete from workspace where "creatorId" = $1', [userId])
+        .catch(() => undefined);
+    }
+    await db.query('delete from "user" where email = $1', [email]).catch(() => undefined);
     await db.end();
   }
 });

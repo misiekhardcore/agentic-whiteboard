@@ -21,6 +21,7 @@ vi.mock("./access", () => accessMock);
 
 import type { CapabilityContext } from "@/lib/capabilities/define";
 import { invoke } from "@/lib/capabilities/invoke";
+import { routes } from "@/lib/shared/routes";
 
 import {
   archiveWorkspace,
@@ -28,6 +29,7 @@ import {
   deleteWorkspace,
   getWorkspace,
   listWorkspaces,
+  restoreWorkspace,
   updateWorkspace,
 } from "./capabilities";
 
@@ -205,6 +207,24 @@ describe("updateWorkspace capability", () => {
         link: "/workspace/ws_1",
       },
     });
+  });
+});
+
+describe("archive surfaces", () => {
+  const archived = {
+    ok: true as const,
+    workspace: {
+      id: "ws_1",
+      name: "Food delivery",
+      status: "PLANNING" as const,
+      link: "/workspace/ws_1",
+    },
+  };
+
+  it("refreshes the archive page whenever a workspace enters or leaves it", () => {
+    expect(archiveWorkspace.invalidates?.(archived)).toContain(routes.dashboardArchive);
+    expect(restoreWorkspace.invalidates?.(archived)).toContain(routes.dashboardArchive);
+    expect(deleteWorkspace.invalidates?.(archived)).toContain(routes.dashboardArchive);
   });
 });
 

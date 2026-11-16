@@ -10,10 +10,16 @@ import {
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
 import { getSessionAccount } from "@/lib/identity/account";
 import { formatDay } from "@/lib/shared/format-date";
 import { routes, signInPath } from "@/lib/shared/routes";
 import { getWorkspaceForUser } from "@/lib/workspace/access";
+import {
+  archiveWorkspaceAction,
+  deleteWorkspaceAction,
+  restoreWorkspaceAction,
+} from "@/lib/workspace/actions";
 import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace/status";
 
 // The id comes from the URL and access depends on the session, so this route
@@ -75,6 +81,50 @@ export default async function WorkspacePage({ params }: PageProps<"/workspace/[i
             <Button asChild variant="outline" size="sm">
               <Link href={routes.dashboard}>Manage your workspaces</Link>
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Manage this workspace</CardTitle>
+            <CardDescription>
+              {workspace.archivedAt
+                ? "This workspace is archived: it is out of the dashboard and the plan meter. Restore it, or delete it for good."
+                : "Archive the workspace to hide it from the dashboard and free its plan slot; its contents are kept and it can be restored from the archive."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center gap-2">
+            {workspace.archivedAt ? (
+              <>
+                <form action={restoreWorkspaceAction}>
+                  <input type="hidden" name="workspaceId" value={workspace.id} />
+                  <Button type="submit" variant="outline" size="sm">
+                    Restore
+                  </Button>
+                </form>
+                <ConfirmAction
+                  action={deleteWorkspaceAction}
+                  fields={{ workspaceId: workspace.id }}
+                  title={`Delete ${workspace.name} permanently?`}
+                  description="The workspace and its documents, canvas and agent history are removed for good. This cannot be undone."
+                  confirmLabel="Delete workspace"
+                  pendingLabel="Deleting…"
+                  triggerLabel="Delete"
+                />
+              </>
+            ) : (
+              <ConfirmAction
+                action={archiveWorkspaceAction}
+                fields={{ workspaceId: workspace.id }}
+                title={`Archive ${workspace.name}?`}
+                description="The workspace leaves the dashboard and stops counting against your plan. Its documents, canvas and agent history are kept, and you can restore it at any time."
+                confirmLabel="Archive workspace"
+                pendingLabel="Archiving…"
+                triggerLabel="Archive"
+                triggerVariant="outline"
+                confirmVariant="default"
+              />
+            )}
           </CardContent>
         </Card>
       </div>
