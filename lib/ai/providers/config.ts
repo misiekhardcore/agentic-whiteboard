@@ -101,7 +101,16 @@ function isProviderId(value: string): value is AiProviderId {
  * Resolves and validates a complete configuration. Passing the environment
  * explicitly keeps the resolver pure and makes every failure path testable.
  */
-export type AiEnvironment = Record<string, string | undefined>;
+export type AiEnvironment = Pick<
+  typeof process.env,
+  | "AI_PROVIDER"
+  | "AI_MODEL"
+  | "AI_BASE_URL"
+  | "AI_TOOL_APPROVAL_SECRET"
+  | "AI_MAX_STEPS"
+  | "AI_MAX_RETRIES"
+  | "AI_API_KEY"
+>;
 
 export function resolveAiConfig(env: AiEnvironment = process.env): AiConfig {
   const providerValue = readValue(env.AI_PROVIDER) ?? "lmstudio";
