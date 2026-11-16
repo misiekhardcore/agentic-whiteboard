@@ -202,7 +202,12 @@ export const restoreWorkspace = defineCapability({
   }),
   output: summaryOutput,
   callers: ["human", "agent"] as const,
-  invalidates: (output) => [routes.dashboard, routes.workspaces, output.workspace.link],
+  invalidates: (output) => [
+    routes.dashboard,
+    routes.dashboardArchive,
+    routes.workspaces,
+    output.workspace.link,
+  ],
   notFound: NOT_FOUND,
   authorize: async (ctx, input) => authorizeWorkspace(ctx.actor, input.workspaceId, "edit"),
   handler: async (_ctx, _input, access, { signal }) => {
@@ -222,7 +227,12 @@ export const archiveWorkspace = defineCapability({
   output: summaryOutput,
   callers: ["human", "agent"] as const,
   approval: "always" as const,
-  invalidates: (output) => [routes.dashboard, routes.workspaces, output.workspace.link],
+  invalidates: (output) => [
+    routes.dashboard,
+    routes.dashboardArchive,
+    routes.workspaces,
+    output.workspace.link,
+  ],
   notFound: NOT_FOUND,
   authorize: async (ctx, input) => authorizeWorkspace(ctx.actor, input.workspaceId, "edit"),
   handler: async (_ctx, _input, access, { signal }) => {
@@ -242,7 +252,12 @@ export const deleteWorkspace = defineCapability({
   output: summaryOutput,
   callers: ["human", "agent"] as const,
   approval: "always" as const,
-  invalidates: (output) => [routes.dashboard, routes.workspaces, output.workspace.link],
+  invalidates: (output) => [
+    routes.dashboard,
+    routes.dashboardArchive,
+    routes.workspaces,
+    output.workspace.link,
+  ],
   notFound: NOT_FOUND,
   authorize: async (ctx, input) => authorizeWorkspace(ctx.actor, input.workspaceId, "edit"),
   handler: async (_ctx, _input, access, { signal }) => {

@@ -1,4 +1,3 @@
-import { Button } from "@konopskidev/ui/components/button";
 import {
   Card,
   CardContent,
@@ -6,14 +5,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@konopskidev/ui/components/card";
+import Link from "next/link";
 import { Suspense } from "react";
 
-import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
 import { Loading } from "@/components/Loading/Loading";
 import { getSessionAccount } from "@/lib/identity/account";
-import { formatDay } from "@/lib/shared/format-date";
-import { deleteWorkspaceAction, restoreWorkspaceAction } from "@/lib/workspace/actions";
+import { routes } from "@/lib/shared/routes";
 import { listArchivedWorkspaces } from "@/lib/workspace/queries";
+
+import { ArchivedWorkspaceList } from "./ArchivedWorkspaceList";
 
 /**
  * Archived workspaces stay restorable without cluttering the dashboard. Only
@@ -42,42 +42,15 @@ async function ArchivedWorkspacesInner() {
     <Card>
       <CardHeader>
         <CardTitle>Archived workspaces</CardTitle>
-        <CardDescription>Restore a workspace to bring it back to the dashboard.</CardDescription>
+        <CardDescription>
+          Restore a workspace to bring it back to the dashboard, or delete it permanently.{" "}
+          <Link href={routes.dashboardArchive} className="underline underline-offset-4">
+            View all archived
+          </Link>
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <ul className="flex flex-col divide-y">
-          {workspaces.map((workspace) => (
-            <li
-              key={workspace.id}
-              className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{workspace.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  Archived {formatDay(workspace.archivedAt)}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <form action={restoreWorkspaceAction}>
-                  <input type="hidden" name="workspaceId" value={workspace.id} />
-                  <Button type="submit" variant="outline" size="sm">
-                    Restore
-                  </Button>
-                </form>
-                <ConfirmAction
-                  action={deleteWorkspaceAction}
-                  fields={{ workspaceId: workspace.id }}
-                  title={`Delete ${workspace.name} permanently?`}
-                  description="The workspace and its documents, canvas and agent history are removed for good. This cannot be undone."
-                  confirmLabel="Delete workspace"
-                  pendingLabel="Deleting…"
-                  triggerLabel="Delete"
-                  triggerVariant="ghost"
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
+        <ArchivedWorkspaceList workspaces={workspaces} />
       </CardContent>
     </Card>
   );
