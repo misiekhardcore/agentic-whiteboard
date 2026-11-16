@@ -1,4 +1,4 @@
-import { and, count, eq, gte } from "drizzle-orm";
+import { and, count, eq, gte, isNull } from "drizzle-orm";
 
 import type { PlanLimits } from "@/lib/billing/plans";
 import type { SubscriptionRow } from "@/lib/billing/subscriptions";
@@ -19,7 +19,9 @@ import { agentPrompts } from "@/lib/db/schema";
  * dashboard and the agent endpoint answer the allowance the same way.
  *
  * Superseded prompts are counted: an edit replaced a turn the person already
- * spent a prompt on, and the new one is its own execution.
+ * spent a prompt on, and the new one is its own execution. A branched prompt is
+ * not counted: it is a copy of a turn that already ran, kept so another
+ * conversation has the history without charging for it twice.
  */
 
 /** How many prompts this member used in the paying account since `since`. */
@@ -40,6 +42,7 @@ export async function countPromptsForMember({
         eq(agentPrompts.ownerId, ownerId),
         eq(agentPrompts.userId, userId),
         gte(agentPrompts.createdAt, since),
+        isNull(agentPrompts.branchedFromId),
       ),
     );
 

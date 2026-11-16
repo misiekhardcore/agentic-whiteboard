@@ -68,6 +68,14 @@ export const agentPrompts = pgTable(
      */
     supersededAt: timestamp("supersededAt", { precision: 3, mode: "date" }),
 
+    /**
+     * The prompt this row was copied from, when its conversation is a branch of
+     * another one. A branch is history rather than an execution: the turn ran
+     * once, in the conversation it came from, so the monthly count skips the
+     * copy instead of charging the person twice for the same work.
+     */
+    branchedFromId: text("branchedFromId"),
+
     startedAt: timestamp("startedAt", { precision: 3, mode: "date" }),
     finishedAt: timestamp("finishedAt", { precision: 3, mode: "date" }),
 

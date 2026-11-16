@@ -1,0 +1,1 @@
+ALTER TABLE "agentPrompt" ADD COLUMN "branchedFromId" text;

@@ -16,6 +16,7 @@ import type { KeyboardEvent, SubmitEvent } from "react";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import { branchConversationAction } from "@/lib/ai/actions";
 import {
   composerKeyIntent,
   composerView,
@@ -122,6 +123,8 @@ export function PromptComposer({
   const [failure, setFailure] = useState<PromptFailure | null>(null);
   // The message whose turn a send replaces, if the person is editing one.
   const [editing, setEditing] = useState<{ messageId: string } | null>(null);
+  // The reply being copied into a new conversation, while the copy is written.
+  const [branching, setBranching] = useState<string | null>(null);
   const [canRetry, setCanRetry] = useState(initialCanRetry);
   const [readAloud, setReadAloud] = useState(initialReadAloud);
   const [, startTransition] = useTransition();
@@ -269,6 +272,32 @@ export function PromptComposer({
   }
 
   /**
+   * Copies the thread through a reply into a new conversation and opens it. The
+   * copy is the server's: the branch keeps what was stored, not what this tab
+   * happens to be showing, and the original conversation is untouched.
+   */
+  function branchFrom(message: UIMessage) {
+    if (isBusy || branching) return;
+    if (dictation.isListening) dictation.discard();
+
+    setBranching(message.id);
+    startTransition(async () => {
+      const result = await branchConversationAction({
+        conversationId,
+        messageId: message.id,
+      });
+
+      if (!result.ok) {
+        setBranching(null);
+        toast.error(result.error);
+        return;
+      }
+
+      router.push(routes.dashboardConversation(result.conversationId));
+    });
+  }
+
+  /**
    * Starts an empty thread. The id is made here so the empty conversation is a
    * place the URL can return to, and the first prompt is what creates it.
    */
@@ -355,7 +384,10 @@ export function PromptComposer({
         <PromptThread
           messages={messages}
           isDrafting={awaitingText}
+          branchingId={branching}
+          onBranch={isBusy ? undefined : branchFrom}
           onEdit={isBusy ? undefined : editPrompt}
+          onRegenerate={isBusy ? undefined : retryLastPrompt}
           editingId={editing?.messageId ?? null}
           onRead={speech.supported ? speech.readMessage : undefined}
           onStop={speech.supported ? speech.cancel : undefined}

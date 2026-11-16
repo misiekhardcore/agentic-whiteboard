@@ -749,6 +749,26 @@ test("the conversation scrolls in its own box instead of growing the page", asyn
   }
 });
 
+/** The prompts a branch copied in: the replays the allowance does not count. */
+async function branchCopies(
+  email: string,
+): Promise<{ conversationId: string | null; branchedFromId: string | null }[]> {
+  return withDb(async (db) => {
+    const { rows } = await db.query<{
+      conversationId: string | null;
+      branchedFromId: string | null;
+    }>(
+      `select "conversationId", "branchedFromId" from "agentPrompt"
+        where "userId" = (select id from "user" where email = $1)
+          and "branchedFromId" is not null
+        order by "createdAt"`,
+      [email],
+    );
+
+    return rows;
+  });
+}
+
 /** The conversation the person's newest prompt belongs to. */
 async function conversationOf(email: string): Promise<string> {
   return withDb(async (db) => {
@@ -835,6 +855,171 @@ test("a body that carries turns the thread discarded is answered from the store"
       "A prompt the thread discarded",
     );
     await expect.poll(() => promptCount(email)).toBe(2);
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("a message's actions appear on hover and copy its text", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-actions-${id}@example.com`;
+
+  try {
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+
+    await composer.fill("Plan the schema");
+    await composer.press("Enter");
+    await expect(thread).toContainText("Stub agent: Plan the schema");
+    await expect.poll(async () => (await promptRows(email))[0]?.status).toBe("COMPLETED");
+
+    // The first turn creates the conversation, so the next server render adds the
+    // switcher above the thread and moves everything down. Hover after that has
+    // landed, not while the page is still settling beneath the pointer.
+    await expect(page.getByRole("button", { name: "New conversation" })).toBeVisible();
+
+    const prompt = thread.getByRole("listitem").filter({ hasText: "Plan the schema" }).first();
+    const copyPrompt = prompt.getByRole("button", { name: "Copy this prompt" });
+    // A reply that is still arriving has no row yet, and mounting it grows the
+    // message: hover once it is there, the way a person does when they read.
+    await copyPrompt.waitFor();
+    // The row is what fades, so the opacity that matters is the row's.
+    const promptActions = copyPrompt.locator("xpath=..");
+
+    // The actions belong to the message: out of the way until it is hovered.
+    await expect(promptActions).toHaveCSS("opacity", "0");
+    await prompt.hover();
+    await expect(promptActions).toHaveCSS("opacity", "1");
+
+    await copyPrompt.click();
+    await expect(page.getByText("Copied to the clipboard")).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("Plan the schema");
+
+    // The reply offers its own row: copy, read aloud, and the two ways to carry
+    // the thread on from here.
+    const reply = thread.getByRole("listitem").filter({ hasText: "Stub agent" });
+    const copyReply = reply.getByRole("button", { name: "Copy this reply" });
+    await copyReply.waitFor();
+    const replyActions = copyReply.locator("xpath=..");
+    await expect(replyActions).toHaveCSS("opacity", "0");
+    await reply.hover();
+    await expect(replyActions).toHaveCSS("opacity", "1");
+    await expect(reply.getByRole("button", { name: "Read this reply aloud" })).toBeVisible();
+    await expect(reply.getByRole("button", { name: "Regenerate this reply" })).toBeVisible();
+    await expect(
+      reply.getByRole("button", { name: "Branch this conversation into a new chat" }),
+    ).toBeVisible();
+
+    // A reply is copied as the agent wrote it — its markdown, not its rendered
+    // text — so pasting it somewhere else keeps the formatting.
+    await copyReply.click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      "**Stub agent:** Plan the schema",
+    );
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("regenerating the newest reply runs its prompt again as a new turn", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-regenerate-${id}@example.com`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+
+    await composer.fill("Plan the schema");
+    await composer.press("Enter");
+    await expect(thread).toContainText("Stub agent: Plan the schema");
+    await expect.poll(async () => (await promptRows(email))[0]?.status).toBe("COMPLETED");
+
+    await thread
+      .getByRole("listitem")
+      .filter({ hasText: "Stub agent" })
+      .getByRole("button", { name: "Regenerate this reply" })
+      .click();
+
+    await expect(thread).toContainText("Stub agent: Plan the schema");
+    // One turn, re-run: the reply the person replaced is superseded rather than
+    // deleted, so the thread still shows a single answer and the count grows.
+    await expect(thread.getByRole("button", { name: "Regenerate this reply" })).toHaveCount(1);
+    await expect.poll(() => promptCount(email)).toBe(2);
+    await expect
+      .poll(async () => (await promptRows(email)).filter((row) => row.supersededAt !== null).length)
+      .toBe(1);
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("branching a conversation opens a new chat with a copy of its turns", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-branch-${id}@example.com`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+
+    await composer.fill("Plan the schema");
+    await composer.press("Enter");
+    await expect(thread).toContainText("Stub agent: Plan the schema");
+
+    await composer.fill("Now the API");
+    await composer.press("Enter");
+    await expect(thread).toContainText("Stub agent: Now the API");
+    await expect.poll(() => promptCount(email)).toBe(2);
+    await expect.poll(async () => (await promptRows(email))[1]?.status).toBe("COMPLETED");
+
+    const original = await conversationOf(email);
+
+    // The count the plan enforces, before the copy exists.
+    await page.goto("/dashboard/billing");
+    // The header carries the same meter as the page, so the page's is first.
+    const meter = page.getByRole("progressbar", { name: "Agent prompts usage" }).first();
+    const usedBefore = await meter.getAttribute("aria-valuetext");
+
+    await page.goto(`/dashboard?conversation=${original}`);
+    const reply = page
+      .getByRole("list", { name: "Agent conversation" })
+      .getByRole("listitem")
+      .filter({ hasText: "Stub agent: Now the API" });
+    await reply.hover();
+    await reply.getByRole("button", { name: "Branch this conversation into a new chat" }).click();
+
+    // The branch is a conversation of its own, opened at the reply it copied.
+    await expect(page).not.toHaveURL(new RegExp(`conversation=${original}`));
+    const branch = page.getByRole("list", { name: "Agent conversation" });
+    await expect(branch).toContainText("Stub agent: Plan the schema");
+    await expect(branch).toContainText("Stub agent: Now the API");
+
+    // Every copied turn points at the prompt it came from...
+    await expect.poll(() => branchCopies(email)).toHaveLength(2);
+    const copies = await branchCopies(email);
+    expect(copies.every((copy) => copy.branchedFromId !== null)).toBe(true);
+    expect(new Set(copies.map((copy) => copy.conversationId)).size).toBe(1);
+
+    // ...and none of them is charged for again: the turn ran once.
+    await page.goto("/dashboard/billing");
+    await expect(
+      page.getByRole("progressbar", { name: "Agent prompts usage" }).first(),
+    ).toHaveAttribute("aria-valuetext", usedBefore ?? "");
+
+    // The conversation it came from is untouched and still usable.
+    await page.goto(`/dashboard?conversation=${original}`);
+    await expect(page.getByRole("list", { name: "Agent conversation" })).toContainText(
+      "Stub agent: Now the API",
+    );
+    await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
+
+    await expect.poll(() => promptCount(email)).toBe(4);
   } finally {
     await deleteAccount(email);
   }

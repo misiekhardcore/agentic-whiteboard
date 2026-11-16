@@ -104,7 +104,8 @@ lib/
   doc/ canvas/      content surfaces of a workspace: contracts and scoped reads
   billing/          plans, entitlements, usage rules, subscriptions, checkout
   ai/               providers, runtime, thread (rules, prompts, messages, approvals,
-                    allowance, orphans, live, conversations, turn), tools
+                    allowance, orphans, live, conversations, branches, turn),
+                    capabilities and actions, tools
   collab/           Yjs/realtime contracts and topic names
   notifications/    outbound email
   db/               pool, schema, migrations input

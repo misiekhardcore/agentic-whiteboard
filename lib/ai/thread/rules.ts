@@ -223,6 +223,18 @@ export function promptsFromBranch<T extends PromptPosition>(
 }
 
 /**
+ * Whether a turn may be copied into a branch.
+ *
+ * A branch is a copy of history, so it may only take a turn that has finished.
+ * A prompt still queued, running or parked on an approval is a question the copy
+ * could not answer — and answering it would resume the turn in the conversation
+ * it came from, since the parked row is found by its approval reference.
+ */
+export function branchableStatus(status: AgentPromptStatus): boolean {
+  return status === "COMPLETED" || status === "FAILED" || status === "CANCELLED";
+}
+
+/**
  * The prompts that make up a turn's history: every live prompt up to and
  * including it. A turn's history is read from here rather than from the browser,
  * so a discarded or foreign turn cannot be replayed into the model.

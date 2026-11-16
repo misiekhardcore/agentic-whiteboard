@@ -47,6 +47,10 @@ column.
 | Switcher         | The five most recently updated conversations, labelled by their first prompt  | Enough to go back to what was just left without becoming a sidebar. A conversation with no live prompt is not listed, because there is nothing in it to open.                                                                                                                   |
 | Scroll           | The thread is its own scroll box with a maximum height, pinned to the newest  | The composer must stay in place while a reply arrives. Following is a property of the position, not of the render: content growing does not move the scroll position, so only an upward scroll stops it, and the observer resumes as soon as the reader returns to the bottom.  |
 | Retry control    | Offered by the composer and by the thread when the stored tip failed          | The browser knows a send failed before it reached the route (the outage never wrote a row); the page knows the stored prompt failed. Both offer the same one-click retry, and both send the same message again.                                                                 |
+| Branch           | A new conversation holding a copy of the live turns through a reply           | "Carry on from here, without the rest" is a second thread, and a prompt belongs to one conversation — so the turns are copied rather than shared. Editing a copied turn rewinds the branch and leaves the original alone.                                                       |
+| Branch origin    | `agentPrompt.branchedFromId` marks a copy, and the count skips it             | The copy is history: the turn ran, and was paid for, where it came from. Counting it again would charge a person for branching, which does no work. Marking it says so in the row rather than in a query's shape.                                                               |
+| Branch point     | Only a turn that finished can be copied                                       | A queued, running or parked turn is not history yet, and a copy of a parked approval could never be answered: the answer is matched to the stored request, which lives in the original conversation.                                                                            |
+| Message actions  | Per message, revealed on hover; always visible where nothing can hover        | A long thread should read as a conversation, not as a wall of buttons. Copy and edit belong to the prompt; copy, read aloud, re-run (newest only) and branch belong to the reply. Re-running an older reply is not offered — that is what editing its prompt is for.            |
 
 ### Why a conversation is URL state
 
@@ -87,6 +91,22 @@ approval sat unanswered — the loser is answered with a 409 naming the busy
 thread and the row is left exactly as it was found. Losing that race is never a
 500 and never a prompt stuck in `RUNNING`.
 
+### Why a branch copies instead of sharing
+
+A branch could have pointed the new conversation at the old one's prompts, and
+saved a write. It would make one prompt belong to two conversations, which the
+schema, the single-flight rule and every read in `conversations.ts` assume is not
+true: an edit in the branch would have to decide whether it also changed the
+original. Copying keeps the invariant and gives the branch its own life; the
+original is untouched and still counts what it ran.
+
+The copy keeps source order by giving each copied row a later timestamp than the
+one before it, because the ids are freshly generated and two source turns stored
+in the same millisecond would otherwise be separated by an id tie-break. Copied
+prompts are recorded as `COMPLETED` whatever the source ended as: history cannot
+take the single-flight slot, and it must not offer a free retry for a turn the
+person already paid for in the conversation it came from.
+
 ### Why the composer names messages instead of prompts
 
 `useChat.setMessages` truncates the browser's list at a message and
@@ -108,6 +128,10 @@ an approval lands in exactly one of them:
 - `prompts.ts` — the prompt row's life: open (an append or a rewind's new
   branch), retry, resume after an approval, close, and the usage it accrues.
   The single-flight loss is mapped here, as `busy` or `expired`.
+- `branches.ts` — copying a conversation's finished turns into a new one, and
+  the refusal when the chosen turn has not finished.
+- `allowance.ts` — the monthly count and the refusal copy; the one place that
+  knows a branch's replay is not an execution.
 - `messages.ts` — the message rows: the person's text before the stream, the
   agent's reply after it, and which stored prompt a repeated message names.
 - `approvals.ts` — the parked approval a browser answer may resume.
@@ -117,6 +141,9 @@ an approval lands in exactly one of them:
   streaming this prompt?".
 - `turn.ts` — one dashboard turn: who pays, the allowance, the recording, the
   stream.
+- `capabilities.ts` / `actions.ts` — the thread's one operation that is not a
+  prompt (branching), declared as a human-only capability and exposed as the
+  action the browser calls.
 
 The direction is one-way: `rules.ts` imports no database, no reader imports a
 writer, and `turn.ts` is the only module that composes the others.
@@ -130,7 +157,10 @@ writer, and `turn.ts` is the only module that composes the others.
    messages filtered out), whether its tip failed, the five recent conversations
    and the person's reading preference, then mounts the composer with them.
 3. "New conversation" navigates to a fresh UUID. Nothing is written.
-4. Sending posts the UI thread, the conversation id and the newest message. The
+4. Branching sends the reply's message id to the branch action. The server copies
+   that conversation's live turns through the reply into a new conversation, in
+   one transaction, marking each copy as a replay; the browser then opens it.
+5. Sending posts the UI thread, the conversation id and the newest message. The
    route resolves the account, validates the newest user message against the
    provider config, and resolves the submitter's stored prompt by message id.
    The posted thread is a mirror, not the model's input: the turn reads the
@@ -139,11 +169,11 @@ writer, and `turn.ts` is the only module that composes the others.
    reply is answered exactly like a clean one. The only things a body
    contributes are the prompt being sent and, for a parked approval, the
    answer — which is matched to the stored request before the turn resumes.
-5. `promptIntent` decides append, retry or rewind. A retry reuses its row; an
+6. `promptIntent` decides append, retry or rewind. A retry reuses its row; an
    append checks the allowance and opens a counted prompt; a rewind checks the
    allowance, supersedes every live prompt from the branch point and opens a new
    one. The conversation row is created on first use.
-6. The stream is unchanged from
+7. The stream is unchanged from
    [agent-prompt-thread](agent-prompt-thread.md#flow): tools run with the actor,
    the reply is stored, usage is recorded, the row is closed.
 
@@ -164,6 +194,8 @@ writer, and `turn.ts` is the only module that composes the others.
   account that ran each prompt.
 - The thread box scrolls instead of the page, and stops following while the
   reader is scrolled up.
+- Branching costs nothing and loses nothing: the copy is not counted, and the
+  conversation it came from keeps its turns and stays usable.
 
 ## Deferred
 

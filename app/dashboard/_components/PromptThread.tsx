@@ -2,13 +2,33 @@
 
 import { Button } from "@konopskidev/ui/components/button";
 import type { UIMessage } from "ai";
-import { Pencil, Square, Volume2 } from "lucide-react";
+import { Copy, GitBranch, Pencil, RotateCcw, Square, Volume2 } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { toast } from "sonner";
 
 import { threadBlocks, threadText } from "@/lib/ai/thread/parts";
 
 import { AgentMarkdown } from "./AgentMarkdown";
 import { ToolCallLine } from "./ToolCallLine";
+
+/**
+ * A message's actions belong to the message, not to the page: the row appears
+ * when the message is hovered or one of its buttons has focus, so a long thread
+ * does not read as a wall of controls. A device that cannot hover keeps the row
+ * visible — hiding it there would leave no way to reach it.
+ */
+const ACTIONS =
+  "flex flex-wrap items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100";
+
+/** Copies a message's prose, which is what the person can see and select. */
+async function copyMessage(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success("Copied to the clipboard");
+  } catch {
+    toast.error("Could not copy to the clipboard.");
+  }
+}
 
 /**
  * The dashboard conversation. A person's prompt is shown as they typed it; the
@@ -22,32 +42,151 @@ import { ToolCallLine } from "./ToolCallLine";
  * reply that is still arriving does not yank them away from something they are
  * reading.
  *
- * A prompt carries an edit control: sending an edited one replaces that turn and
- * everything after it. A reply with prose carries a small speaker: reading it
- * again is the only way to hear a thread that was read before the preference was
- * on, or to hear one reply twice. It is manual, so it works whether or not the
- * preference is on. A reply that is still arriving has no speaker yet: reading
- * half of it would leave the rest unheard, because the reading takes over the
+ * Each message carries its actions, revealed on hover. A prompt can be copied or
+ * edited; sending an edited one replaces that turn and everything after it. A
+ * reply can be copied, read again, re-run (the newest one only, because that is
+ * the turn re-running replaces) or branched into a new conversation that starts
+ * with this thread through it. Reading aloud is manual so it works whether or not
+ * the preference is on, and a reply that is still arriving has no actions yet:
+ * reading half of it would leave the rest unheard, because reading takes over the
  * queue.
  */
-function ThreadMessage({
+function MessageActions({
   message,
+  branching,
   editing,
-  onApproval,
+  isNewest,
+  onBranch,
   onEdit,
   onRead,
+  onRegenerate,
+  onStop,
+  speaking,
+}: {
+  message: UIMessage;
+  /** This reply is being branched; its actions wait for the copy. */
+  branching: boolean;
+  /** This is the prompt currently being edited in the composer. */
+  editing: boolean;
+  /** The thread's newest message, so re-running it replaces nothing after it. */
+  isNewest: boolean;
+  onBranch?: (message: UIMessage) => void;
+  onEdit?: (message: UIMessage) => void;
+  onRead?: (message: UIMessage) => void;
+  /** Re-runs the newest prompt's turn from the reply. */
+  onRegenerate?: () => void;
+  /** Stops the reply being read from this card. */
+  onStop?: () => void;
+  speaking: boolean;
+}) {
+  const text = threadText(message).trim();
+  const isUser = message.role === "user";
+
+  return (
+    <div className={ACTIONS}>
+      {text.length > 0 && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={isUser ? "Copy this prompt" : "Copy this reply"}
+          className="text-muted-foreground"
+          onClick={() => void copyMessage(text)}
+        >
+          <Copy />
+        </Button>
+      )}
+
+      {isUser && onEdit && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Edit this prompt"
+          aria-pressed={editing}
+          className="text-muted-foreground"
+          onClick={() => onEdit(message)}
+        >
+          <Pencil />
+        </Button>
+      )}
+
+      {!isUser && onRead && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={speaking ? "Stop reading this reply" : "Read this reply aloud"}
+          aria-pressed={speaking}
+          className="text-muted-foreground"
+          // The button is a toggle: while this reply is being read it stops
+          // rather than starting the same reply over.
+          onClick={() => (speaking ? onStop?.() : onRead(message))}
+        >
+          {speaking ? <Square /> : <Volume2 />}
+        </Button>
+      )}
+
+      {!isUser && onRegenerate && isNewest && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Regenerate this reply"
+          className="text-muted-foreground"
+          onClick={onRegenerate}
+        >
+          <RotateCcw />
+        </Button>
+      )}
+
+      {!isUser && onBranch && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Branch this conversation into a new chat"
+          className="text-muted-foreground"
+          disabled={branching}
+          onClick={() => onBranch(message)}
+        >
+          <GitBranch />
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function ThreadMessage({
+  message,
+  branching,
+  editing,
+  isNewest,
+  onApproval,
+  onBranch,
+  onEdit,
+  onRead,
+  onRegenerate,
   onStop,
   speaking,
   streaming,
 }: {
   message: UIMessage;
+  /** This reply is being branched; its actions wait for the copy. */
+  branching: boolean;
   /** This is the prompt currently being edited in the composer. */
   editing: boolean;
+  /** This is the thread's newest message. */
+  isNewest: boolean;
   onApproval?: (approvalId: string, approved: boolean) => void;
+  /** Present when branching is allowed; absent while the agent is working. */
+  onBranch?: (message: UIMessage) => void;
   /** Present when editing is allowed; absent while the agent is working. */
   onEdit?: (message: UIMessage) => void;
   /** Present when the browser can speak; absent where it cannot. */
   onRead?: (message: UIMessage) => void;
+  /** Re-runs the newest reply's turn. */
+  onRegenerate?: () => void;
   /** Stops the reply being read from this card. */
   onStop?: () => void;
   /** This reply is the one being read. */
@@ -60,22 +199,25 @@ function ThreadMessage({
 
   if (message.role === "user") {
     return (
-      <li className="ml-auto flex max-w-[85%] items-start gap-1.5">
+      <li className="group ml-auto flex max-w-[85%] flex-col items-end gap-1">
         <div className="rounded-2xl bg-muted px-3 py-2 text-sm whitespace-pre-wrap">
           {threadText(message).trim()}
         </div>
-        {onEdit && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Edit this prompt"
-            aria-pressed={editing}
-            className="mt-1 text-muted-foreground"
-            onClick={() => onEdit(message)}
-          >
-            <Pencil />
-          </Button>
+        {/* Nothing to act on while the agent is working: an edit mid-turn would
+            replace the turn the reply is still being written for. */}
+        {!streaming && (
+          <MessageActions
+            message={message}
+            branching={branching}
+            editing={editing}
+            isNewest={isNewest}
+            onBranch={onBranch}
+            onEdit={onEdit}
+            onRead={onRead}
+            onRegenerate={onRegenerate}
+            onStop={onStop}
+            speaking={speaking}
+          />
         )}
       </li>
     );
@@ -84,31 +226,32 @@ function ThreadMessage({
   const canRead = Boolean(onRead) && !streaming && blocks.some((block) => block.kind === "text");
 
   return (
-    <li className="flex max-w-[85%] flex-col gap-2 card px-3 py-2 text-sm">
-      {blocks.map((block) =>
-        block.kind === "text" ? (
-          <AgentMarkdown key={block.key}>{block.text}</AgentMarkdown>
-        ) : (
-          <ToolCallLine key={block.key} trace={block.trace} onApproval={onApproval} />
-        ),
-      )}
+    <li className="group flex max-w-[85%] flex-col gap-1">
+      <div className="flex flex-col gap-2 card px-3 py-2 text-sm">
+        {blocks.map((block) =>
+          block.kind === "text" ? (
+            <AgentMarkdown key={block.key}>{block.text}</AgentMarkdown>
+          ) : (
+            <ToolCallLine key={block.key} trace={block.trace} onApproval={onApproval} />
+          ),
+        )}
+      </div>
 
-      {onRead && canRead && (
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={speaking ? "Stop reading this reply" : "Read this reply aloud"}
-            aria-pressed={speaking}
-            className="text-muted-foreground"
-            // The button is a toggle: while this reply is being read it stops
-            // rather than starting the same reply over.
-            onClick={() => (speaking ? onStop?.() : onRead(message))}
-          >
-            {speaking ? <Square /> : <Volume2 />}
-          </Button>
-        </div>
+      {/* A reply that is still arriving has nothing to read, copy or re-run
+          yet, and a reply without prose has nothing to copy. */}
+      {!streaming && (canRead || threadText(message).trim().length > 0) && (
+        <MessageActions
+          message={message}
+          branching={branching}
+          editing={editing}
+          isNewest={isNewest}
+          onBranch={onBranch}
+          onEdit={onEdit}
+          onRead={canRead ? onRead : undefined}
+          onRegenerate={onRegenerate}
+          onStop={onStop}
+          speaking={speaking}
+        />
       )}
     </li>
   );
@@ -117,10 +260,13 @@ function ThreadMessage({
 export function PromptThread({
   messages,
   isDrafting,
+  branchingId,
   editingId,
   onApproval,
+  onBranch,
   onEdit,
   onRead,
+  onRegenerate,
   onStop,
   speakingId,
   streamingId,
@@ -128,19 +274,25 @@ export function PromptThread({
   messages: UIMessage[];
   /** The agent is working and has not said anything yet. */
   isDrafting: boolean;
+  /** The reply being branched into a new conversation, if any. */
+  branchingId?: string | null;
   /** The prompt the composer is editing, if any. */
   editingId?: string | null;
   /** Answers an approval the agent is waiting on. */
   onApproval?: (approvalId: string, approved: boolean) => void;
+  /** Branches the conversation through a reply; absent while the agent works. */
+  onBranch?: (message: UIMessage) => void;
   /** Starts editing a prompt; absent while the agent is answering. */
   onEdit?: (message: UIMessage) => void;
   /** Reads a reply again; absent where the browser cannot speak. */
   onRead?: (message: UIMessage) => void;
+  /** Re-runs the newest reply's turn; absent while the agent works. */
+  onRegenerate?: () => void;
   /** Stops the reply being read. */
   onStop?: () => void;
   /** The reply currently being read, if any. */
   speakingId?: string | null;
-  /** The reply still arriving, which cannot be read again yet. */
+  /** The reply still arriving, which has no actions yet. */
   streamingId?: string | null;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -150,6 +302,9 @@ export function PromptThread({
   // content growing underneath a reader who is already at the bottom.
   const lastTop = useRef(0);
   const hasMessages = messages.length > 0;
+  // Re-running a turn is only offered on the newest reply: an older one would
+  // discard the turns below it, and that is what editing a prompt is for.
+  const newestId = hasMessages ? messages[messages.length - 1]?.id : null;
 
   const scrollToBottom = () => {
     const element = scrollRef.current;
@@ -207,10 +362,14 @@ export function PromptThread({
           <ThreadMessage
             key={message.id}
             message={message}
+            branching={branchingId === message.id}
             editing={editingId === message.id}
+            isNewest={message.id === newestId}
             onApproval={onApproval}
+            onBranch={onBranch}
             onEdit={onEdit}
             onRead={onRead}
+            onRegenerate={onRegenerate}
             onStop={onStop}
             speaking={speakingId === message.id}
             streaming={streamingId === message.id}
