@@ -9,9 +9,11 @@ import {
 import { redirect } from "next/navigation";
 
 import { getSessionAccount } from "@/lib/identity/account";
+import { readReadAloudPreference } from "@/lib/identity/preferences";
 import { canManageTeam } from "@/lib/organizations/membership";
 import { routes, signInPath } from "@/lib/shared/routes";
 
+import { PreferencesForm } from "./_components/preferences-form";
 import { OrganizationProfileForm, PersonalProfileForm } from "./_components/profile-forms";
 
 export const metadata = {
@@ -33,6 +35,9 @@ export default async function SettingsPage() {
   if (!account) redirect(signInPath(routes.dashboardSettings));
 
   const { activeTeam, session } = account;
+  // Preferences belong to the person, not the active account, so they are read
+  // and edited the same way whichever profile is on screen.
+  const readAloud = await readReadAloudPreference(session.user.id);
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
@@ -90,6 +95,18 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Preferences</CardTitle>
+          <CardDescription>
+            These follow you across your personal account and every organization.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PreferencesForm initialReadAloud={readAloud} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

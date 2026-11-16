@@ -167,6 +167,47 @@ test("read aloud speaks each sentence as it streams and survives a reload", asyn
   }
 });
 
+test("the settings page changes the preference the composer follows", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-read-aloud-settings-${id}@example.com`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    await page.goto("/dashboard/settings");
+    const toggle = page.getByRole("switch", { name: "Read agent replies aloud" });
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+    // Waiting for the confirmation also waits for the save, so the navigation
+    // below cannot cancel the request in flight.
+    await expect(page.getByRole("status")).toHaveText("Saved. Read aloud is on.");
+
+    // The composer reads the same stored choice.
+    await page.goto("/dashboard");
+    await expect(page.getByRole("button", { name: "Turn off read aloud" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    // And turning it back off there is what the composer starts with.
+    await page.goto("/dashboard/settings");
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    await expect(page.getByRole("status")).toHaveText("Saved. Read aloud is off.");
+
+    await page.goto("/dashboard");
+    await expect(page.getByRole("button", { name: "Turn on read aloud" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
 test("read aloud is off by default, and turning it off silences the queue", async ({ page }) => {
   await installFakeSynthesis(page);
 
