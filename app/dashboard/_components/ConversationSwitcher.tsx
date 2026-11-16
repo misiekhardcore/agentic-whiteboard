@@ -1,7 +1,5 @@
-"use client";
-
 import { Button } from "@konopskidev/ui/components/button";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import type { DashboardConversation } from "@/lib/ai/thread/rules";
 import { routes } from "@/lib/shared/routes";
@@ -23,8 +21,6 @@ export function ConversationSwitcher({
   conversations: DashboardConversation[];
   currentId: string;
 }) {
-  const router = useRouter();
-
   if (conversations.length === 0) return null;
 
   return (
@@ -41,9 +37,11 @@ export function ConversationSwitcher({
             className="h-auto max-w-56 rounded-full py-1 text-xs"
             aria-current={current ? "true" : undefined}
             title={conversation.preview}
-            onClick={() => router.push(routes.dashboardConversation(conversation.id))}
+            asChild
           >
-            <span className="truncate">{conversation.preview}</span>
+            <Link href={routes.dashboardConversation(conversation.id)}>
+              <span className="truncate">{conversation.preview}</span>
+            </Link>
           </Button>
         );
       })}

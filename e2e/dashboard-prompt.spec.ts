@@ -919,6 +919,13 @@ test("a message's actions appear on hover and copy its text", async ({ page }) =
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
       "**Stub agent:** Plan the schema",
     );
+
+    // An icon is the whole button, so the label it means has to be on screen
+    // somewhere: hovering it is the only way to learn what it does. (The copy
+    // buttons were just clicked, and a click dismisses a tooltip, so this uses
+    // one that was not.)
+    await prompt.getByRole("button", { name: "Edit this prompt" }).hover();
+    await expect(page.getByRole("tooltip")).toHaveText("Edit this prompt");
   } finally {
     await deleteAccount(email);
   }

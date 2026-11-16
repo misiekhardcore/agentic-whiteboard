@@ -30,6 +30,7 @@ import { routes } from "@/lib/shared/routes";
 
 import { ConversationSwitcher } from "./ConversationSwitcher";
 import { DictationButton } from "./DictationButton";
+import { IconButton } from "./IconButton";
 import { PromptThread } from "./PromptThread";
 import { ReadAloudButton } from "./ReadAloudButton";
 import { useDictation } from "./useDictation";
@@ -427,15 +428,14 @@ export function PromptComposer({
                   className="ml-auto flex max-w-[85%] items-start gap-2 rounded-2xl border border-dashed px-3 py-2 text-sm text-muted-foreground"
                 >
                   <span className="whitespace-pre-wrap">{threadText(message).trim()}</span>
-                  <Button
-                    type="button"
+                  <IconButton
+                    label="Remove queued prompt"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="Remove queued prompt"
                     onClick={() => experimental_removeQueuedMessage(message.id)}
                   >
                     <X />
-                  </Button>
+                  </IconButton>
                 </li>
               ))}
               <li className="ml-auto text-xs text-muted-foreground">
@@ -493,30 +493,30 @@ export function PromptComposer({
                   onToggle={toggleReadAloud}
                 />
                 {isBusy && (
-                  <Button
+                  <IconButton
+                    label="Stop prompt"
                     type="button"
                     variant="outline"
                     size="icon-lg"
                     className="rounded-full shadow"
-                    aria-label="Stop prompt"
                     onClick={() => {
                       speech.cancel();
                       void stop();
                     }}
                   >
                     <Square />
-                  </Button>
+                  </IconButton>
                 )}
-                <Button
+                <IconButton
+                  label={isBusy ? "Queue prompt" : "Send prompt"}
                   type="submit"
                   variant="primary"
                   size="icon-lg"
                   className="rounded-full shadow"
-                  aria-label={isBusy ? "Queue prompt" : "Send prompt"}
                   disabled={!promptToSend}
                 >
                   <ArrowUp />
-                </Button>
+                </IconButton>
               </div>
             </div>
           </div>

@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@konopskidev/ui/components/button";
 import type { UIMessage } from "ai";
 import { Copy, GitBranch, Pencil, RotateCcw, Square, Volume2 } from "lucide-react";
 import { useEffect, useRef } from "react";
@@ -9,16 +8,8 @@ import { toast } from "sonner";
 import { threadBlocks, threadText } from "@/lib/ai/thread/parts";
 
 import { AgentMarkdown } from "./AgentMarkdown";
+import { IconButton } from "./IconButton";
 import { ToolCallLine } from "./ToolCallLine";
-
-/**
- * A message's actions belong to the message, not to the page: the row appears
- * when the message is hovered or one of its buttons has focus, so a long thread
- * does not read as a wall of controls. A device that cannot hover keeps the row
- * visible — hiding it there would leave no way to reach it.
- */
-const ACTIONS =
-  "flex flex-wrap items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100";
 
 /** Copies a message's prose, which is what the person can see and select. */
 async function copyMessage(text: string): Promise<void> {
@@ -83,40 +74,37 @@ function MessageActions({
   const isUser = message.role === "user";
 
   return (
-    <div className={ACTIONS}>
+    <div className="flex flex-wrap items-center gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100">
       {text.length > 0 && (
-        <Button
-          type="button"
+        <IconButton
+          label={isUser ? "Copy this prompt" : "Copy this reply"}
           variant="ghost"
           size="icon-sm"
-          aria-label={isUser ? "Copy this prompt" : "Copy this reply"}
           className="text-muted-foreground"
           onClick={() => void copyMessage(text)}
         >
           <Copy />
-        </Button>
+        </IconButton>
       )}
 
       {isUser && onEdit && (
-        <Button
-          type="button"
+        <IconButton
+          label="Edit this prompt"
           variant="ghost"
           size="icon-sm"
-          aria-label="Edit this prompt"
           aria-pressed={editing}
           className="text-muted-foreground"
           onClick={() => onEdit(message)}
         >
           <Pencil />
-        </Button>
+        </IconButton>
       )}
 
       {!isUser && onRead && (
-        <Button
-          type="button"
+        <IconButton
+          label={speaking ? "Stop reading this reply" : "Read this reply aloud"}
           variant="ghost"
           size="icon-sm"
-          aria-label={speaking ? "Stop reading this reply" : "Read this reply aloud"}
           aria-pressed={speaking}
           className="text-muted-foreground"
           // The button is a toggle: while this reply is being read it stops
@@ -124,34 +112,32 @@ function MessageActions({
           onClick={() => (speaking ? onStop?.() : onRead(message))}
         >
           {speaking ? <Square /> : <Volume2 />}
-        </Button>
+        </IconButton>
       )}
 
       {!isUser && onRegenerate && isNewest && (
-        <Button
-          type="button"
+        <IconButton
+          label="Regenerate this reply"
           variant="ghost"
           size="icon-sm"
-          aria-label="Regenerate this reply"
           className="text-muted-foreground"
           onClick={onRegenerate}
         >
           <RotateCcw />
-        </Button>
+        </IconButton>
       )}
 
       {!isUser && onBranch && (
-        <Button
-          type="button"
+        <IconButton
+          label="Branch this conversation into a new chat"
           variant="ghost"
           size="icon-sm"
-          aria-label="Branch this conversation into a new chat"
           className="text-muted-foreground"
           disabled={branching}
           onClick={() => onBranch(message)}
         >
           <GitBranch />
-        </Button>
+        </IconButton>
       )}
     </div>
   );
