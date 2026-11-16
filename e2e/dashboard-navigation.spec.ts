@@ -24,8 +24,11 @@ test("the sidebar links the dashboard from the other signed-in surfaces", async 
     await page.getByRole("button", { name: "Create account" }).click();
     await page.waitForURL("**/dashboard");
 
-    // Exact: the "Back to dashboard" links on other pages also match the name.
-    const dashboardLink = page.getByRole("link", { name: "Dashboard", exact: true });
+    // Exact: the "Back to dashboard" links on other pages also match the name,
+    // and the header carries its own dashboard entry once signed in.
+    const dashboardLink = page
+      .locator('[data-slot="sidebar"]')
+      .getByRole("link", { name: "Dashboard", exact: true });
 
     await test.step("the dashboard is the current surface on /dashboard", async () => {
       await expect(dashboardLink).toBeVisible();
@@ -53,6 +56,41 @@ test("the sidebar links the dashboard from the other signed-in surfaces", async 
       await dashboardLink.click();
       await page.waitForURL("**/dashboard");
     });
+  } finally {
+    await db.query('delete from "user" where email = $1', [email]).catch(() => undefined);
+    await db.end();
+  }
+});
+
+/**
+ * A visitor lands on `/`, which has the header but no sidebar, so the header is
+ * the only place a signed-in person can be offered the way back in.
+ */
+test("the header links the dashboard from the landing page", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-header-dashboard-${id}@example.com`;
+  const password = `e2e-pass-${id}`;
+
+  const db = new Client({ connectionString: process.env.DATABASE_URL });
+  await db.connect();
+
+  try {
+    const headerLink = page.getByRole("banner").getByRole("link", { name: "Dashboard" });
+
+    await page.goto("/");
+    await expect(headerLink).toHaveCount(0);
+
+    await page.goto("/sign-up");
+    await page.getByLabel("Name").fill("Header Dashboard Tester");
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password").fill(password);
+    await page.getByRole("button", { name: "Create account" }).click();
+    await page.waitForURL("**/dashboard");
+
+    await page.goto("/");
+    await expect(headerLink).toBeVisible();
+    await headerLink.click();
+    await page.waitForURL("**/dashboard");
   } finally {
     await db.query('delete from "user" where email = $1', [email]).catch(() => undefined);
     await db.end();

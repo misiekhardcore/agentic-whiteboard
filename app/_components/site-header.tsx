@@ -5,6 +5,7 @@ import { SignButton } from "@/components/SignButton/SignButton";
 
 import { HeaderBilling } from "./billing/header-billing";
 import { BrandLockup } from "./brand";
+import { HeaderDashboard } from "./header-dashboard";
 import { HeaderThemeSwitcher } from "./header-theme-switcher";
 
 export function SiteHeader() {
@@ -15,6 +16,9 @@ export function SiteHeader() {
     <header className="flex h-(--app-header-height) shrink-0 items-center justify-between gap-4 border-b px-6">
       <BrandLockup href="/" textClassName="text-base" />
       <nav className="flex items-center gap-4">
+        <Suspense fallback={null}>
+          <HeaderDashboard />
+        </Suspense>
         <HeaderThemeSwitcher />
         <Suspense fallback={null}>
           <SignButton />
