@@ -156,6 +156,32 @@ export function deadThreadPrompts(
 }
 
 /**
+ * Retires the QUEUED/RUNNING prompts nothing is streaming. A restarted server
+ * leaves one behind, and it would otherwise block every send until someone
+ * cleared it by hand.
+ */
+async function retireOrphanedPrompts(userId: string): Promise<void> {
+  const active = await db
+    .select({ id: agentPrompts.id })
+    .from(agentPrompts)
+    .where(
+      and(
+        eq(agentPrompts.userId, userId),
+        isNull(agentPrompts.workspaceId),
+        inArray(agentPrompts.status, ["QUEUED", "RUNNING"]),
+      ),
+    );
+
+  const orphaned = deadThreadPrompts(active, streamingPromptIds(userId));
+  if (orphaned.length === 0) return;
+
+  await db
+    .update(agentPrompts)
+    .set({ status: "FAILED", error: ORPHANED_PROMPT_ERROR, finishedAt: new Date() })
+    .where(inArray(agentPrompts.id, orphaned));
+}
+
+/**
  * Records an accepted prompt and returns its id. `discardFrom` is the turn an
  * edit replaced: that prompt and every live one after it are marked superseded
  * in the same transaction as the insert, so a reload never shows both the old
@@ -164,10 +190,6 @@ export function deadThreadPrompts(
  * A partial unique index allows one QUEUED/RUNNING prompt per person's dashboard
  * thread; a second send while the agent is working reports `busy` instead of
  * running two streams over the same conversation.
- *
- * Retiring an orphan first is what makes a restart recoverable: the row a killed
- * server left behind would otherwise block every send until someone cleared it by
- * hand.
  */
 export async function openDashboardPrompt({
   conversationId,
@@ -185,29 +207,7 @@ export async function openDashboardPrompt({
   /** The prompt an edit branched from, if this send replaces a turn. */
   discardFrom?: PromptPosition;
 }): Promise<OpenPromptResult> {
-  const active = await db
-    .select({ id: agentPrompts.id })
-    .from(agentPrompts)
-    .where(
-      and(
-        eq(agentPrompts.userId, userId),
-        isNull(agentPrompts.workspaceId),
-        inArray(agentPrompts.status, ["QUEUED", "RUNNING"]),
-      ),
-    );
-
-  const orphaned = deadThreadPrompts(active, streamingPromptIds(userId));
-
-  if (orphaned.length > 0) {
-    await db
-      .update(agentPrompts)
-      .set({
-        status: "FAILED",
-        error: ORPHANED_PROMPT_ERROR,
-        finishedAt: new Date(),
-      })
-      .where(inArray(agentPrompts.id, orphaned));
-  }
+  await retireOrphanedPrompts(userId);
 
   try {
     return await db.transaction(async (tx) => {
@@ -287,10 +287,19 @@ export async function markPromptRunning(promptId: string): Promise<void> {
     .where(eq(agentPrompts.id, promptId));
 }
 
+export type RetryPromptResult = "resumed" | "busy" | "expired";
+
 /**
  * Re-runs a prompt that failed, reusing its row so the person is not charged
  * twice for one request. Only the conversation's newest prompt that failed is
  * eligible; the caller decides that from the intent rule before asking.
+ *
+ * The status change is a compare-and-swap on `FAILED`, so the loser of a race —
+ * a second retry of the same prompt, or an edit that replaced the turn — reports
+ * `expired` instead of streaming a prompt that is already somebody else's. The
+ * single-flight index can also fire when another conversation holds a live
+ * prompt, which reports `busy`; both leave the failed turn exactly as it was,
+ * because nothing but the swap happens before it succeeds.
  *
  * The failed attempt's replies are superseded rather than deleted — the prompt's
  * own text stays — so the reloaded thread shows one prompt with one answer.
@@ -303,50 +312,54 @@ export async function retryFailedPrompt({
   conversationId: string;
   promptId: string;
   userId: string;
-}): Promise<boolean> {
+}): Promise<RetryPromptResult> {
+  // A retry is a send too: the row a restarted server left RUNNING must not be
+  // mistaken for a live turn and answered with `busy` forever.
+  await retireOrphanedPrompts(userId);
+
   const now = new Date();
 
-  return db.transaction(async (tx) => {
-    const [prompt] = await tx
-      .select({ id: agentPrompts.id })
-      .from(agentPrompts)
-      .where(
-        and(
-          eq(agentPrompts.id, promptId),
-          eq(agentPrompts.userId, userId),
-          eq(agentPrompts.conversationId, conversationId),
-          isNull(agentPrompts.workspaceId),
-          isNull(agentPrompts.supersededAt),
-          eq(agentPrompts.status, "FAILED"),
-        ),
-      )
-      .limit(1);
+  try {
+    return await db.transaction(async (tx) => {
+      const [resumed] = await tx
+        .update(agentPrompts)
+        .set({ status: "RUNNING", error: null, finishedAt: null, startedAt: now })
+        .where(
+          and(
+            eq(agentPrompts.id, promptId),
+            eq(agentPrompts.userId, userId),
+            eq(agentPrompts.conversationId, conversationId),
+            isNull(agentPrompts.workspaceId),
+            isNull(agentPrompts.supersededAt),
+            eq(agentPrompts.status, "FAILED"),
+          ),
+        )
+        .returning({ id: agentPrompts.id });
 
-    if (!prompt) return false;
+      if (!resumed) return "expired";
 
-    await tx
-      .update(agentMessages)
-      .set({ supersededAt: now })
-      .where(
-        and(
-          eq(agentMessages.promptId, promptId),
-          eq(agentMessages.role, "ASSISTANT"),
-          isNull(agentMessages.supersededAt),
-        ),
-      );
+      await tx
+        .update(agentMessages)
+        .set({ supersededAt: now })
+        .where(
+          and(
+            eq(agentMessages.promptId, promptId),
+            eq(agentMessages.role, "ASSISTANT"),
+            isNull(agentMessages.supersededAt),
+          ),
+        );
 
-    await tx
-      .update(agentPrompts)
-      .set({ status: "RUNNING", error: null, finishedAt: null, startedAt: now })
-      .where(eq(agentPrompts.id, promptId));
+      await tx
+        .update(agentConversations)
+        .set({ updatedAt: now })
+        .where(eq(agentConversations.id, conversationId));
 
-    await tx
-      .update(agentConversations)
-      .set({ updatedAt: now })
-      .where(eq(agentConversations.id, conversationId));
-
-    return true;
-  });
+      return "resumed";
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) return "busy";
+    throw error;
+  }
 }
 
 export type UserPromptTarget = PromptTarget & {
@@ -522,9 +535,24 @@ export async function findAwaitingApprovalPrompt(
   return row ? { promptId: row.id } : null;
 }
 
-/** Puts an answered prompt back into RUNNING without restarting its clock. */
-export async function resumePrompt(promptId: string): Promise<void> {
-  await db.update(agentPrompts).set({ status: "RUNNING" }).where(eq(agentPrompts.id, promptId));
+export type ResumePromptResult = "resumed" | "busy";
+
+/**
+ * Puts an answered prompt back into RUNNING without restarting its clock.
+ *
+ * A parked prompt waits outside the single-flight index, so another send may
+ * have taken the slot while its approval sat unanswered; the resume then hits
+ * that index. Reporting `busy` leaves the prompt parked and still answerable
+ * instead of failing the request outright.
+ */
+export async function resumePrompt(promptId: string): Promise<ResumePromptResult> {
+  try {
+    await db.update(agentPrompts).set({ status: "RUNNING" }).where(eq(agentPrompts.id, promptId));
+    return "resumed";
+  } catch (error) {
+    if (isUniqueViolation(error)) return "busy";
+    throw error;
+  }
 }
 
 /** Adds a continuation's tokens to what the prompt already recorded. */

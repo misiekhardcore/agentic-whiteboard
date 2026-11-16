@@ -730,8 +730,15 @@ test("the conversation scrolls in its own box instead of growing the page", asyn
     expect(metrics.overflowY).toBe("auto");
     expect(metrics.maxHeight).not.toBe("none");
     expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
-    // The newest message is in view without scrolling the page at all.
-    expect(metrics.distanceFromBottom).toBeLessThanOrEqual(2);
+    // The newest message is in view without scrolling the page at all. The box
+    // positions itself once the page hydrates, so the position is polled: on a
+    // loaded machine the server-rendered thread is readable before the effect
+    // that follows it has run.
+    await expect
+      .poll(() =>
+        box.evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight),
+      )
+      .toBeLessThanOrEqual(2);
 
     const documentScrolls = await page.evaluate(
       () => document.documentElement.scrollHeight > window.innerHeight,

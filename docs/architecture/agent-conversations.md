@@ -79,6 +79,14 @@ prompt with one answer, while the operator can still see what the broken stream
 produced. Because the retry reuses the prompt row, the failed reply and the new
 one are siblings under it.
 
+Reusing a row is a conditional write, not a read followed by a write: the retry
+swaps `FAILED` → `RUNNING` in one statement, and an answered approval does the
+same to the prompt it parked. When the single-flight index fires anyway — a
+second tab retrying the same prompt, or a send that took the slot while an
+approval sat unanswered — the loser is answered with a 409 naming the busy
+thread and the row is left exactly as it was found. Losing that race is never a
+500 and never a prompt stuck in `RUNNING`.
+
 ### Why the composer names messages instead of prompts
 
 `useChat.setMessages` truncates the browser's list at a message and

@@ -11,6 +11,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 const mocks = vi.hoisted(() => {
   const opened: "opened" | "busy" | "missing" = "opened";
+  // Typed through their parameter so the knobs hold the union the turn must
+  // handle, not the one literal each starts on.
+  const retryAnswer = (result: "resumed" | "busy" | "expired") => result;
+  const resumeAnswer = (result: "resumed" | "busy") => result;
 
   return {
     history: [] as UIMessage[],
@@ -18,10 +22,11 @@ const mocks = vi.hoisted(() => {
     waiting: null as { promptId: string } | null,
     opened,
     promptId: "prompt_new",
-    retryResumed: true,
+    retryResult: retryAnswer("resumed"),
     streamed: [] as Record<string, unknown>[],
     stored: [] as { messageId?: string }[],
     resumed: [] as string[],
+    resumeResult: resumeAnswer("resumed"),
     closed: [] as { status: string }[],
   };
 });
@@ -44,7 +49,7 @@ vi.mock("./store", () => ({
         : { kind: mocks.opened },
     ),
   ),
-  retryFailedPrompt: vi.fn(() => Promise.resolve(mocks.retryResumed)),
+  retryFailedPrompt: vi.fn(() => Promise.resolve(mocks.retryResult)),
   appendUserPromptMessage: vi.fn((options: { messageId?: string }) => {
     mocks.stored.push(options);
     return Promise.resolve();
@@ -52,7 +57,7 @@ vi.mock("./store", () => ({
   markPromptRunning: vi.fn(() => Promise.resolve()),
   resumePrompt: vi.fn((promptId: string) => {
     mocks.resumed.push(promptId);
-    return Promise.resolve();
+    return Promise.resolve(mocks.resumeResult);
   }),
   clearThreadStream: vi.fn(),
   markThreadStream: vi.fn(),
@@ -147,10 +152,11 @@ beforeEach(() => {
   mocks.waiting = null;
   mocks.opened = "opened";
   mocks.promptId = "prompt_new";
-  mocks.retryResumed = true;
+  mocks.retryResult = "resumed";
   mocks.streamed = [];
   mocks.stored = [];
   mocks.resumed = [];
+  mocks.resumeResult = "resumed";
   mocks.closed = [];
 });
 
@@ -215,6 +221,51 @@ describe("which turns the model is shown", () => {
   });
 });
 
+describe("retrying a prompt another send got to first", () => {
+  const failedTarget = {
+    promptId: "prompt_failed",
+    status: "FAILED",
+    isTip: true,
+    text: "Plan the schema",
+    createdAt: new Date("2026-11-16T12:00:00Z"),
+  };
+
+  beforeEach(() => {
+    mocks.target = failedTarget;
+    mocks.history = [userMessage("message_failed", "Plan the schema")];
+  });
+
+  it("reports the busy thread instead of a 500 when the single-flight index fires", async () => {
+    mocks.retryResult = "busy";
+
+    const response = await send(body([userMessage("message_failed", "Plan the schema")]));
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error:
+        "The agent is still working on your previous prompt. Stop it or wait for it to finish.",
+    });
+    // Nothing was streamed and nothing was written: the failed turn is intact.
+    expect(mocks.streamed).toHaveLength(0);
+    expect(mocks.stored).toHaveLength(0);
+    expect(mocks.resumed).toEqual([]);
+    expect(mocks.closed).toEqual([]);
+  });
+
+  it("tells the person to send again when the prompt is no longer retryable", async () => {
+    mocks.retryResult = "expired";
+
+    const response = await send(body([userMessage("message_failed", "Plan the schema")]));
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "That prompt is no longer the one to retry. Send it again as a new prompt.",
+    });
+    expect(mocks.streamed).toHaveLength(0);
+    expect(mocks.stored).toHaveLength(0);
+  });
+});
+
 describe("answering a parked approval", () => {
   const answer = assistantMessage("browser_reply", [
     { type: "text", text: "Archiving needs your approval." },
@@ -258,5 +309,19 @@ describe("answering a parked approval", () => {
     expect(mocks.resumed).toEqual([]);
     expect(mocks.closed).toEqual([]);
     expect(mocks.streamed).toHaveLength(0);
+  });
+
+  it("leaves it parked when another send holds the single-flight slot", async () => {
+    mocks.resumeResult = "busy";
+
+    const response = await send(body([userMessage("message_user", "Archive it"), answer]));
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error:
+        "The agent is still working on your previous prompt. Stop it or wait for it to finish.",
+    });
+    expect(mocks.streamed).toHaveLength(0);
+    expect(mocks.closed).toEqual([]);
   });
 });

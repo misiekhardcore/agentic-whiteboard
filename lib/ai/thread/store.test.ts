@@ -12,7 +12,11 @@ const mocks = vi.hoisted(() => ({
   conversationOwner: null as string | null,
   promptIds: [{ id: "prompt_new" }] as { id: string }[],
   insertError: null as Error | null,
-  retryablePrompt: false,
+  /** The rows a compare-and-swap returns; empty when another send won the row. */
+  retryRows: [{ id: "prompt_failed" }] as { id: string }[],
+  retryError: null as Error | null,
+  /** A write that is not the retry's compare-and-swap failing. */
+  updateError: null as Error | null,
   ops: [] as { op: string; table: string; values: Record<string, unknown> }[],
 }));
 
@@ -47,7 +51,7 @@ vi.mock("@/lib/db", async () => {
 
           return {
             orderBy: () => rows(mocks.livePrompts),
-            limit: () => Promise.resolve(mocks.retryablePrompt ? [{ id: "prompt_failed" }] : []),
+            limit: () => Promise.resolve([]),
             then: (resolve: (value: unknown[]) => unknown, reject?: (error: unknown) => unknown) =>
               Promise.resolve(mocks.activePrompts).then(resolve, reject),
           };
@@ -76,8 +80,21 @@ vi.mock("@/lib/db", async () => {
     update: (table: unknown) => ({
       set: (values: Record<string, unknown>) => ({
         where: () => {
-          mocks.ops.push({ op: "update", table: getTableName(table as never), values });
-          return Promise.resolve();
+          const name = getTableName(table as never);
+          mocks.ops.push({ op: "update", table: name, values });
+
+          return {
+            // Only the retry's compare-and-swap asks for the row back.
+            returning: () =>
+              mocks.retryError
+                ? Promise.reject(mocks.retryError)
+                : Promise.resolve(mocks.retryRows),
+            then: (resolve: (value: unknown[]) => unknown, reject?: (error: unknown) => unknown) =>
+              (mocks.updateError
+                ? Promise.reject(mocks.updateError)
+                : Promise.resolve([] as unknown[])
+              ).then(resolve, reject),
+          };
         },
       }),
     }),
@@ -86,7 +103,7 @@ vi.mock("@/lib/db", async () => {
   return { db };
 });
 
-import { deadThreadPrompts, openDashboardPrompt, retryFailedPrompt } from "./store";
+import { deadThreadPrompts, openDashboardPrompt, resumePrompt, retryFailedPrompt } from "./store";
 
 const open = (options: { discardFrom?: { id: string; createdAt: Date } } = {}) =>
   openDashboardPrompt({
@@ -117,7 +134,9 @@ beforeEach(() => {
   mocks.conversationOwner = null;
   mocks.promptIds = [{ id: "prompt_new" }];
   mocks.insertError = null;
-  mocks.retryablePrompt = false;
+  mocks.retryRows = [{ id: "prompt_failed" }];
+  mocks.retryError = null;
+  mocks.updateError = null;
   mocks.ops = [];
 });
 
@@ -229,16 +248,15 @@ describe("opening a dashboard prompt", () => {
 });
 
 describe("retrying a prompt that failed", () => {
-  it("reuses the row and hides the failed replies instead of opening a new prompt", async () => {
-    mocks.retryablePrompt = true;
+  const retry = () =>
+    retryFailedPrompt({
+      conversationId: "conversation_1",
+      promptId: "prompt_failed",
+      userId: "user_1",
+    });
 
-    await expect(
-      retryFailedPrompt({
-        conversationId: "conversation_1",
-        promptId: "prompt_failed",
-        userId: "user_1",
-      }),
-    ).resolves.toBe(true);
+  it("reuses the row and hides the failed replies instead of opening a new prompt", async () => {
+    await expect(retry()).resolves.toBe("resumed");
 
     expect(mocks.ops.some((op) => op.op === "insert")).toBe(false);
 
@@ -253,16 +271,64 @@ describe("retrying a prompt that failed", () => {
     });
   });
 
-  it("refuses a prompt that is not a failed one in this conversation", async () => {
-    mocks.retryablePrompt = false;
+  it("refuses a prompt that is no longer the one that failed", async () => {
+    // Another retry, or a send that replaced the turn, got there first.
+    mocks.retryRows = [];
 
-    await expect(
-      retryFailedPrompt({
-        conversationId: "conversation_1",
-        promptId: "prompt_failed",
-        userId: "user_1",
-      }),
-    ).resolves.toBe(false);
-    expect(mocks.ops).toHaveLength(0);
+    await expect(retry()).resolves.toBe("expired");
+    expect(updatesTo("agentMessage", "supersededAt")).toHaveLength(0);
+    expect(updatesTo("agentConversation", "updatedAt")).toHaveLength(0);
+  });
+
+  it("reports busy when another prompt holds the single-flight index", async () => {
+    mocks.retryError = wrappedQueryError("23505");
+
+    await expect(retry()).resolves.toBe("busy");
+    // The failed turn is left exactly as it was: no reply was hidden and the
+    // prompt is still the one that failed.
+    expect(updatesTo("agentMessage", "supersededAt")).toHaveLength(0);
+    expect(updatesTo("agentConversation", "updatedAt")).toHaveLength(0);
+  });
+
+  it("reports busy for a bare driver error too", async () => {
+    mocks.retryError = Object.assign(new Error("duplicate key"), { code: "23505" });
+
+    await expect(retry()).resolves.toBe("busy");
+  });
+
+  it("rethrows a failure that is not the single-flight rule", async () => {
+    const failure = wrappedQueryError("23503");
+    mocks.retryError = failure;
+
+    await expect(retry()).rejects.toBe(failure);
+  });
+
+  it("retires a prompt no process is streaming before reusing the row", async () => {
+    mocks.activePrompts = [{ id: "prompt_orphaned" }];
+
+    await expect(retry()).resolves.toBe("resumed");
+
+    expect(updatesTo("agentPrompt", "status")[0]?.values).toMatchObject({ status: "FAILED" });
+  });
+});
+
+describe("resuming a parked prompt", () => {
+  it("puts it back into RUNNING", async () => {
+    await expect(resumePrompt("prompt_parked")).resolves.toBe("resumed");
+
+    expect(updatesTo("agentPrompt", "status")[0]?.values).toMatchObject({ status: "RUNNING" });
+  });
+
+  it("reports busy when a later send took the single-flight slot", async () => {
+    mocks.updateError = wrappedQueryError("23505");
+
+    await expect(resumePrompt("prompt_parked")).resolves.toBe("busy");
+  });
+
+  it("rethrows a failure that is not the single-flight rule", async () => {
+    const failure = wrappedQueryError("23503");
+    mocks.updateError = failure;
+
+    await expect(resumePrompt("prompt_parked")).rejects.toBe(failure);
   });
 });

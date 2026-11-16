@@ -247,7 +247,10 @@ export async function runDashboardTurn({
     }
     history = answered;
 
-    await resumePrompt(promptId);
+    const unParked = await resumePrompt(promptId);
+    if (unParked === "busy") {
+      return jsonError(BUSY, 409);
+    }
     markThreadStream(session.user.id, promptId);
   } else {
     const submitted = messages[messages.length - 1];
@@ -269,7 +272,10 @@ export async function runDashboardTurn({
         promptId: intent.promptId,
         userId: session.user.id,
       });
-      if (!resumed) {
+      if (resumed === "busy") {
+        return jsonError(BUSY, 409);
+      }
+      if (resumed === "expired") {
         return jsonError(RETRY_EXPIRED, 409);
       }
       promptId = intent.promptId;
