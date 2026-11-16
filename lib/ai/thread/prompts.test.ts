@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * The store's database work is exercised through a small fake: every chain the
- * store builds is answered by table name, and the writes it made are recorded.
- * A test can say "the thread has one active prompt", "the conversation is
- * somebody else's" or "this prompt failed", without a database.
+ * The prompt row's database work is exercised through a small fake: every chain
+ * the module builds is answered by table name, and the writes it made are
+ * recorded. A test can say "the thread has one active prompt", "the conversation
+ * is somebody else's" or "this prompt failed", without a database.
  */
 const mocks = vi.hoisted(() => ({
   activePrompts: [] as { id: string }[],
@@ -103,7 +103,7 @@ vi.mock("@/lib/db", async () => {
   return { db };
 });
 
-import { deadThreadPrompts, openDashboardPrompt, resumePrompt, retryFailedPrompt } from "./store";
+import { openDashboardPrompt, resumePrompt, retryFailedPrompt } from "./prompts";
 
 const open = (options: { discardFrom?: { id: string; createdAt: Date } } = {}) =>
   openDashboardPrompt({
@@ -138,25 +138,6 @@ beforeEach(() => {
   mocks.retryError = null;
   mocks.updateError = null;
   mocks.ops = [];
-});
-
-describe("which active prompts a send retires", () => {
-  it("keeps the prompt this process is streaming", () => {
-    expect(
-      deadThreadPrompts([{ id: "prompt_live" }, { id: "prompt_dead" }], ["prompt_live"]),
-    ).toEqual(["prompt_dead"]);
-  });
-
-  it("retires every active prompt when this process streams none", () => {
-    expect(deadThreadPrompts([{ id: "prompt_a" }, { id: "prompt_b" }], [])).toEqual([
-      "prompt_a",
-      "prompt_b",
-    ]);
-  });
-
-  it("has nothing to retire on a free thread", () => {
-    expect(deadThreadPrompts([], ["prompt_live"])).toEqual([]);
-  });
 });
 
 describe("opening a dashboard prompt", () => {

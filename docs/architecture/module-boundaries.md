@@ -103,7 +103,8 @@ lib/
   workspace/        the reference context: rules, access, queries, service, capabilities
   doc/ canvas/      content surfaces of a workspace: contracts and scoped reads
   billing/          plans, entitlements, usage rules, subscriptions, checkout
-  ai/               providers, runtime, thread (rules, store, allowance, turn), tools
+  ai/               providers, runtime, thread (rules, prompts, messages, approvals,
+                    allowance, orphans, live, conversations, turn), tools
   collab/           Yjs/realtime contracts and topic names
   notifications/    outbound email
   db/               pool, schema, migrations input

@@ -1,6 +1,6 @@
 import { cache } from "react";
 
-import { countPromptsForMember } from "@/lib/ai/thread/store";
+import { countPromptsForMember } from "@/lib/ai/thread/allowance";
 import { getSessionAccount } from "@/lib/identity/account";
 import type { TeamOption } from "@/lib/organizations/contracts";
 import { canManageTeam } from "@/lib/organizations/membership";

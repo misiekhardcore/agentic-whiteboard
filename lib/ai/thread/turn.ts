@@ -13,8 +13,23 @@ import { getOrganizationEntitlements, getUserEntitlements } from "@/lib/billing/
 import { approvalGatedCapabilityNames } from "@/lib/capabilities/registry";
 import type { SessionAccountContext } from "@/lib/identity/account";
 
+import { promptAllowance } from "./allowance";
+import { findAwaitingApprovalPrompt } from "./approvals";
 import { loadPromptHistory } from "./conversations";
 import { clearThreadStream, markThreadStream } from "./live";
+import {
+  appendAssistantPromptMessage,
+  appendUserPromptMessage,
+  findUserPromptTarget,
+} from "./messages";
+import {
+  accruePromptUsage,
+  closePrompt,
+  markPromptRunning,
+  openDashboardPrompt,
+  resumePrompt,
+  retryFailedPrompt,
+} from "./prompts";
 import {
   applyApprovalAnswer,
   approvalReference,
@@ -26,19 +41,6 @@ import {
   promptRequestKind,
   promptStatusAfterStream,
 } from "./rules";
-import {
-  accruePromptUsage,
-  appendAssistantPromptMessage,
-  appendUserPromptMessage,
-  closePrompt,
-  findAwaitingApprovalPrompt,
-  findUserPromptTarget,
-  markPromptRunning,
-  openDashboardPrompt,
-  promptAllowance,
-  resumePrompt,
-  retryFailedPrompt,
-} from "./store";
 
 /**
  * One dashboard prompt turn: what the client must not decide — who is asking,
@@ -123,7 +125,7 @@ function readUiContext(payload: unknown): UiContext | null {
 
 /**
  * Records the accepted prompt — its user message, when this send has one — and
- * reads the turn's history back from the store. A failure closes the prompt
+ * reads the turn's history back from the conversation. A failure closes the prompt
  * here, so nothing is left looking live to the single-flight rule.
  */
 async function recordTurn({
@@ -228,7 +230,7 @@ export async function runDashboardTurn({
   /** A retry and an approval answer reuse their prompt, so its usage accrues. */
   let continuing = kind === "continuation";
   let promptId: string;
-  /** The turn's history, replayed from the store rather than from the body. */
+  /** The turn's history, read back from the database rather than from the body. */
   let history: UIMessage[];
 
   if (kind === "continuation" && reference) {

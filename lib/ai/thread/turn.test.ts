@@ -39,9 +39,24 @@ vi.mock("ai", () => ({
   generateId: () => "generated_message_id",
 }));
 
-vi.mock("./store", () => ({
+vi.mock("./allowance", () => ({
+  promptAllowance: vi.fn(() => Promise.resolve({ message: null })),
+}));
+
+vi.mock("./approvals", () => ({
   findAwaitingApprovalPrompt: vi.fn(() => Promise.resolve(mocks.waiting)),
+}));
+
+vi.mock("./messages", () => ({
   findUserPromptTarget: vi.fn(() => Promise.resolve(mocks.target)),
+  appendUserPromptMessage: vi.fn((options: { messageId?: string }) => {
+    mocks.stored.push(options);
+    return Promise.resolve();
+  }),
+  appendAssistantPromptMessage: vi.fn(),
+}));
+
+vi.mock("./prompts", () => ({
   openDashboardPrompt: vi.fn(() =>
     Promise.resolve(
       mocks.opened === "opened"
@@ -50,24 +65,16 @@ vi.mock("./store", () => ({
     ),
   ),
   retryFailedPrompt: vi.fn(() => Promise.resolve(mocks.retryResult)),
-  appendUserPromptMessage: vi.fn((options: { messageId?: string }) => {
-    mocks.stored.push(options);
-    return Promise.resolve();
-  }),
   markPromptRunning: vi.fn(() => Promise.resolve()),
   resumePrompt: vi.fn((promptId: string) => {
     mocks.resumed.push(promptId);
     return Promise.resolve(mocks.resumeResult);
   }),
-  clearThreadStream: vi.fn(),
-  markThreadStream: vi.fn(),
   closePrompt: vi.fn((options: { status: string }) => {
     mocks.closed.push(options);
     return Promise.resolve();
   }),
   accruePromptUsage: vi.fn(),
-  appendAssistantPromptMessage: vi.fn(),
-  promptAllowance: vi.fn(() => Promise.resolve({ message: null })),
 }));
 
 vi.mock("./conversations", () => ({

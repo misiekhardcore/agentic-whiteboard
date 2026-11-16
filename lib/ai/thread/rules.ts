@@ -18,6 +18,26 @@ export type StoredPromptMessage = {
   parts: UIMessage["parts"];
 };
 
+type StoredContent = { parts: unknown };
+
+/**
+ * The parts of a stored row. Only a well-formed `{ parts }` array is replayed;
+ * anything else would break `useChat`, so an unreadable row is skipped rather
+ * than crashing the page.
+ */
+export function storedParts(content: unknown): UIMessage["parts"] {
+  if (typeof content !== "object" || content === null) return [];
+  const parts = (content as Partial<StoredContent>).parts;
+  return Array.isArray(parts) ? (parts as UIMessage["parts"]) : [];
+}
+
+/** The prose of a stored row, without its tool calls. */
+export function storedText(content: unknown): string {
+  return storedParts(content)
+    .flatMap((part) => (part.type === "text" ? [part.text] : []))
+    .join("\n");
+}
+
 const ROLE_BY_STORED: Record<AgentMessageRole, UIMessage["role"]> = {
   SYSTEM: "system",
   USER: "user",

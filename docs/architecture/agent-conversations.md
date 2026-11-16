@@ -96,6 +96,31 @@ and the route resolves it through `findUserPromptTarget`, which looks the id up
 inside the conversation the session owns. A message id from another account's
 conversation resolves to nothing, and the send becomes a plain append.
 
+### Where it lives
+
+Persisting a thread is one concern per file, so a change to a retry, a rewind or
+an approval lands in exactly one of them:
+
+- `rules.ts` — the pure rules: append/retry/rewind intent, the branch and
+  history windows, the stored-message mapping, the switcher preview.
+- `conversations.ts` — reads: which conversation is open, its live thread, one
+  turn's history, the recent list.
+- `prompts.ts` — the prompt row's life: open (an append or a rewind's new
+  branch), retry, resume after an approval, close, and the usage it accrues.
+  The single-flight loss is mapped here, as `busy` or `expired`.
+- `messages.ts` — the message rows: the person's text before the stream, the
+  agent's reply after it, and which stored prompt a repeated message names.
+- `approvals.ts` — the parked approval a browser answer may resume.
+- `orphans.ts` — which active prompts nothing is streaming, and retiring them
+  before the next send takes the slot.
+- `live.ts` — the in-process registry of streams that answers "is anything
+  streaming this prompt?".
+- `turn.ts` — one dashboard turn: who pays, the allowance, the recording, the
+  stream.
+
+The direction is one-way: `rules.ts` imports no database, no reader imports a
+writer, and `turn.ts` is the only module that composes the others.
+
 ## Flow
 
 1. The dashboard reads `?conversation=`. A stored id the session owns is used; an
@@ -109,7 +134,7 @@ conversation resolves to nothing, and the send becomes a plain append.
    route resolves the account, validates the newest user message against the
    provider config, and resolves the submitter's stored prompt by message id.
    The posted thread is a mirror, not the model's input: the turn reads the
-   conversation's live turns back from the store (up to and including the prompt
+   conversation's live turns back from the database (up to and including the prompt
    it just recorded), so a body that carries a discarded branch or an invented
    reply is answered exactly like a clean one. The only things a body
    contributes are the prompt being sent and, for a parked approval, the

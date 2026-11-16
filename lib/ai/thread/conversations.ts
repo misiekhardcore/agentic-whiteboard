@@ -6,6 +6,8 @@ import {
   type DashboardConversation,
   promptCanRetry,
   promptsThrough,
+  storedParts,
+  storedText,
   threadMessages,
 } from "@/lib/ai/thread/rules";
 import { db } from "@/lib/db";
@@ -25,24 +27,6 @@ export const RECENT_CONVERSATION_LIMIT = 5;
 
 /** How many recent messages a conversation reloads. */
 export const CONVERSATION_THREAD_LIMIT = 40;
-
-type StoredContent = { parts: unknown };
-
-/**
- * Only a well-formed `{ parts }` array is replayed; anything else would break
- * `useChat`, so an unreadable row is skipped rather than crashing the page.
- */
-function storedParts(content: unknown): UIMessage["parts"] {
-  if (typeof content !== "object" || content === null) return [];
-  const parts = (content as Partial<StoredContent>).parts;
-  return Array.isArray(parts) ? (parts as UIMessage["parts"]) : [];
-}
-
-function firstText(content: unknown): string {
-  return storedParts(content)
-    .flatMap((part) => (part.type === "text" ? [part.text] : []))
-    .join("\n");
-}
 
 /**
  * The conversation a person sees: the one the URL names, otherwise the one they
@@ -247,7 +231,7 @@ export async function listRecentConversations(
   const previews = new Map<string, string>();
   for (const message of firstMessages) {
     if (!message.conversationId || previews.has(message.conversationId)) continue;
-    previews.set(message.conversationId, firstText(message.content));
+    previews.set(message.conversationId, storedText(message.content));
   }
 
   return conversations.map((conversation) => ({
