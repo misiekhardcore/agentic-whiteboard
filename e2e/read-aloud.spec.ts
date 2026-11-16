@@ -229,7 +229,11 @@ test("read aloud is off by default, and turning it off silences the queue", asyn
     await composer.fill("Plan the schema. Then ship it.");
     await composer.press("Enter");
 
-    await expect.poll(() => spoken(page)).toHaveLength(1);
+    // The first sentence is read as it arrives. How many of the following ones
+    // are heard depends on how quickly the click below lands, so the count is
+    // not asserted; what matters is that turning the speaker off cancels the
+    // queue, and that what is read afterwards changes.
+    await expect.poll(async () => (await spoken(page))[0]).toBe("Stub agent: Plan the schema.");
     await page.getByRole("button", { name: "Turn off read aloud" }).click();
     expect(await cancelled(page)).toBeGreaterThan(0);
 
@@ -238,7 +242,7 @@ test("read aloud is off by default, and turning it off silences the queue", asyn
     await composer.press("Enter");
     await expect(thread).toContainText("Stub agent: Plan the schema once more");
     await expect.poll(() => openPrompts(email)).toBe(0);
-    expect(await spoken(page)).toHaveLength(1);
+    expect(await spoken(page)).not.toContainEqual(expect.stringContaining("once more"));
   } finally {
     await deleteAccount(email);
   }
