@@ -77,10 +77,29 @@ async function dictate(page: Page, resultIndex: number, phrases: FakePhrase[]) {
   );
 }
 
+/**
+ * The browser sees the reply before the route has stored it and closed the
+ * prompt. Deleting the account during that write cascades the prompt away under
+ * the assistant message, so wait briefly for the turn to land.
+ */
 async function deleteAccount(email: string) {
   const db = new Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
   try {
+    const deadline = Date.now() + 10_000;
+
+    while (Date.now() < deadline) {
+      const { rows } = await db.query<{ total: number }>(
+        `select count(*)::int as total from "agentPrompt"
+          where "userId" = (select id from "user" where email = $1)
+            and status in ('QUEUED', 'RUNNING')`,
+        [email],
+      );
+
+      if ((rows[0]?.total ?? 0) === 0) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
     await db.query('delete from "user" where email = $1', [email]).catch(() => undefined);
   } finally {
     await db.end();

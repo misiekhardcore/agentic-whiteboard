@@ -50,6 +50,9 @@ export default defineConfig({
           // Hold the first chunk back so a spec can act while a reply is still
           // streaming; the scripted provider is otherwise instantaneous.
           AI_STUB_DELAY_MS: process.env.AI_STUB_DELAY_MS ?? "1500",
+          // The script emits a word per chunk. A gap between them leaves time
+          // to observe a reply (and the speech it drives) mid-flight.
+          AI_STUB_CHUNK_DELAY_MS: process.env.AI_STUB_CHUNK_DELAY_MS ?? "120",
           // The approval specs need signed requests; a fixed test value is
           // enough because the stub never leaves the machine.
           AI_TOOL_APPROVAL_SECRET:

@@ -1,4 +1,8 @@
-import { updatePersonalProfile } from "@/lib/identity/capabilities";
+import {
+  setReadAloud,
+  setReadAloudVoice,
+  updatePersonalProfile,
+} from "@/lib/identity/capabilities";
 import {
   acceptInvitation,
   cancelInvitation,
@@ -53,6 +57,8 @@ export const capabilities: readonly CapabilityDescriptor[] = [
   describeCapability(acceptInvitation),
   describeCapability(updateOrganizationProfile),
   describeCapability(updatePersonalProfile),
+  describeCapability(setReadAloud),
+  describeCapability(setReadAloudVoice),
 ];
 
 /** What the agent may call, in registry order. */

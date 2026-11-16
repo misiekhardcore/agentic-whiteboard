@@ -5,3 +5,4 @@ export * from "./billing";
 export * from "./canvas";
 export * from "./doc";
 export * from "./workspace";
+export * from "./userSettings";

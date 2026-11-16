@@ -19,7 +19,35 @@ async function signUp(page: Page, email: string, password: string) {
   await page.waitForURL("**/dashboard");
 }
 
+/**
+ * A turn looks finished in the browser before the route has stored its reply
+ * and closed the prompt. Deleting the account while that write is in flight
+ * cascades the prompt away under the assistant message; a short wait lets the
+ * turn land first.
+ */
+async function waitForTurnsToClose(email: string) {
+  const deadline = Date.now() + 10_000;
+
+  while (Date.now() < deadline) {
+    const open = await withDb(async (db) => {
+      const { rows } = await db.query<{ total: number }>(
+        `select count(*)::int as total from "agentPrompt"
+          where "userId" = (select id from "user" where email = $1)
+            and status in ('QUEUED', 'RUNNING')`,
+        [email],
+      );
+
+      return rows[0]?.total ?? 0;
+    });
+
+    if (open === 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+}
+
 async function deleteAccount(email: string) {
+  await waitForTurnsToClose(email).catch(() => undefined);
+
   const db = new Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
   try {
@@ -307,7 +335,9 @@ test("the agent archives and deletes only after the person approves", async ({ p
     // Two prompts were sent; answering an approval is not a third.
     await expect.poll(() => promptCount(email)).toBe(2);
 
-    // The answered card is gone from the replay; its reply is not.
+    // The answered card is gone from the replay; its reply is not. The reply
+    // is persisted when the turn closes, so reloading before that loses it.
+    await waitForTurnsToClose(email);
     await page.reload();
     await expect(page.getByRole("list", { name: "Agent conversation" })).toContainText("Archived.");
     await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
@@ -354,6 +384,7 @@ test("denying an approval leaves the workspace exactly as it was", async ({ page
     await expect.poll(() => promptCount(email)).toBe(2);
 
     // The denial is recorded as the card's outcome, not as a second question.
+    await waitForTurnsToClose(email);
     await page.reload();
     await expect(page.getByRole("list", { name: "Agent conversation" })).toContainText(
       "Nothing changed.",

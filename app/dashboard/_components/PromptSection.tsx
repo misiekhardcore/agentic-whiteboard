@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Loading } from "@/components/Loading/Loading";
 import { loadDashboardPromptThread } from "@/lib/ai/thread/store";
 import { getSessionAccount } from "@/lib/identity/account";
+import { readPersonalSettings } from "@/lib/identity/settings";
 
 import { PromptComposer } from "./PromptComposer";
 
@@ -22,9 +23,23 @@ export function PromptSection() {
 
 async function PromptSectionInner() {
   const account = await getSessionAccount();
-  if (!account) return <PromptComposer initialMessages={[]} />;
+  if (!account) {
+    return (
+      <PromptComposer initialMessages={[]} initialReadAloud={false} initialReadAloudVoice="" />
+    );
+  }
+
+  const userId = account.session.user.id;
+  const [messages, settings] = await Promise.all([
+    loadDashboardPromptThread(userId),
+    readPersonalSettings(userId),
+  ]);
 
   return (
-    <PromptComposer initialMessages={await loadDashboardPromptThread(account.session.user.id)} />
+    <PromptComposer
+      initialMessages={messages}
+      initialReadAloud={settings.readAloud}
+      initialReadAloudVoice={settings.readAloudVoice}
+    />
   );
 }

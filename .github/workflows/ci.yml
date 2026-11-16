@@ -102,6 +102,10 @@ jobs:
       # the agent busy long enough for a spec to send a queued prompt, and the
       # approval secret is what offers the approval-gated tools at all.
       AI_STUB_DELAY_MS: "1500"
+      # A gap between the stub's word deltas lets the read-aloud spec observe a
+      # reply (and the sentence being spoken) while it is still streaming;
+      # without it the whole answer lands in one render.
+      AI_STUB_CHUNK_DELAY_MS: "120"
       AI_TOOL_APPROVAL_SECRET: e2e-tool-approval-secret-0123456789abcdef
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}

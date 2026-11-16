@@ -116,11 +116,19 @@ function firstWorkspaceId(results: string): string | null {
   );
 }
 
+/**
+ * The reply as word-sized deltas, the way a real model streams. Keeping the
+ * whitespace with each word means the deltas rejoin to exactly the scripted
+ * answer, while the client can render and speak a sentence before the rest of
+ * the reply exists.
+ */
 function textChunks(text: string) {
+  const words = text.match(/\S+\s*/g) ?? [];
+
   return [
     { type: "stream-start" as const, warnings: [] },
     { type: "text-start" as const, id: "stub-text" },
-    { type: "text-delta" as const, id: "stub-text", delta: text },
+    ...words.map((delta) => ({ type: "text-delta" as const, id: "stub-text", delta })),
     { type: "text-end" as const, id: "stub-text" },
     {
       type: "finish" as const,
@@ -193,6 +201,16 @@ function initialDelayMs(): number {
   return Number.isFinite(configured) && configured > 0 ? configured : 0;
 }
 
+/**
+ * The gap between word deltas. A real provider takes hundreds of milliseconds
+ * per word on a local model, so the suite sets `AI_STUB_CHUNK_DELAY_MS` to give
+ * tests time to observe a reply mid-flight; unset, the script answers at once.
+ */
+function chunkDelayMs(): number {
+  const configured = Number(process.env.AI_STUB_CHUNK_DELAY_MS ?? 0);
+  return Number.isFinite(configured) && configured > 0 ? configured : 0;
+}
+
 export function createStubModel(): LanguageModel {
   return new MockLanguageModelV4({
     modelId: STUB_MODEL_ID,
@@ -223,12 +241,14 @@ function chooseStream({ prompt, tools }: { prompt: PromptMessage[]; tools?: { na
     stream: simulateReadableStream({
       chunks: textChunks(text),
       initialDelayInMs: initialDelayMs(),
+      chunkDelayInMs: chunkDelayMs(),
     }),
   });
   const call = (name: string, input: Record<string, unknown>) => ({
     stream: simulateReadableStream({
       chunks: toolCallChunks(name, input),
       initialDelayInMs: initialDelayMs(),
+      chunkDelayInMs: chunkDelayMs(),
     }),
   });
 
