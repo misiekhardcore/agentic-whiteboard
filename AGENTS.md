@@ -48,10 +48,10 @@ into "confirm the change is what was asked" — never into "skip the tests".
   in a new top-level grab bag.
 - **Layout.** One folder per context under `lib/<context>/` with the domain
   types, pure rules and the persistence/API adapters beside them, e.g.
-  [lib/billing/entitlements.ts](lib/billing/entitlements.ts) and
-  [lib/billing/subscriptions.ts](lib/billing/subscriptions.ts).
+  [lib/billing/entitlements](lib/billing/entitlements/index.ts) and
+  [lib/billing/subscriptions](lib/billing/subscriptions/index.ts).
 - **Layers are folders**, in this order: `status`/`forms`/`contracts`/`presentation` (client-safe) → `rules` → `queries`/`access`/`service` → `capabilities` → `actions`. A module imports only leftwards; `lib/capabilities` imports no context. Enforced by lint zones and [lib/architecture.test.ts](lib/architecture.test.ts) — see [docs/architecture/module-boundaries.md](docs/architecture/module-boundaries.md) and [docs/architecture/module-layout.md](docs/architecture/module-layout.md).
-- **One behaviour, one module.** Split an exported behaviour into its own file named for the function (`lib/workspace/capabilities/createWorkspace.ts`); types and constants stay with the function that owns them. Files named by lint zones, client-safe allowlists or the architecture test stay as re-export barrels, and a sibling imports the concrete module rather than its own barrel.
+- **One behaviour, one module.** Split an exported behaviour into its own file named for the function (`lib/workspace/capabilities/createWorkspace.ts`); types and constants stay with the function that owns them. Only an `index.ts` re-exports the folder - never a `thing.ts` shim kept alive to preserve an old import path; update the import instead. A sibling imports the concrete module rather than its own barrel.
 - **A user-facing mutation is a capability.** That includes operations the agent must never call: declare `callers: ["human"]` instead of writing a bespoke action. Pre-auth flows (sign-in, reset, OAuth) are the documented exception, because there is no actor yet.
 - **One rule, one module.** Quota copy, roles, slugs and lifecycle invariants are imported, never re-derived in a page, action or tool. A context may use another context's published functions and contracts, never its `actions.ts`, schema or SQL.
 - **Domain first.** Money, quotas, entitlements, roles and permissions,
@@ -76,8 +76,8 @@ into "confirm the change is what was asked" — never into "skip the tests".
 Write the failing test before the production code, for every behaviour change.
 
 - **Red.** Add or change a test that expresses the new rule and watch it fail for
-  the right reason. Unit tests are colocated: `lib/billing/plans.test.ts` beside
-  `lib/billing/plans.ts`, matching `**/*.test.ts` from
+  the right reason. Unit tests are colocated: `lib/billing/plans/upgradeOffer.test.ts`
+  beside `lib/billing/plans/upgradeOffer.ts`, matching `**/*.test.ts` from
   [vitest.config.mts](vitest.config.mts).
 - **Green.** Write the smallest implementation that satisfies the test. No dead
   options, no speculative branches.

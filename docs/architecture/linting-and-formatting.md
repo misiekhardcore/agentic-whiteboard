@@ -74,7 +74,8 @@ Two consequences to keep in mind when editing the zones:
 
 - `except` entries resolve **against the zone's `from`** and must be descendants
   of it, so `from: ["./lib/identity"], except: ["./actor.ts"]` allows exactly
-  `lib/identity/actor.ts`. Without the extension the path never matches.
+  `lib/identity/actor/index.ts` (or the `./actor.ts` file, before that layer
+  became a folder). Without the extension the path never matches.
 - A zone's `from` list cannot mix globs and paths, which is why the client-safe
   rule is two zones: server packages, then `./lib/db/**` (importing the adapter
   reaches `pg` even though the file never names it).
@@ -83,11 +84,11 @@ Two consequences to keep in mind when editing the zones:
 
 The `clientSafeFiles` list and the `CLIENT_SAFE` patterns are deliberately
 identical. A module ships to the browser when its context gives it a presenter,
-so a new `presentation.ts` is added in both places rather than matched by a
-`**/presentation.ts` glob that would also cover a server file.
+so a new `presentation/` folder is added in both places rather than matched by a
+`**/presentation/**` glob that would also cover a server file.
 
 Everything else stays at the strict preset. `no-base-to-string` surfaced a real
 issue in every server action: `String(formData.get(...))` can stringify a
 `File` into `"[object File]"`. Those reads now go through
-[`formString`](../../lib/shared/form-data.ts), which returns text only and is
+[`formString`](../../lib/shared/form-data/index.ts), which returns text only and is
 covered by a unit test.

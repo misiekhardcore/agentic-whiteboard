@@ -36,13 +36,13 @@ probe.
 
 ### Domain
 
-| Area          | Decision                                                                                                                                                                                                                  |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| One behaviour | One file per exported behaviour, named for the function: `lib/workspace/capabilities/createWorkspace.ts`.                                                                                                                 |
-| Layers        | A layer is a folder inside the context (`contracts/`, `rules/`, `access/`, `queries/`, `service/`, `capabilities/`, `actions/`, `presentation/`) with an `index.ts` entry point.                                          |
-| Types         | Types and constants co-locate with the function that owns them. Cohesive vocabulary modules (`contracts.ts`, `forms.ts`, `status.ts`) may stay whole.                                                                     |
-| Barrels       | A file named by the existing enforcement (lint zones, client-safe allowlists, `architecture.test.ts`) stays as a re-export barrel so the rule keeps working. A sibling imports the concrete module, never its own barrel. |
-| New domains   | A helper with no context of its own and several consumers goes to `lib/shared`. A new context is created only when it owns its own language and invariants.                                                               |
+| Area          | Decision                                                                                                                                                                                                                                                                                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| One behaviour | One file per exported behaviour, named for the function: `lib/workspace/capabilities/createWorkspace.ts`.                                                                                                                                                                                                                                                    |
+| Layers        | A layer is a folder inside the context (`contracts/`, `rules/`, `access/`, `queries/`, `service/`, `capabilities/`, `actions/`, `presentation/`) with an `index.ts` entry point.                                                                                                                                                                             |
+| Types         | Types and constants co-locate with the function that owns them. A cohesive vocabulary folder (`contracts/`, `forms/`, `status/`) keeps its types beside the rules that read them.                                                                                                                                                                            |
+| Barrels       | Only `index.ts` re-exports a folder, and only to name its entry point. A `thing.ts` left beside `thing/` purely to keep the old import path alive is deleted: the lint zones, the client-safe allowlists and `architecture.test.ts` point at `thing/**` and the callers import the folder path. A sibling imports the concrete module, never its own barrel. |
+| New domains   | A helper with no context of its own and several consumers goes to `lib/shared`. A new context is created only when it owns its own language and invariants.                                                                                                                                                                                                  |
 
 ### Size
 
@@ -58,8 +58,8 @@ returns, a `max-lines` and one-component rule is the next gate to add.
   separate modules with explicit props.
 - The duplicated rules disappear: plan selection, date formatting, initials,
   browser support and the API refusal parse each live in one module.
-- More files with narrower jobs. Imports get more specific, and the existing
-  barrels keep the public entry points (`lib/ai/thread/rules`, `lib/db/schema`)
-  stable for callers.
+- More files with narrower jobs. Imports get more specific, and each folder's
+  `index.ts` names its entry point (`lib/ai/thread/rules`, `lib/db/schema`), so
+  a caller keeps naming the module while the file behind it moves.
 - Moving a file is mechanical: `git mv` plus import updates, with typecheck,
   unit tests and the end-to-end flows as the safety net.

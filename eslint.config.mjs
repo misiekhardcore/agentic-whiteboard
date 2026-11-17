@@ -17,19 +17,19 @@ const e2eFiles = ["e2e/**/*.ts"];
 // server-only package here either breaks the build or pulls it into the bundle.
 const clientSafeFiles = [
   "lib/shared/**",
-  "lib/capabilities/presentation.ts",
-  "lib/capabilities/presentations.ts",
-  "lib/workspace/status.ts",
-  "lib/workspace/contracts.ts",
-  "lib/workspace/forms.ts",
-  "lib/workspace/presentation.ts",
-  "lib/organizations/contracts.ts",
-  "lib/identity/forms.ts",
+  "lib/capabilities/presentation/**",
+  "lib/capabilities/presentations/**",
+  "lib/workspace/status/**",
+  "lib/workspace/contracts/**",
+  "lib/workspace/forms/**",
+  "lib/workspace/presentation/**",
+  "lib/organizations/contracts/**",
+  "lib/identity/forms/**",
   "lib/identity/redirect.ts",
-  "lib/billing/plans.ts",
-  "lib/ai/thread/parts.ts",
-  "lib/ai/thread/composer.ts",
-  "lib/ai/thread/read-aloud.ts",
+  "lib/billing/plans/**",
+  "lib/ai/thread/parts/**",
+  "lib/ai/thread/composer/**",
+  "lib/ai/thread/read-aloud/**",
 ];
 
 const serverOnlyPackages = [
