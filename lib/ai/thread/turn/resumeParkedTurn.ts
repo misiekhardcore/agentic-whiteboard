@@ -6,9 +6,7 @@ import { markThreadStream } from "../live";
 import { resumePrompt } from "../prompts";
 import { applyApprovalAnswer } from "../rules";
 
-import { APPROVAL_EXPIRED } from "./internals/APPROVAL_EXPIRED";
-import { APPROVAL_MISMATCH } from "./internals/APPROVAL_MISMATCH";
-import { BUSY } from "./internals/BUSY";
+import { APPROVAL_EXPIRED, APPROVAL_MISMATCH, BUSY } from "./internals/constants";
 import { jsonError } from "./internals/jsonError";
 import type { TurnFailure } from "./internals/types";
 

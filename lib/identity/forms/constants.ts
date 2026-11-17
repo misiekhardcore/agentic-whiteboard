@@ -1,3 +1,10 @@
+export const EMPTY_PROFILE_FORM_STATE: ProfileFormState = {
+  error: null,
+  notice: null,
+};
+
+export const initialAuthState: AuthFormState = { error: null };
+
 /** State shared by the sign-in, sign-up and reset forms. */
 export type AuthFormState = {
   error: string | null;

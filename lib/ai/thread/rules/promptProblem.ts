@@ -1,4 +1,4 @@
-import { PROMPT_MAX_LENGTH } from "./PROMPT_MAX_LENGTH";
+import { PROMPT_MAX_LENGTH } from "./constants";
 
 /**
  * What is wrong with a draft, or `null` when it can be sent. The route re-checks

@@ -5,8 +5,8 @@ import { clearThreadStream } from "../../live";
 import { appendUserPromptMessage } from "../../messages";
 import { closePrompt, markPromptRunning } from "../../prompts";
 
+import { MESSAGE_ID_PATTERN } from "./constants";
 import { jsonError } from "./jsonError";
-import { MESSAGE_ID_PATTERN } from "./MESSAGE_ID_PATTERN";
 import { STREAM_ERROR } from "./STREAM_ERROR";
 
 export /**

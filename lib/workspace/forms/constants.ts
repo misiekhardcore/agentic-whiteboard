@@ -1,3 +1,16 @@
+export const EMPTY_WORKSPACE_FORM_STATE: WorkspaceFormState = {
+  error: null,
+  notice: null,
+  fieldErrors: {},
+  limitReached: false,
+  saved: false,
+};
+
+/** Shared limits so the server and the dialogs agree on what is valid. */
+export const WORKSPACE_NAME_MAX_LENGTH = 120;
+
+export const WORKSPACE_DESCRIPTION_MAX_LENGTH = 500;
+
 /**
  * State shared by the workspace forms that use `useActionState`. No server imports,
  * so the dialogs can read it and the server actions can return it.

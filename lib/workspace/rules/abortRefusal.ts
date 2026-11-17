@@ -1,6 +1,6 @@
 import { type CapabilityFailure, failure } from "@/lib/capabilities/define";
 
-import { WORKSPACE_ABORTED_MESSAGE } from "./WORKSPACE_ABORTED_MESSAGE";
+import { WORKSPACE_ABORTED_MESSAGE } from "./constants";
 
 /**
  * A stopped request must not leave a change behind. Checked before any work and

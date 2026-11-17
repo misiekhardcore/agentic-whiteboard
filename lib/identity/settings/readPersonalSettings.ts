@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { userSettings } from "@/lib/db/schema";
 
-import { DEFAULT_PERSONAL_SETTINGS } from "./DEFAULT_PERSONAL_SETTINGS";
+import { DEFAULT_PERSONAL_SETTINGS } from "./constants";
 import type { PersonalSettings } from "./types";
 
 /**

@@ -1,4 +1,10 @@
 /**
+ * Dictation is fixed to US English rather than following the browser locale: the
+ * composer's copy is English, so a mixed-language draft would be surprising.
+ */
+export const DICTATION_LANGUAGE = "en-US";
+
+/**
  * Rules for the prompt composer that starts an agent conversation. The module is
  * pure so the keyboard contract and the sendable text are tested directly, and
  * the dashboard component only maps DOM events onto them.

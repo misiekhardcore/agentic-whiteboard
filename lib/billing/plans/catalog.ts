@@ -1,5 +1,4 @@
-import type { Plan, PlanId } from "./types";
-
+import type { Plan, PlanId, PlanLimits } from "./types";
 /**
  * Content follows the agreed price sheet: Free is the same on both tabs, Pro is
  * personal, Team and Enterprise are billed per member.
@@ -92,3 +91,17 @@ export const plans = {
     },
   },
 } as const satisfies Record<PlanId, Plan>;
+
+/**
+ * The currency every catalog price is quoted in. Checkout builds its line item
+ * with inline `price_data`, and Stripe requires an explicit currency there.
+ */
+export const BILLING_CURRENCY = "usd" as const;
+
+export type BillingCurrency = typeof BILLING_CURRENCY;
+
+/** Short names for a limit, used by the usage meters. */
+export const limitLabels = {
+  agentPromptsPerMonth: "Agent prompts",
+  workspaces: "Workspaces",
+} as const satisfies Record<keyof PlanLimits, string>;

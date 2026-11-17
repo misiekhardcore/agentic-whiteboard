@@ -1,9 +1,11 @@
 import { simulateReadableStream } from "ai";
 
-import { STUB_ARCHIVED_REPLY } from "../STUB_ARCHIVED_REPLY";
-import { STUB_DELETED_REPLY } from "../STUB_DELETED_REPLY";
-import { STUB_DENIED_REPLY } from "../STUB_DENIED_REPLY";
-import { STUB_TOOL_REPLY } from "../STUB_TOOL_REPLY";
+import {
+  STUB_ARCHIVED_REPLY,
+  STUB_DELETED_REPLY,
+  STUB_DENIED_REPLY,
+  STUB_TOOL_REPLY,
+} from "../constants";
 
 import { calledTools } from "./calledTools";
 import { chunkDelayMs } from "./chunkDelayMs";

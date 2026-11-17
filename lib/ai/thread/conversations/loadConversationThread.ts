@@ -5,7 +5,7 @@ import { promptCanRetry, storedParts, threadMessages } from "@/lib/ai/thread/rul
 import { db } from "@/lib/db";
 import { agentMessages, agentPrompts } from "@/lib/db/schema";
 
-import { CONVERSATION_THREAD_LIMIT } from "./CONVERSATION_THREAD_LIMIT";
+import { CONVERSATION_THREAD_LIMIT } from "./constants";
 
 /**
  * One conversation's live thread, oldest first, plus whether its last prompt

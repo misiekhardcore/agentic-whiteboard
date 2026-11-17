@@ -4,6 +4,4 @@ export * from "./workspaceDocName";
 export * from "./workspaceCanvasName";
 export * from "./organizationBoardTopic";
 export * from "./parseWorkspaceDocumentName";
-export * from "./AGENT_STATUS_EVENT";
-export * from "./AGENT_MESSAGE_EVENT";
-export * from "./WORKSPACE_UPDATED_EVENT";
+export * from "./constants";

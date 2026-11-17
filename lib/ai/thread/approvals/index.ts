@@ -1,2 +1,2 @@
-export * from "./APPROVAL_WINDOW_MS";
+export * from "./constants";
 export * from "./findAwaitingApprovalPrompt";

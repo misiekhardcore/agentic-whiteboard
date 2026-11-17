@@ -5,7 +5,7 @@ import { promptsThrough, storedParts, threadMessages } from "@/lib/ai/thread/rul
 import { db } from "@/lib/db";
 import { agentMessages, agentPrompts } from "@/lib/db/schema";
 
-import { CONVERSATION_THREAD_LIMIT } from "./CONVERSATION_THREAD_LIMIT";
+import { CONVERSATION_THREAD_LIMIT } from "./constants";
 
 /**
  * What the model is shown for one turn: the conversation's live turns up to and

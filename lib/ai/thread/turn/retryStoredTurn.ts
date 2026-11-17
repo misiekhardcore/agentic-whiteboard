@@ -3,10 +3,9 @@ import type { UIMessage } from "ai";
 import { markThreadStream } from "../live";
 import { retryFailedPrompt } from "../prompts";
 
-import { BUSY } from "./internals/BUSY";
+import { BUSY, RETRY_EXPIRED } from "./internals/constants";
 import { jsonError } from "./internals/jsonError";
 import { recordTurn } from "./internals/recordTurn";
-import { RETRY_EXPIRED } from "./internals/RETRY_EXPIRED";
 import type { TurnFailure } from "./internals/types";
 
 /**

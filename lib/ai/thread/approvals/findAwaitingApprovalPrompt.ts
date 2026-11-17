@@ -3,7 +3,7 @@ import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { agentMessages, agentPrompts } from "@/lib/db/schema";
 
-import { APPROVAL_WINDOW_MS } from "./APPROVAL_WINDOW_MS";
+import { APPROVAL_WINDOW_MS } from "./constants";
 
 /** The prompt whose approval the browser just answered, if it may be answered. */
 export async function findAwaitingApprovalPrompt(

@@ -1,8 +1,10 @@
-import type { AGENT_ACTOR_TYPES } from "./AGENT_ACTOR_TYPES";
-import type { AGENT_MESSAGE_ROLES } from "./AGENT_MESSAGE_ROLES";
-import type { AGENT_PROMPT_STATUSES } from "./AGENT_PROMPT_STATUSES";
-import type { WORKSPACE_PERMISSIONS } from "./WORKSPACE_PERMISSIONS";
-import type { WORKSPACE_SURFACES } from "./WORKSPACE_SURFACES";
+import type {
+  AGENT_ACTOR_TYPES,
+  AGENT_MESSAGE_ROLES,
+  AGENT_PROMPT_STATUSES,
+  WORKSPACE_PERMISSIONS,
+  WORKSPACE_SURFACES,
+} from "./constants";
 
 /**
  * Collaboration contracts shared by the agent layer, the future Hocuspocus

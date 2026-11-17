@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CONVERSATION_PREVIEW_LENGTH } from "./CONVERSATION_PREVIEW_LENGTH";
+import { CONVERSATION_PREVIEW_LENGTH } from "./constants";
 import { conversationPreview } from "./conversationPreview";
 
 describe("conversationPreview", () => {

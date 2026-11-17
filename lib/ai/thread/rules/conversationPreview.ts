@@ -1,4 +1,4 @@
-import { CONVERSATION_PREVIEW_LENGTH } from "./CONVERSATION_PREVIEW_LENGTH";
+import { CONVERSATION_PREVIEW_LENGTH } from "./constants";
 
 /**
  * The label the conversation switcher shows: the first prompt on one line. A

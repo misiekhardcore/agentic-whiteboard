@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { PROMPT_MAX_LENGTH } from "./PROMPT_MAX_LENGTH";
+import { PROMPT_MAX_LENGTH } from "./constants";
 import { promptProblem } from "./promptProblem";
 
 describe("promptProblem", () => {

@@ -7,8 +7,7 @@ import { markThreadStream } from "../live";
 import { openDashboardPrompt } from "../prompts";
 import type { PromptPosition } from "../rules";
 
-import { BUSY } from "./internals/BUSY";
-import { CONVERSATION_MISSING } from "./internals/CONVERSATION_MISSING";
+import { BUSY, CONVERSATION_MISSING } from "./internals/constants";
 import { jsonError } from "./internals/jsonError";
 import { recordTurn } from "./internals/recordTurn";
 import type { TurnActor, TurnFailure } from "./internals/types";

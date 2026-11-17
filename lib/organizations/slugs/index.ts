@@ -1,3 +1,3 @@
-export * from "./ORGANIZATION_SLUG_MAX_LENGTH";
+export * from "./constants";
 export * from "./normalizeOrganizationSlug";
 export * from "./uniqueOrganizationSlug";

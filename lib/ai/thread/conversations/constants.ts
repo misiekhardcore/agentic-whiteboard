@@ -1,3 +1,6 @@
+/** How many recent messages a conversation reloads. */
+export const CONVERSATION_THREAD_LIMIT = 40;
+
 /**
  * Reads for the dashboard's conversations: which thread is open, its stored
  * messages, and the recent list the switcher offers.

@@ -1,6 +1,6 @@
 export * from "./types";
 export * from "./authErrorMessage";
-export * from "./INVALID_TOKEN_MESSAGE";
+export * from "./constants";
 export * from "./signIn";
 export * from "./signUp";
 export * from "./requestPasswordReset";

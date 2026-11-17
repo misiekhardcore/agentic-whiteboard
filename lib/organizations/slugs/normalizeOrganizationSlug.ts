@@ -1,4 +1,4 @@
-import { ORGANIZATION_SLUG_MAX_LENGTH } from "./ORGANIZATION_SLUG_MAX_LENGTH";
+import { ORGANIZATION_SLUG_MAX_LENGTH } from "./constants";
 
 /** Lowercase letters, digits and single hyphens; empty when nothing survives. */
 export function normalizeOrganizationSlug(value: string): string {
