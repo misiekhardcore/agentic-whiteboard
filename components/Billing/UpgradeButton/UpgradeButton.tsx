@@ -1,6 +1,5 @@
 "use client";
 
-import { Alert, AlertDescription, AlertTitle } from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
 import {
   Dialog,
@@ -10,27 +9,32 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@konopskidev/ui/components/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@konopskidev/ui/components/tabs";
-import { Sparkles, TriangleAlert } from "lucide-react";
-import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import { useState } from "react";
 
 import {
   type BillingAudience,
   getPlan,
   type Plan,
+  planChoiceMode,
+  type PlanChoiceMode,
   type PlanId,
-  planServesAudience,
-  upgradePlans,
+  upgradeOffer,
   type UpgradeReason,
 } from "@/lib/billing/plans";
 import type { TeamOption } from "@/lib/organizations/contracts";
-import { routes } from "@/lib/shared/routes";
 
 import { CheckoutSheet } from "../CheckoutSheet";
 
-import { PlanGrid } from "./PlanGrid";
+import { PlanCeilingNotice } from "./PlanCeilingNotice";
+import { PlanChoiceTabs } from "./PlanChoiceTabs";
+import { UpgradeReasons } from "./UpgradeReasons";
 
+/**
+ * The upgrade dialog: why the account hit a limit, which plans are an upgrade
+ * from the current one, and the checkout hand-off. The policy lives in
+ * `upgradeOffer`; this component owns the dialog and the choice it is making.
+ */
 export function UpgradeButton({
   reasons,
   currentPlanId,
@@ -55,41 +59,12 @@ export function UpgradeButton({
   const [open, setOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<PlanId | null>(null);
 
-  const personalPlans = upgradePlans("personal", currentPlanId);
-  const teamPlans = upgradePlans("team", currentPlanId);
-  const hasAnyPlan = personalPlans.length > 0 || teamPlans.length > 0;
-
-  // An organization's limit is paid for by the organization, so personal plans
-  // are not an answer there. A personal account can still put the work on a
-  // team, which is why both tabs are offered in that case.
-  const showPersonal = activeAudience === "personal" && personalPlans.length > 0;
-  const showTeam = teamPlans.length > 0;
-
-  const defaultTab: BillingAudience =
-    activeAudience === "team" || !showPersonal ? "team" : "personal";
-  const [tab, setTab] = useState<BillingAudience>(defaultTab);
-  const activeTab = showPersonal ? tab : "team";
-
-  /**
-   * An organization that already pays switches plans; everyone else buys one.
-   * The button label and the checkout mode answer the same question, so they
-   * ask it in one place.
-   */
-  function isPlanChange(plan: Plan | undefined): boolean {
-    return Boolean(
-      plan &&
-      activeAudience === "team" &&
-      currentPlanId !== "free" &&
-      planServesAudience(plan, "team"),
-    );
-  }
+  const offer = upgradeOffer({ activeAudience, currentPlanId });
+  const modeOf = (plan: Plan): PlanChoiceMode =>
+    planChoiceMode({ activeAudience, currentPlanId, planId: plan.id });
 
   const selectedPlan = getPlan(selectedPlanId);
-  const changeMode = isPlanChange(selectedPlan);
-
-  function ctaLabel(plan: Plan): string {
-    return isPlanChange(plan) ? `Switch to ${plan.name}` : `Upgrade to ${plan.name}`;
-  }
+  const changeMode = selectedPlan ? modeOf(selectedPlan) : "checkout";
 
   function choosePlan(plan: Plan) {
     // The sheet is a second overlay; close this one first so focus and scroll
@@ -122,15 +97,7 @@ export function UpgradeButton({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-2">
-            {reasons.map((reason) => (
-              <Alert key={reason.title}>
-                <TriangleAlert aria-hidden="true" />
-                <AlertTitle>{reason.title}</AlertTitle>
-                <AlertDescription>{reason.description}</AlertDescription>
-              </Alert>
-            ))}
-          </div>
+          <UpgradeReasons reasons={reasons} />
 
           {!canManageBilling && (
             <p className="text-sm text-muted-foreground">
@@ -139,65 +106,21 @@ export function UpgradeButton({
             </p>
           )}
 
-          {!hasAnyPlan ? (
-            <p className="text-sm text-muted-foreground">
-              You’re on the highest plan for this account. Manage the subscription from{" "}
-              <Link
-                href={routes.dashboardBilling}
-                className="underline underline-offset-3"
-                onClick={() => setOpen(false)}
-              >
-                Billing
-              </Link>
-              .
-            </p>
-          ) : (
-            <Tabs
-              value={activeTab}
-              onValueChange={(value) => setTab(value as BillingAudience)}
-              className="gap-3"
-            >
-              {showPersonal && showTeam && (
-                <TabsList aria-label="Plan type">
-                  <TabsTrigger value="personal">Personal</TabsTrigger>
-                  <TabsTrigger value="team">Team</TabsTrigger>
-                </TabsList>
-              )}
+          {offer.hasAnyPlan ? (
+            <PlanChoiceTabs
+              offer={offer}
+              mode={modeOf}
+              disabled={!canManageBilling}
+              onChoose={choosePlan}
+            />
+          ) : null}
 
-              {showPersonal && (
-                <TabsContent value="personal">
-                  <PlanGrid
-                    plans={personalPlans}
-                    featuredId="pro"
-                    disabled={!canManageBilling}
-                    label={ctaLabel}
-                    onChoose={choosePlan}
-                  />
-                </TabsContent>
-              )}
-
-              {showTeam && (
-                <TabsContent value="team" className="flex flex-col gap-3">
-                  <PlanGrid
-                    plans={teamPlans}
-                    disabled={!canManageBilling}
-                    label={ctaLabel}
-                    onChoose={choosePlan}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Team plans give every member their own prompt allowance and include unlimited
-                    workspaces. Billed per member with unlimited seats.
-                  </p>
-                </TabsContent>
-              )}
-            </Tabs>
-          )}
-
-          {activeAudience === "personal" && personalPlans.length === 0 && (
-            <p className="text-xs text-muted-foreground">
-              {`${getPlan(currentPlanId)?.name ?? "Your plan"} is the highest personal plan. A team plan is the next step for more prompts.`}
-            </p>
-          )}
+          <PlanCeilingNotice
+            offer={offer}
+            activeAudience={activeAudience}
+            currentPlanId={currentPlanId}
+            onLeave={() => setOpen(false)}
+          />
         </DialogContent>
       </Dialog>
 
@@ -211,7 +134,7 @@ export function UpgradeButton({
           }}
           teams={teams}
           defaultOrganizationId={defaultOrganizationId}
-          mode={changeMode ? "change" : "checkout"}
+          mode={changeMode === "change" ? "change" : "checkout"}
         />
       )}
     </>

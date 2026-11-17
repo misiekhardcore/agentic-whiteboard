@@ -17,5 +17,13 @@ export type {
   PlanLimits,
   UpgradeReason,
 } from "./types";
+export {
+  planChoiceLabel,
+  planChoiceMode,
+  type PlanChoiceMode,
+  type UpgradeOffer,
+  upgradeOffer,
+  visibleTab,
+} from "./upgradeOffer";
 export { upgradeMessages } from "./upgradeMessages";
 export { upgradePlans } from "./upgradePlans";
