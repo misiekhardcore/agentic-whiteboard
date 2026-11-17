@@ -1,3 +1,3 @@
-export * from "./workspaceStatusEnum";
-export * from "./workspaces";
-export * from "./workspacesRelations";
+export { workspaceStatusEnum } from "./workspaceStatusEnum";
+export { workspaces } from "./workspaces";
+export { workspacesRelations } from "./workspacesRelations";

@@ -1,1 +1,1 @@
-export * from "./runDashboardTurn";
+export { runDashboardTurn } from "./runDashboardTurn";

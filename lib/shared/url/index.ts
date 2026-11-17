@@ -1,1 +1,1 @@
-export * from "./isHttpUrl";
+export { isHttpUrl } from "./isHttpUrl";

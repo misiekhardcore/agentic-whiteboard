@@ -1,12 +1,3 @@
-export * from "./types";
-export * from "./catalog";
-export { formatPlanPeriod } from "./formatPlanPeriod";
-export { formatPlanPrice } from "./formatPlanPrice";
-export { getPlan } from "./getPlan";
-export { isPaidPlan } from "./isPaidPlan";
-export { isPlanId } from "./isPlanId";
-export { planServesAudience } from "./planServesAudience";
-export { plansForAudience } from "./plansForAudience";
 export type {
   BillingAudience,
   BillingOwnerType,
@@ -16,6 +7,15 @@ export type {
   PlanLimits,
   UpgradeReason,
 } from "./types";
+export { BILLING_CURRENCY, limitLabels, plans } from "./catalog";
+export type { BillingCurrency } from "./catalog";
+export { formatPlanPeriod } from "./formatPlanPeriod";
+export { formatPlanPrice } from "./formatPlanPrice";
+export { getPlan } from "./getPlan";
+export { isPaidPlan } from "./isPaidPlan";
+export { isPlanId } from "./isPlanId";
+export { planServesAudience } from "./planServesAudience";
+export { plansForAudience } from "./plansForAudience";
 export {
   planChoiceLabel,
   planChoiceMode,

@@ -1,1 +1,1 @@
-export * from "./types";
+export type { CanvasSurface } from "./types";

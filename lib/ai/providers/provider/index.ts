@@ -1,2 +1,2 @@
-export * from "./getProvider";
-export * from "./getLanguageModel";
+export { getProvider } from "./getProvider";
+export { getLanguageModel } from "./getLanguageModel";

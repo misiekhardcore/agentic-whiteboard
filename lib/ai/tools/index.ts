@@ -1,2 +1,2 @@
-export * from "./types";
-export * from "./createWorkspaceTools";
+export type { WorkspaceToolActor, WorkspaceToolOptions } from "./types";
+export { createWorkspaceTools } from "./createWorkspaceTools";

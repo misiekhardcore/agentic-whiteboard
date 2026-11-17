@@ -1,5 +1,5 @@
-export * from "./types";
-export * from "./agentMessageRoleEnum";
-export * from "./agentActorTypeEnum";
-export * from "./agentMessages";
-export * from "./agentMessagesRelations";
+export type { AgentMessage } from "./types";
+export { agentMessageRoleEnum } from "./agentMessageRoleEnum";
+export { agentActorTypeEnum } from "./agentActorTypeEnum";
+export { agentMessages } from "./agentMessages";
+export { agentMessagesRelations } from "./agentMessagesRelations";

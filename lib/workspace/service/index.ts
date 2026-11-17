@@ -1,5 +1,5 @@
-export * from "./createWorkspaceFor";
-export * from "./updateWorkspaceWith";
-export * from "./archiveWorkspaceWith";
-export * from "./restoreWorkspaceWith";
-export * from "./deleteWorkspaceWith";
+export { createWorkspaceFor } from "./createWorkspaceFor";
+export { updateWorkspaceWith } from "./updateWorkspaceWith";
+export { archiveWorkspaceWith } from "./archiveWorkspaceWith";
+export { restoreWorkspaceWith } from "./restoreWorkspaceWith";
+export { deleteWorkspaceWith } from "./deleteWorkspaceWith";

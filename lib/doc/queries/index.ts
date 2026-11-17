@@ -1,1 +1,1 @@
-export * from "./listDocSurfaces";
+export { listDocSurfaces } from "./listDocSurfaces";

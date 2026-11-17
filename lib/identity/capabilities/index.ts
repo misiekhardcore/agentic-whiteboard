@@ -1,3 +1,3 @@
-export * from "./updatePersonalProfile";
-export * from "./setReadAloud";
-export * from "./setReadAloudVoice";
+export { updatePersonalProfile } from "./updatePersonalProfile";
+export { setReadAloud } from "./setReadAloud";
+export { setReadAloudVoice } from "./setReadAloudVoice";

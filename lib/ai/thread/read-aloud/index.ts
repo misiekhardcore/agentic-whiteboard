@@ -1,6 +1,6 @@
-export * from "./types";
-export * from "./READ_ALOUD_LANGUAGE";
-export * from "./pendingSpeech";
-export * from "./speechVoiceChoices";
-export * from "./chooseSpeechVoice";
-export * from "./speechErrorMessage";
+export type { PendingSpeech, SpeechVoice } from "./types";
+export { READ_ALOUD_LANGUAGE } from "./READ_ALOUD_LANGUAGE";
+export { pendingSpeech } from "./pendingSpeech";
+export { speechVoiceChoices } from "./speechVoiceChoices";
+export { chooseSpeechVoice } from "./chooseSpeechVoice";
+export { speechErrorMessage } from "./speechErrorMessage";

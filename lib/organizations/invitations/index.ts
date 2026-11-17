@@ -1,7 +1,7 @@
-export * from "./createOrganization";
-export * from "./switchAccount";
-export * from "./inviteMember";
-export * from "./cancelInvitation";
-export * from "./removeMember";
-export * from "./changeMemberRole";
-export * from "./acceptInvitation";
+export { createOrganization } from "./createOrganization";
+export { switchAccount } from "./switchAccount";
+export { inviteMember } from "./inviteMember";
+export { cancelInvitation } from "./cancelInvitation";
+export { removeMember } from "./removeMember";
+export { changeMemberRole } from "./changeMemberRole";
+export { acceptInvitation } from "./acceptInvitation";

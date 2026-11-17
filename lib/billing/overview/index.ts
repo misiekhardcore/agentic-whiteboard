@@ -1,2 +1,2 @@
-export * from "./types";
-export * from "./getSessionBillingOverview";
+export type { BillingOverview } from "./types";
+export { getSessionBillingOverview } from "./getSessionBillingOverview";

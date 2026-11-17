@@ -1,1 +1,1 @@
-export * from "./formString";
+export { formString } from "./formString";

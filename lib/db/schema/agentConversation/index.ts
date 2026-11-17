@@ -1,3 +1,3 @@
-export * from "./types";
-export * from "./agentConversations";
-export * from "./agentConversationsRelations";
+export type { AgentConversation } from "./types";
+export { agentConversations } from "./agentConversations";
+export { agentConversationsRelations } from "./agentConversationsRelations";

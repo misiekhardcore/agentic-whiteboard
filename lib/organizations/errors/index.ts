@@ -1,1 +1,1 @@
-export * from "./organizationErrorMessage";
+export { organizationErrorMessage } from "./organizationErrorMessage";

@@ -1,3 +1,3 @@
-export * from "./types";
-export * from "./constants";
-export * from "./branchConversation";
+export type { BranchResult } from "./types";
+export { BRANCH_MISSING, BRANCH_UNFINISHED } from "./constants";
+export { branchConversation } from "./branchConversation";

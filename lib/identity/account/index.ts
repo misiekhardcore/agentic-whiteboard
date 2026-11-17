@@ -1,2 +1,2 @@
-export * from "./types";
-export * from "./getSessionAccount";
+export type { SessionAccountContext } from "./types";
+export { getSessionAccount } from "./getSessionAccount";

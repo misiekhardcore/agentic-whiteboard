@@ -1,2 +1,2 @@
-export * from "./types";
-export * from "./planFacts";
+export type { PlanFacts } from "./types";
+export { planFacts } from "./planFacts";

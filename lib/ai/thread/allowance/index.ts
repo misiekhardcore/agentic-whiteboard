@@ -1,3 +1,3 @@
-export * from "./types";
-export * from "./countPromptsForMember";
-export * from "./promptAllowance";
+export type { PromptAllowance } from "./types";
+export { countPromptsForMember } from "./countPromptsForMember";
+export { promptAllowance } from "./promptAllowance";

@@ -1,2 +1,2 @@
-export * from "./PersonalProfileForm";
-export * from "./OrganizationProfileForm";
+export { PersonalProfileForm } from "./PersonalProfileForm";
+export { OrganizationProfileForm } from "./OrganizationProfileForm";

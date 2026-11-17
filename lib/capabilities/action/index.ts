@@ -1,4 +1,4 @@
-export * from "./types";
-export * from "./humanContext";
-export * from "./runCapability";
-export * from "./action";
+export type { RevalidatePath } from "./types";
+export { humanContext } from "./humanContext";
+export { runCapability } from "./runCapability";
+export { action } from "./action";

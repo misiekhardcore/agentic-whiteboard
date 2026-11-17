@@ -1,2 +1,2 @@
-export * from "./BrandMark";
-export * from "./BrandLockup";
+export { BrandMark } from "./BrandMark";
+export { BrandLockup } from "./BrandLockup";

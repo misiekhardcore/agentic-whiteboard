@@ -1,3 +1,3 @@
-export * from "./types";
-export * from "./getUserEntitlements";
-export * from "./getOrganizationEntitlements";
+export type { Entitlements } from "./types";
+export { getUserEntitlements } from "./getUserEntitlements";
+export { getOrganizationEntitlements } from "./getOrganizationEntitlements";

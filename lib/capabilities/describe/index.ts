@@ -1,2 +1,2 @@
-export * from "./describeCapability";
-export * from "./describeClientCapability";
+export { describeCapability } from "./describeCapability";
+export { describeClientCapability } from "./describeClientCapability";

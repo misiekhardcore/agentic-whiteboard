@@ -1,7 +1,7 @@
-export * from "./types";
-export * from "./openDashboardPrompt";
-export * from "./markPromptRunning";
-export * from "./retryFailedPrompt";
-export * from "./resumePrompt";
-export * from "./closePrompt";
-export * from "./accruePromptUsage";
+export type { OpenPromptResult, ResumePromptResult, RetryPromptResult } from "./types";
+export { openDashboardPrompt } from "./openDashboardPrompt";
+export { markPromptRunning } from "./markPromptRunning";
+export { retryFailedPrompt } from "./retryFailedPrompt";
+export { resumePrompt } from "./resumePrompt";
+export { closePrompt } from "./closePrompt";
+export { accruePromptUsage } from "./accruePromptUsage";

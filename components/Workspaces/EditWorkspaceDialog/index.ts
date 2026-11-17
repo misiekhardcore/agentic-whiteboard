@@ -1,2 +1,2 @@
-export * from "./EditWorkspaceDialog";
-export * from "./EditWorkspaceForm";
+export { EditWorkspaceDialog } from "./EditWorkspaceDialog";
+export { EditWorkspaceForm } from "./EditWorkspaceForm";

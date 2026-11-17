@@ -1,1 +1,1 @@
-export * from "./capabilityLists";
+export { agentCapabilities, approvalGatedCapabilityNames, capabilities } from "./capabilityLists";

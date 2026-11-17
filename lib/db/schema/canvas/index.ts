@@ -1,2 +1,2 @@
-export * from "./canvases";
-export * from "./canvasesRelations";
+export { canvases } from "./canvases";
+export { canvasesRelations } from "./canvasesRelations";

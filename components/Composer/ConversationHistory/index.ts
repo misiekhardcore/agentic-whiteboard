@@ -1,2 +1,2 @@
-export * from "./ConversationHistory";
-export * from "./ConversationHistoryList";
+export { ConversationHistory } from "./ConversationHistory";
+export { ConversationHistoryList } from "./ConversationHistoryList";

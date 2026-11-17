@@ -1,9 +1,9 @@
-export * from "./presentCreateWorkspace";
-export * from "./presentListWorkspaces";
-export * from "./presentGetWorkspace";
-export * from "./presentUpdateWorkspace";
-export * from "./presentRestoreWorkspace";
-export * from "./presentArchiveWorkspace";
-export * from "./presentDeleteWorkspace";
-export * from "./presentOpenWorkspace";
-export * from "./workspacePresentations";
+export { presentCreateWorkspace } from "./presentCreateWorkspace";
+export { presentListWorkspaces } from "./presentListWorkspaces";
+export { presentGetWorkspace } from "./presentGetWorkspace";
+export { presentUpdateWorkspace } from "./presentUpdateWorkspace";
+export { presentRestoreWorkspace } from "./presentRestoreWorkspace";
+export { presentArchiveWorkspace } from "./presentArchiveWorkspace";
+export { presentDeleteWorkspace } from "./presentDeleteWorkspace";
+export { presentOpenWorkspace } from "./presentOpenWorkspace";
+export { workspacePresentations } from "./workspacePresentations";

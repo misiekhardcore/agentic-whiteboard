@@ -1,3 +1,3 @@
-export * from "./routes";
-export * from "./signInPath";
-export * from "./signUpPath";
+export { routes } from "./routes";
+export { signInPath } from "./signInPath";
+export { signUpPath } from "./signUpPath";

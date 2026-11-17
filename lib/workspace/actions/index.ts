@@ -1,5 +1,5 @@
-export * from "./createWorkspaceAction";
-export * from "./updateWorkspaceAction";
-export * from "./archiveWorkspaceAction";
-export * from "./restoreWorkspaceAction";
-export * from "./deleteWorkspaceAction";
+export { createWorkspaceAction } from "./createWorkspaceAction";
+export { updateWorkspaceAction } from "./updateWorkspaceAction";
+export { archiveWorkspaceAction } from "./archiveWorkspaceAction";
+export { restoreWorkspaceAction } from "./restoreWorkspaceAction";
+export { deleteWorkspaceAction } from "./deleteWorkspaceAction";

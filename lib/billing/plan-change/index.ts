@@ -1,1 +1,1 @@
-export * from "./changeSubscriptionPlan";
+export { changeSubscriptionPlan } from "./changeSubscriptionPlan";

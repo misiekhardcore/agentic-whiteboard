@@ -1,1 +1,1 @@
-export * from "./types";
+export type { AccountActor } from "./types";

@@ -1,2 +1,2 @@
-export * from "./UpgradeButton";
-export * from "./PlanGrid";
+export { UpgradeButton } from "./UpgradeButton";
+export { PlanGrid } from "./PlanGrid";

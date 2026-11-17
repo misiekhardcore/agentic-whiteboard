@@ -1,1 +1,1 @@
-export * from "./updateOrganizationProfile";
+export { updateOrganizationProfile } from "./updateOrganizationProfile";

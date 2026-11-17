@@ -1,2 +1,2 @@
-export * from "./docs";
-export * from "./docsRelations";
+export { docs } from "./docs";
+export { docsRelations } from "./docsRelations";

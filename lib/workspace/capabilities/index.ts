@@ -1,8 +1,8 @@
-export * from "./createWorkspace";
-export * from "./listWorkspaces";
-export * from "./getWorkspace";
-export * from "./updateWorkspace";
-export * from "./restoreWorkspace";
-export * from "./archiveWorkspace";
-export * from "./deleteWorkspace";
-export * from "./openWorkspace";
+export { createWorkspace } from "./createWorkspace";
+export { listWorkspaces } from "./listWorkspaces";
+export { getWorkspace } from "./getWorkspace";
+export { updateWorkspace } from "./updateWorkspace";
+export { restoreWorkspace } from "./restoreWorkspace";
+export { archiveWorkspace } from "./archiveWorkspace";
+export { deleteWorkspace } from "./deleteWorkspace";
+export { openWorkspace } from "./openWorkspace";

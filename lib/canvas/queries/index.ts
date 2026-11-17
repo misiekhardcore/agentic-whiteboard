@@ -1,1 +1,1 @@
-export * from "./listCanvasSurfaces";
+export { listCanvasSurfaces } from "./listCanvasSurfaces";

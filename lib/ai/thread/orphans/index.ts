@@ -1,2 +1,2 @@
-export * from "./deadThreadPrompts";
-export * from "./retireOrphanedPrompts";
+export { deadThreadPrompts } from "./deadThreadPrompts";
+export { retireOrphanedPrompts } from "./retireOrphanedPrompts";
