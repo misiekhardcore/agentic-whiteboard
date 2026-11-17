@@ -15,18 +15,13 @@ import {
   isPaidPlan,
   type Plan,
   planServesAudience,
+  plansForAudience,
 } from "@/lib/billing/plans";
 import type { TeamOption } from "@/lib/organizations/contracts";
 import { routes, signInPath } from "@/lib/shared/routes";
 import { cn } from "@/lib/utils";
 
 const AUDIENCES: readonly BillingAudience[] = ["personal", "team"];
-
-function plansFor(audience: BillingAudience): Plan[] {
-  return landing.pricing.planIds[audience]
-    .map((id) => getPlan(id))
-    .filter((plan): plan is Plan => Boolean(plan));
-}
 
 export function PricingTabs({
   signedIn,
@@ -98,7 +93,7 @@ export function PricingTabs({
         </TabsList>
 
         {AUDIENCES.map((option) => {
-          const plans = plansFor(option);
+          const plans = plansForAudience(option);
 
           return (
             <TabsContent key={option} value={option}>

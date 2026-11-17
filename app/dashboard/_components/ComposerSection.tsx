@@ -20,19 +20,19 @@ import { readPersonalSettings } from "@/lib/identity/settings";
  * The composer is keyed by the conversation: switching threads is a remount with
  * that thread's messages, not a prop change a live `useChat` would ignore.
  */
-export function PromptSection({
+export function ComposerSection({
   searchParams,
 }: {
   searchParams: PageProps<"/dashboard">["searchParams"];
 }) {
   return (
     <Suspense fallback={<Loading className="py-16" />}>
-      <PromptSectionInner searchParams={searchParams} />
+      <ComposerSectionInner searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function PromptSectionInner({
+async function ComposerSectionInner({
   searchParams,
 }: {
   searchParams: PageProps<"/dashboard">["searchParams"];

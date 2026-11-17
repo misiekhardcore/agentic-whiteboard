@@ -1,20 +1,11 @@
-import { Badge } from "@konopskidev/ui/components/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@konopskidev/ui/components/card";
 import { redirect } from "next/navigation";
 
 import { getSessionAccount } from "@/lib/identity/account";
 import { readPersonalSettings } from "@/lib/identity/settings";
-import { canManageTeam } from "@/lib/organizations/membership";
 import { routes, signInPath } from "@/lib/shared/routes";
 
-import { PreferencesForm } from "./_components/preferences-form";
-import { OrganizationProfileForm, PersonalProfileForm } from "./_components/profile-forms";
+import { PreferencesSection } from "./_components/PreferencesSection";
+import { ProfileSection } from "./_components/ProfileSection";
 
 export const metadata = {
   title: "Settings",
@@ -50,66 +41,15 @@ export default async function SettingsPage() {
         </p>
       </header>
 
-      {activeTeam ? (
-        <Card>
-          <CardHeader>
-            <div className="flex flex-wrap items-center gap-2">
-              <CardTitle>{activeTeam.name}</CardTitle>
-              <Badge variant="outline" className="capitalize">
-                {activeTeam.role}
-              </Badge>
-            </div>
-            <CardDescription>
-              This name and photo appear wherever this organization is shown to its teammates.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <OrganizationProfileForm
-              organization={{
-                id: activeTeam.id,
-                name: activeTeam.name,
-                slug: activeTeam.slug,
-                logo: activeTeam.logo,
-              }}
-              canManage={canManageTeam(activeTeam.role)}
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Personal account</CardTitle>
-            <CardDescription>
-              This name and photo appear in the header and anywhere your account is shown to
-              teammates.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PersonalProfileForm
-              user={{
-                name: session.user.name,
-                email: session.user.email,
-                image: session.user.image ?? null,
-              }}
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Preferences</CardTitle>
-          <CardDescription>
-            These follow you across your personal account and every organization.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <PreferencesForm
-            initialReadAloud={settings.readAloud}
-            initialReadAloudVoice={settings.readAloudVoice}
-          />
-        </CardContent>
-      </Card>
+      <ProfileSection
+        activeTeam={activeTeam}
+        user={{
+          name: session.user.name,
+          email: session.user.email,
+          image: session.user.image ?? null,
+        }}
+      />
+      <PreferencesSection settings={settings} />
     </div>
   );
 }

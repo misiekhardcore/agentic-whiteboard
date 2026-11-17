@@ -19,15 +19,15 @@ import { listArchivedWorkspaces } from "@/lib/workspace/queries";
  * the active account's workspaces are listed, and the card disappears entirely
  * when there is nothing archived.
  */
-export function ArchivedWorkspaces() {
+export function ArchivedSection() {
   return (
     <Suspense fallback={<Loading />}>
-      <ArchivedWorkspacesInner />
+      <ArchivedSectionInner />
     </Suspense>
   );
 }
 
-async function ArchivedWorkspacesInner() {
+async function ArchivedSectionInner() {
   const account = await getSessionAccount();
 
   if (!account) return null;

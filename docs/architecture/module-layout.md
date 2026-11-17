@@ -32,6 +32,7 @@ probe.
 | Hooks         | `use<Thing>.ts` beside the area it serves. Pure, testable logic moves to its `lib/<context>` module.                                                                                                     |
 | Route folders | `app/**/_components/` holds page sections named for the page region they own (`MembersCard`, `PlanCardSection`). No atoms, hooks or dialogs.                                                             |
 | Pages         | `page.tsx` keeps the route exports (`metadata`, `instant`), the reads and a composition of sections.                                                                                                     |
+| Copy          | Page copy lives in `app/_data/<page>/`, one module per section, with an `index.ts` that assembles the object the page reads.                                                                             |
 
 ### Domain
 

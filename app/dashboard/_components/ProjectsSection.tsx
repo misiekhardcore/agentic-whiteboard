@@ -14,15 +14,15 @@ import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace/status";
 
 const RECENT_LIMIT = 5;
 
-export function ProjectsList() {
+export function ProjectsSection() {
   return (
     <Suspense fallback={<Loading />}>
-      <ProjectsListInner />
+      <ProjectsSectionInner />
     </Suspense>
   );
 }
 
-async function ProjectsListInner() {
+async function ProjectsSectionInner() {
   const account = await getSessionAccount();
 
   if (!account) return null;
