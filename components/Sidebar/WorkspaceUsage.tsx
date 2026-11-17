@@ -1,5 +1,5 @@
-import { UpgradeControl } from "@/app/_components/billing/upgrade-control";
-import { UsageMeter } from "@/app/_components/billing/usage-meter";
+import { UpgradeControl } from "@/components/Billing/UpgradeControl";
+import { UsageMeter } from "@/components/Billing/UsageMeter";
 import { getSessionBillingOverview } from "@/lib/billing/overview";
 import { limitLabels } from "@/lib/billing/plans";
 

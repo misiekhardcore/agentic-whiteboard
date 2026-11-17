@@ -6,8 +6,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { PlanCard } from "@/app/_components/billing/plan-card";
 import { landing } from "@/app/_data/landing";
+import { CheckoutSheet } from "@/components/Billing/CheckoutSheet";
+import { PlanCard } from "@/components/Billing/PlanCard";
 import {
   type BillingAudience,
   getPlan,
@@ -18,8 +19,6 @@ import {
 import type { TeamOption } from "@/lib/organizations/contracts";
 import { routes, signInPath } from "@/lib/shared/routes";
 import { cn } from "@/lib/utils";
-
-import { CheckoutSheet } from "./checkout-sheet";
 
 const AUDIENCES: readonly BillingAudience[] = ["personal", "team"];
 

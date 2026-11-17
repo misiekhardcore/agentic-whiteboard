@@ -10,8 +10,8 @@ import { Archive } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { ArchivedWorkspaceList } from "@/app/dashboard/_components/ArchivedWorkspaceList";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
+import { ArchivedWorkspaceList } from "@/components/Workspaces/ArchivedWorkspaceList";
 import { getSessionAccount } from "@/lib/identity/account";
 import { routes, signInPath } from "@/lib/shared/routes";
 import { listArchivedWorkspaces } from "@/lib/workspace/queries";

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 import "./globals.css";
+import { SiteHeader } from "@/components/Site/SiteHeader";
 import { cn } from "@/lib/utils";
 
-import { SiteHeader } from "./_components/site-header";
 import { FONT_CLASSNAMES } from "./constants";
 import { Providers } from "./providers";
 

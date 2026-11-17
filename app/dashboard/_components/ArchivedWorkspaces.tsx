@@ -9,11 +9,10 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { Loading } from "@/components/Loading/Loading";
+import { ArchivedWorkspaceList } from "@/components/Workspaces/ArchivedWorkspaceList";
 import { getSessionAccount } from "@/lib/identity/account";
 import { routes } from "@/lib/shared/routes";
 import { listArchivedWorkspaces } from "@/lib/workspace/queries";
-
-import { ArchivedWorkspaceList } from "./ArchivedWorkspaceList";
 
 /**
  * Archived workspaces stay restorable without cluttering the dashboard. Only

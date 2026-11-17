@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { PromptComposer } from "@/components/Composer/PromptComposer";
 import { Loading } from "@/components/Loading/Loading";
 import {
   listConversations,
@@ -9,8 +10,6 @@ import {
 } from "@/lib/ai/thread/conversations";
 import { getSessionAccount } from "@/lib/identity/account";
 import { readPersonalSettings } from "@/lib/identity/settings";
-
-import { PromptComposer } from "./PromptComposer";
 
 /**
  * The composer is a client component with the thread as its initial messages, so

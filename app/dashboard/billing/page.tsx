@@ -10,10 +10,10 @@ import {
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { CancelSubscriptionButton } from "@/app/_components/billing/cancel-subscription-button";
-import { ManageBillingButton } from "@/app/_components/billing/manage-billing-button";
-import { PlanSummary } from "@/app/_components/billing/plan-summary";
-import { UsageMeter } from "@/app/_components/billing/usage-meter";
+import { CancelSubscriptionButton } from "@/components/Billing/CancelSubscriptionButton";
+import { ManageBillingButton } from "@/components/Billing/ManageBillingButton";
+import { PlanSummary } from "@/components/Billing/PlanSummary";
+import { UsageMeter } from "@/components/Billing/UsageMeter";
 import { planFacts } from "@/lib/billing/details";
 import { getSessionBillingOverview } from "@/lib/billing/overview";
 import { isPaidPlan, limitLabels } from "@/lib/billing/plans";

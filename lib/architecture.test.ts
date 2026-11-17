@@ -87,7 +87,14 @@ const KERNEL_ALLOWED = [/^zod$/, /^\.\//, /^@\/lib\/identity\/actor$/];
  */
 const SURFACE_CONTEXTS = [/^lib[\\/](doc|canvas)[\\/]/];
 
-const SURFACE_ALLOWED = [/^@\/lib\/db(\/|$)/, /^@\/lib\/shared(\/|$)/, /^drizzle-orm/, /^\.\//];
+const SURFACE_ALLOWED = [
+  /^@\/lib\/db(\/|$)/,
+  /^@\/lib\/shared(\/|$)/,
+  /^drizzle-orm/,
+  /^\.\//,
+  // A split module lives one folder down but still belongs to its surface.
+  /^\.\.\/(contracts|queries)(\/|$)/,
+];
 
 describe("module boundaries", () => {
   it("keeps lib out of the presentation layer", () => {

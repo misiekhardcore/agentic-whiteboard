@@ -50,7 +50,8 @@ into "confirm the change is what was asked" — never into "skip the tests".
   types, pure rules and the persistence/API adapters beside them, e.g.
   [lib/billing/entitlements.ts](lib/billing/entitlements.ts) and
   [lib/billing/subscriptions.ts](lib/billing/subscriptions.ts).
-- **Layers are filenames**, in this order: `status`/`forms`/`contracts`/`presentation` (client-safe) → `rules` → `queries`/`access`/`service` → `capabilities` → `actions`. A file imports only leftwards; `lib/capabilities` imports no context. Enforced by lint zones and [lib/architecture.test.ts](lib/architecture.test.ts) — see [docs/architecture/module-boundaries.md](docs/architecture/module-boundaries.md).
+- **Layers are folders**, in this order: `status`/`forms`/`contracts`/`presentation` (client-safe) → `rules` → `queries`/`access`/`service` → `capabilities` → `actions`. A module imports only leftwards; `lib/capabilities` imports no context. Enforced by lint zones and [lib/architecture.test.ts](lib/architecture.test.ts) — see [docs/architecture/module-boundaries.md](docs/architecture/module-boundaries.md) and [docs/architecture/module-layout.md](docs/architecture/module-layout.md).
+- **One behaviour, one module.** Split an exported behaviour into its own file named for the function (`lib/workspace/capabilities/createWorkspace.ts`); types and constants stay with the function that owns them. Files named by lint zones, client-safe allowlists or the architecture test stay as re-export barrels, and a sibling imports the concrete module rather than its own barrel.
 - **A user-facing mutation is a capability.** That includes operations the agent must never call: declare `callers: ["human"]` instead of writing a bespoke action. Pre-auth flows (sign-in, reset, OAuth) are the documented exception, because there is no actor yet.
 - **One rule, one module.** Quota copy, roles, slugs and lifecycle invariants are imported, never re-derived in a page, action or tool. A context may use another context's published functions and contracts, never its `actions.ts`, schema or SQL.
 - **Domain first.** Money, quotas, entitlements, roles and permissions,
@@ -111,18 +112,22 @@ Write the failing test before the production code, for every behaviour change.
 - **DRY, without pre-emptive abstraction.** A business rule exists once. Two
   independent call sites is not yet a reason to abstract; three copies of a rule
   is a defect. Prefer clear, local code over a premature generic helper.
-- **Files stay small and named for the domain.** Split a module when it grows
-  two responsibilities; do not create a `utils.ts` dumping ground (`lib/utils.ts`
-  is for UI helpers only). Reuse the existing UI primitives in
-  [components/ui](components/ui) and the `@konopskidev/ui` package rather than
-  forking markup.
+- **Files stay small and named for the domain.** Target 150 lines per module
+  (200 for a rule or service) and one exported React component per file. Split a
+  module when it grows two responsibilities; do not create a `utils.ts` dumping
+  ground (`lib/utils.ts` is for UI helpers only). Reuse the existing UI
+  primitives in [components/ui](components/ui) and the `@konopskidev/ui` package
+  rather than forking markup.
+- **Presentation is shared or sectional.** Reusable UI lives under
+  `components/<Area>/`; `app/**/_components/` holds page sections only. See
+  [docs/architecture/module-layout.md](docs/architecture/module-layout.md).
 
 ## Project map
 
 | Path                 | Contents                                                                                                    |
 | -------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `app/`               | App Router routes, layouts, server actions, route handlers (`app/api`).                                     |
-| `lib/`               | One folder per bounded context; layers are filenames inside a context. See below.                           |
+| `lib/`               | One folder per bounded context; layers are folders inside a context. See below.                             |
 | `lib/capabilities/`  | The capability kernel: `define`, `invoke`, the human/route entry points, registry and thread presentations. |
 | `lib/identity/`      | Actor, session → active account, roles, better-auth adapter, pre-auth actions.                              |
 | `lib/organizations/` | Membership, slug rule, invitations, organization settings and their capabilities.                           |
@@ -132,7 +137,7 @@ Write the failing test before the production code, for every behaviour change.
 | `lib/ai/`            | Providers, runtime (agent + instructions), thread (rules, store, allowance, turn, composer), tools adapter. |
 | `lib/billing/`       | Plans, entitlements, usage rules (pure), subscriptions, checkout, Stripe adapter.                           |
 | `lib/shared/`        | Routes, form-data reading and date formatting — the only genuinely shared primitives.                       |
-| `components/`        | Shared client UI; `components/ui` are shadcn-style primitives.                                              |
+| `components/`        | Shared client UI grouped by area; `components/ui` are shadcn-style primitives.                              |
 | `lib/db/`            | Drizzle schema, connection, column helpers.                                                                 |
 | `drizzle/`           | Generated migrations — never hand-edit applied files.                                                       |
 | `e2e/`               | Playwright specs.                                                                                           |

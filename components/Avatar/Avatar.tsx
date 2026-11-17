@@ -7,6 +7,7 @@ import { headers } from "next/headers";
 import { Suspense } from "react";
 
 import { auth } from "@/lib/identity/better-auth";
+import { initials } from "@/lib/shared/initials";
 
 export function Avatar() {
   return (
@@ -26,7 +27,7 @@ async function AvatarInner() {
   return (
     <BaseAvatar>
       <AvatarImage alt={session.user.name} src={session.user.image ?? undefined} />
-      <AvatarFallback>{session.user.name.slice(0, 1).toUpperCase()}</AvatarFallback>
+      <AvatarFallback>{initials(session.user.name)}</AvatarFallback>
     </BaseAvatar>
   );
 }

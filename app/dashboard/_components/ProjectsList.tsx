@@ -4,14 +4,13 @@ import { Suspense } from "react";
 
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { Loading } from "@/components/Loading/Loading";
+import { CreateWorkspaceDialog } from "@/components/Workspaces/CreateWorkspaceDialog";
+import { WorkspaceCard } from "@/components/Workspaces/WorkspaceCard";
 import { getSessionAccount } from "@/lib/identity/account";
 import { formatDay } from "@/lib/shared/format-date";
 import { routes } from "@/lib/shared/routes";
 import { listRecentWorkspaceItems, type RecentWorkspaceItem } from "@/lib/workspace/recent";
 import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace/status";
-
-import { CreateWorkspaceDialog } from "./CreateWorkspaceDialog";
-import { WorkspaceCard } from "./WorkspaceCard";
 
 const RECENT_LIMIT = 5;
 

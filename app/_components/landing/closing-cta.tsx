@@ -1,8 +1,8 @@
 import { Button } from "@konopskidev/ui/components/button";
 import Link from "next/link";
 
-import { BrandLockup } from "@/app/_components/brand";
 import { landing } from "@/app/_data/landing";
+import { BrandLockup } from "@/components/Site/Brand";
 
 /**
  * The last stop on the page: the logo over the topographic contours, then a
