@@ -1,6 +1,7 @@
 export * from "./types";
 export * from "./EXAMPLE_PROMPTS";
 export * from "./composerKeyIntent";
+export * from "./composerHint";
 export * from "./submittedPrompt";
 export * from "./DICTATION_LANGUAGE";
 export * from "./withTranscript";
