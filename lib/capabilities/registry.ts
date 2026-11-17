@@ -1,3 +1,4 @@
+import { branchConversation } from "@/lib/ai/capabilities";
 import {
   setReadAloud,
   setReadAloudVoice,
@@ -59,6 +60,7 @@ export const capabilities: readonly CapabilityDescriptor[] = [
   describeCapability(updatePersonalProfile),
   describeCapability(setReadAloud),
   describeCapability(setReadAloudVoice),
+  describeCapability(branchConversation),
 ];
 
 /** What the agent may call, in registry order. */

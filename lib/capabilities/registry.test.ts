@@ -10,6 +10,7 @@ describe("capability registry", () => {
     expect(names.sort()).toEqual([
       "acceptInvitation",
       "archiveWorkspace",
+      "branchConversation",
       "cancelInvitation",
       "createOrganization",
       "createWorkspace",

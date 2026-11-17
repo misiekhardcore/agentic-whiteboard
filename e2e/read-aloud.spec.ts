@@ -203,8 +203,11 @@ test("the settings page changes the preference the composer follows", async ({ p
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-checked", "true");
     // Waiting for the confirmation also waits for the save, so the navigation
-    // below cannot cancel the request in flight.
-    await expect(page.getByRole("status")).toHaveText("Saved. Read aloud is on.");
+    // below cannot cancel the request in flight. The locator names the form's
+    // own line: the page's loading spinner is a `status` too, and a slower
+    // machine can still have it when this assertion first resolves.
+    const preferenceStatus = page.getByRole("status").filter({ hasText: /^Saved\./ });
+    await expect(preferenceStatus).toHaveText("Saved. Read aloud is on.");
 
     // The composer reads the same stored choice.
     await page.goto("/dashboard");
@@ -218,7 +221,7 @@ test("the settings page changes the preference the composer follows", async ({ p
     await expect(toggle).toHaveAttribute("aria-checked", "true");
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-checked", "false");
-    await expect(page.getByRole("status")).toHaveText("Saved. Read aloud is off.");
+    await expect(preferenceStatus).toHaveText("Saved. Read aloud is off.");
 
     await page.goto("/dashboard");
     await expect(page.getByRole("button", { name: "Turn on read aloud" })).toHaveAttribute(

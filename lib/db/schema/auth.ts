@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
+import { agentConversations } from "./agentConversation";
 import { agentMessages } from "./agentMessage";
 import { agentPrompts } from "./agentPrompt";
 import { workspaces } from "./workspace";
@@ -135,6 +136,7 @@ export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
   createdWorkspaces: many(workspaces),
+  agentConversations: many(agentConversations),
   agentPrompts: many(agentPrompts),
   agentMessages: many(agentMessages),
   members: many(member),

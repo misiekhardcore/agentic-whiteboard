@@ -4,6 +4,7 @@ import { index, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex } from "dri
 
 import { AGENT_PROMPT_STATUSES } from "../../collab/contracts";
 
+import { agentConversations } from "./agentConversation";
 import { agentMessages } from "./agentMessage";
 import { user } from "./auth";
 import { workspaces } from "./workspace";
@@ -17,7 +18,8 @@ export const agentPromptStatusEnum = pgEnum("AgentPromptStatus", AGENT_PROMPT_ST
  * status, so there is no second ledger to keep in sync.
  *
  * `workspaceId` is null for the dashboard's planning thread, where the prompt
- * belongs to the person and the agent may create a workspace with a tool.
+ * belongs to the person and the agent may create a workspace with a tool; there
+ * `conversationId` says which of that person's conversations it continues.
  */
 export const agentPrompts = pgTable(
   "agentPrompt",
@@ -43,6 +45,13 @@ export const agentPrompts = pgTable(
       onDelete: "cascade",
     }),
 
+    // The dashboard conversation this prompt continues. Null for a workspace
+    // prompt and for rows written before conversations existed (the migration
+    // backfills those into one per person).
+    conversationId: text("conversationId").references(() => agentConversations.id, {
+      onDelete: "cascade",
+    }),
+
     status: agentPromptStatusEnum("status").default("QUEUED").notNull(),
 
     provider: text("provider").notNull(),
@@ -51,6 +60,21 @@ export const agentPrompts = pgTable(
     /** The AI SDK usage object, kept for quotas and cost reporting. */
     usage: jsonb("usage"),
     error: text("error"),
+
+    /**
+     * The prompt is no longer part of its conversation: an edit (or a rewind)
+     * replaced it and everything after it. The row stays for the allowance
+     * count and the audit trail, so discarding a turn never costs history.
+     */
+    supersededAt: timestamp("supersededAt", { precision: 3, mode: "date" }),
+
+    /**
+     * The prompt this row was copied from, when its conversation is a branch of
+     * another one. A branch is history rather than an execution: the turn ran
+     * once, in the conversation it came from, so the monthly count skips the
+     * copy instead of charging the person twice for the same work.
+     */
+    branchedFromId: text("branchedFromId"),
 
     startedAt: timestamp("startedAt", { precision: 3, mode: "date" }),
     finishedAt: timestamp("finishedAt", { precision: 3, mode: "date" }),
@@ -72,6 +96,8 @@ export const agentPrompts = pgTable(
     index("AgentPrompt_userId_createdAt_idx").on(table.userId, table.createdAt),
     // A workspace's chat history.
     index("AgentPrompt_workspaceId_createdAt_idx").on(table.workspaceId, table.createdAt),
+    // Loading one conversation's live prompts, in order.
+    index("AgentPrompt_conversationId_createdAt_idx").on(table.conversationId, table.createdAt),
     // One agent may write to a workspace at a time.
     uniqueIndex("AgentPrompt_one_active_per_workspace_idx")
       .on(table.workspaceId)
@@ -91,6 +117,10 @@ export const agentPromptsRelations = relations(agentPrompts, ({ one, many }) => 
   workspace: one(workspaces, {
     fields: [agentPrompts.workspaceId],
     references: [workspaces.id],
+  }),
+  conversation: one(agentConversations, {
+    fields: [agentPrompts.conversationId],
+    references: [agentConversations.id],
   }),
   messages: many(agentMessages),
 }));

@@ -48,6 +48,14 @@ export const agentMessages = pgTable(
     // Human author for USER messages; null for agent/system/tool output.
     userId: text("userId").references(() => user.id, { onDelete: "set null" }),
 
+    /**
+     * The message is no longer shown while its prompt still is: a retry replaces
+     * the reply a failed attempt left behind without opening a second prompt. A
+     * discarded turn is reached through the prompt's own `supersededAt` instead,
+     * so nothing is deleted and the monthly prompt count never changes.
+     */
+    supersededAt: timestamp("supersededAt", { precision: 3, mode: "date" }),
+
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
