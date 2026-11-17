@@ -473,6 +473,56 @@ async function seedFailedPrompt(
   });
 }
 
+/**
+ * A stored conversation with one finished turn, so the history dialog can be
+ * exercised without sending six prompts through the model. Its timestamps put
+ * it where `minutesAgo` says it sits in the list.
+ */
+async function seedConversation({
+  email,
+  conversationId,
+  prompt,
+  minutesAgo,
+}: {
+  email: string;
+  conversationId: string;
+  prompt: string;
+  minutesAgo: number;
+}): Promise<void> {
+  const at = `${minutesAgo} minutes`;
+
+  await withDb(async (db) => {
+    await db.query(
+      `insert into "agentConversation" (id, "userId", "createdAt", "updatedAt")
+        select $1, id, now() - $3::interval, now() - $3::interval
+          from "user" where email = $2`,
+      [conversationId, email, at],
+    );
+    await db.query(
+      `insert into "agentPrompt" (id, "ownerId", "userId", "conversationId", status, provider, model, "createdAt")
+        select $1 || '-prompt', u.id, u.id, $1, 'COMPLETED', 'stub', 'stub-model', now() - $3::interval
+          from "user" u where u.email = $2`,
+      [conversationId, email, at],
+    );
+    await db.query(
+      `insert into "agentMessage" (id, "promptId", role, content, "actorType", "userId", "createdAt")
+        select $1 || '-user', $1 || '-prompt', 'USER', $3::jsonb, 'USER', u.id, now() - $4::interval
+          from "user" u where u.email = $2`,
+      [conversationId, email, JSON.stringify({ parts: [{ type: "text", text: prompt }] }), at],
+    );
+    await db.query(
+      `insert into "agentMessage" (id, "promptId", role, content, "actorType", "createdAt")
+        values ($1 || '-reply', $1 || '-prompt', 'ASSISTANT', $2::jsonb, 'AGENT',
+                now() - $3::interval + interval '1 second')`,
+      [
+        conversationId,
+        JSON.stringify({ parts: [{ type: "text", text: `Reply to ${prompt}` }] }),
+        at,
+      ],
+    );
+  });
+}
+
 /** A conversation long enough that its thread has to scroll. */
 async function seedScrollThread(email: string, conversationId: string): Promise<void> {
   await withDb(async (db) => {
@@ -542,9 +592,10 @@ test("a new conversation starts empty and the switcher brings the last one back"
     await composer.press("Enter");
     await expect(thread).toContainText("Stub agent: Second thread");
 
+    // A pill is a link to the conversation, styled as a button.
     const switcher = page.getByRole("group", { name: "Recent conversations" });
-    await expect(switcher.getByRole("button", { name: "First thread" })).toBeVisible();
-    await switcher.getByRole("button", { name: "First thread" }).click();
+    await expect(switcher.getByRole("link", { name: "First thread" })).toBeVisible();
+    await switcher.getByRole("link", { name: "First thread" }).click();
 
     await expect(thread).toContainText("Stub agent: First thread");
     await expect(thread).not.toContainText("Second thread");
@@ -557,6 +608,60 @@ test("a new conversation starts empty and the switcher brings the last one back"
 
     expect(await conversationCount(email)).toBe(2);
     await expect.poll(() => promptCount(email)).toBe(2);
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("the history dialog lists every conversation, including ones the pills cannot show", async ({
+  page,
+}) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-history-${id}@example.com`;
+  const oldest = randomUUID();
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    // Six conversations, one more than the pills can name.
+    await seedConversation({
+      email,
+      conversationId: oldest,
+      prompt: "The oldest thread",
+      minutesAgo: 60,
+    });
+    for (let index = 2; index <= 6; index += 1) {
+      await seedConversation({
+        email,
+        conversationId: randomUUID(),
+        prompt: `Seeded thread ${index}`,
+        minutesAgo: 70 - index * 10,
+      });
+    }
+
+    await page.goto("/dashboard");
+
+    // The pills stop at the recent few, so the oldest thread is not among them.
+    const switcher = page.getByRole("group", { name: "Recent conversations" });
+    await expect(switcher).toBeVisible();
+    await expect(switcher.getByText("The oldest thread")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "History" }).click();
+
+    // The dialog reads the whole list, newest first.
+    const dialog = page.getByRole("dialog", { name: "Conversation history" });
+    const entries = dialog.getByRole("link");
+    await expect(entries).toHaveCount(6);
+    await expect(entries.first()).toContainText("Seeded thread 6");
+    await expect(dialog.getByRole("link", { name: "The oldest thread" })).toBeVisible();
+
+    // Choosing one opens it and closes the dialog.
+    await dialog.getByRole("link", { name: "The oldest thread" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`conversation=${oldest}`));
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+    await expect(thread).toContainText("Reply to The oldest thread");
+    await expect(thread).not.toContainText("Seeded thread 6");
   } finally {
     await deleteAccount(email);
   }

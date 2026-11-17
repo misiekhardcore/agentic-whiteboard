@@ -192,13 +192,17 @@ export async function loadPromptHistory({
 }
 
 /**
- * The recent conversations the switcher lists, newest first, labelled by the
- * first prompt still in each thread. A conversation with no live prompt has
- * nothing to show or open, so it is not listed.
+ * A person's conversations, newest first, labelled by the first prompt still in
+ * each thread. The switcher asks for the recent few and the history dialog for
+ * the whole list, so both read the same rows the same way; only the count
+ * differs.
+ *
+ * A conversation with no live prompt has nothing to show or open, so it is not
+ * listed.
  */
-export async function listRecentConversations(
+export async function listConversations(
   userId: string,
-  limit = RECENT_CONVERSATION_LIMIT,
+  limit: number,
 ): Promise<DashboardConversation[]> {
   const conversations = await db
     .select({ id: agentConversations.id, updatedAt: agentConversations.updatedAt })

@@ -45,11 +45,13 @@ column.
 | Allowance        | Checked only where a new prompt is opened                                     | A retry reuses its row, and an approval answer continues one; both are already counted, so neither can be refused for being out of allowance halfway through work the person paid for.                                                                                          |
 | Switching        | The open conversation is `?conversation=<id>`, and the section is keyed by it | `useChat` takes its messages once. A remount with the chosen thread's messages is the honest way to switch, and it keeps the URL shareable and reload-safe. The key uses the URL's id, not the resolved one, so a first visit does not remount and abort the prompt being sent. |
 | Switcher         | The five most recently updated conversations, labelled by their first prompt  | Enough to go back to what was just left without becoming a sidebar. A conversation with no live prompt is not listed, because there is nothing in it to open.                                                                                                                   |
+| History          | Every conversation, listed in a dialog beside the pills, read when it opens   | The pills can only name the last few; the rest need a way in that is not a sidebar. Reading on open keeps a dashboard visit from fetching a whole history, and a bounded limit keeps the query from growing without end.                                                        |
 | Scroll           | The thread is its own scroll box with a maximum height, pinned to the newest  | The composer must stay in place while a reply arrives. Following is a property of the position, not of the render: content growing does not move the scroll position, so only an upward scroll stops it, and the observer resumes as soon as the reader returns to the bottom.  |
 | Retry control    | Offered by the composer and by the thread when the stored tip failed          | The browser knows a send failed before it reached the route (the outage never wrote a row); the page knows the stored prompt failed. Both offer the same one-click retry, and both send the same message again.                                                                 |
 | Branch           | A new conversation holding a copy of the live turns through a reply           | "Carry on from here, without the rest" is a second thread, and a prompt belongs to one conversation — so the turns are copied rather than shared. Editing a copied turn rewinds the branch and leaves the original alone.                                                       |
 | Branch origin    | `agentPrompt.branchedFromId` marks a copy, and the count skips it             | The copy is history: the turn ran, and was paid for, where it came from. Counting it again would charge a person for branching, which does no work. Marking it says so in the row rather than in a query's shape.                                                               |
-| Branch point     | Only a turn that finished can be copied                                       | A queued, running or parked turn is not history yet, and a copy of a parked approval could never be answered: the answer is matched to the stored request, which lives in the original conversation.                                                                            |     | Message actions | Per message, revealed on hover; always visible where nothing can hover | A long thread should read as a conversation, not as a wall of buttons. Copy and edit belong to the prompt; copy, read aloud, re-run (newest only) and branch belong to the reply. Re-running an older reply is not offered — that is what editing its prompt is for. |
+| Branch point     | Only a turn that finished can be copied                                       | A queued, running or parked turn is not history yet, and a copy of a parked approval could never be answered: the answer is matched to the stored request, which lives in the original conversation.                                                                            |
+| Message actions  | Per message, revealed on hover; always visible where nothing can hover        | A long thread should read as a conversation, not as a wall of buttons. Copy and edit belong to the prompt; copy, read aloud, re-run (newest only) and branch belong to the reply. Re-running an older reply is not offered — that is what editing its prompt is for.            |
 | Icon buttons     | One label per button, used as its accessible name and its tooltip             | An icon is the whole control, so its meaning has to be on screen somewhere. One string cannot disagree with itself the way an `aria-label` and a tooltip written separately can, and it keeps the icon legible to a screen reader and a pointer alike.                          |
 
 ### Why a conversation is URL state
@@ -124,7 +126,8 @@ an approval lands in exactly one of them:
 - `rules.ts` — the pure rules: append/retry/rewind intent, the branch and
   history windows, the stored-message mapping, the switcher preview.
 - `conversations.ts` — reads: which conversation is open, its live thread, one
-  turn's history, the recent list.
+  turn's history, and one list read that serves both the pills and the history
+  dialog.
 - `prompts.ts` — the prompt row's life: open (an append or a rewind's new
   branch), retry, resume after an approval, close, and the usage it accrues.
   The single-flight loss is mapped here, as `busy` or `expired`.
@@ -179,9 +182,9 @@ writer, and `turn.ts` is the only module that composes the others.
 
 ## Consequences
 
-- A person can hold several conversations and switch between the recent ones; a
-  conversation with nothing live in it is not offered, so the switcher never grows
-  junk.
+- A person can hold several conversations, switch between the recent ones, or
+  open any of them from the history dialog; a conversation with nothing live in
+  it is not offered, so neither list ever grows junk.
 - The monthly count is a count of work, not of visible turns: superseded prompts
   keep counting, and only a retry of a failed tip is free.
 - History is never destroyed by an edit. The database keeps every discarded turn
@@ -199,7 +202,8 @@ writer, and `turn.ts` is the only module that composes the others.
 
 ## Deferred
 
-- A full conversation sidebar (rename, delete, search).
+- Renaming, deleting or searching conversations: the history dialog lists them,
+  it does not manage them.
 - Sharing a conversation with the account's other members.
 - Restoring a superseded branch.
 - Streaming the same conversation to several tabs.

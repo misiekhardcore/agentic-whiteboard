@@ -33,6 +33,8 @@ export const routes = {
   invite: (id: string) => `/invite/${encodeURIComponent(id)}`,
 
   agentPromptsApi: "/api/agent/prompts",
+  /** The session's conversations, for the dashboard's history dialog. */
+  agentConversationsApi: "/api/agent/conversations",
 } as const;
 
 /**

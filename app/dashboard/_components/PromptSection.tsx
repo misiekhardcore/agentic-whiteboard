@@ -2,8 +2,9 @@ import { Suspense } from "react";
 
 import { Loading } from "@/components/Loading/Loading";
 import {
-  listRecentConversations,
+  listConversations,
   loadConversationThread,
+  RECENT_CONVERSATION_LIMIT,
   resolveActiveConversation,
 } from "@/lib/ai/thread/conversations";
 import { getSessionAccount } from "@/lib/identity/account";
@@ -61,7 +62,7 @@ async function PromptSectionInner({
   });
   const [thread, conversations, settings] = await Promise.all([
     loadConversationThread({ userId, conversationId }),
-    listRecentConversations(userId),
+    listConversations(userId, RECENT_CONVERSATION_LIMIT),
     readPersonalSettings(userId),
   ]);
 

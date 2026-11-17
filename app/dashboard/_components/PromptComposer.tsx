@@ -28,6 +28,7 @@ import { type DashboardConversation, lastUserMessage } from "@/lib/ai/thread/rul
 import { setReadAloudAction } from "@/lib/identity/actions";
 import { routes } from "@/lib/shared/routes";
 
+import { ConversationHistory } from "./ConversationHistory";
 import { ConversationSwitcher } from "./ConversationSwitcher";
 import { DictationButton } from "./DictationButton";
 import { IconButton } from "./IconButton";
@@ -367,7 +368,13 @@ export function PromptComposer({
 
         {initialConversations.length > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <ConversationSwitcher conversations={initialConversations} currentId={conversationId} />
+            <div className="flex flex-wrap items-center gap-1.5">
+              <ConversationSwitcher
+                conversations={initialConversations}
+                currentId={conversationId}
+              />
+              <ConversationHistory currentId={conversationId} />
+            </div>
             <Button
               type="button"
               variant="outline"

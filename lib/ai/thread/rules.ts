@@ -303,6 +303,24 @@ export type DashboardConversation = {
   updatedAt: Date;
 };
 
+/**
+ * One conversation as the history endpoint sends it: the same entry, with the
+ * date as JSON carries it. The client parses it back into a `Date` before
+ * formatting, so both sides agree on what the field is.
+ */
+export type ConversationHistoryEntry = {
+  id: string;
+  preview: string;
+  updatedAt: string;
+};
+
+/**
+ * How many conversations the history dialog offers. It is a bound rather than a
+ * page size: the dialog is a scroll box of labels, and asking for more than a
+ * person will ever scroll through costs a query that reads the same either way.
+ */
+export const CONVERSATION_HISTORY_LIMIT = 200;
+
 /** How long a conversation's label may be before it is cut. */
 export const CONVERSATION_PREVIEW_LENGTH = 48;
 
