@@ -5,7 +5,6 @@ import {
   SCRIPTED_DENIED_REPLY,
   SCRIPTED_REPLY_PREFIX,
   SCRIPTED_TOOL_REPLY,
-  TITLE_REQUEST_MARKER,
 } from "./policy.mjs";
 
 /**
@@ -121,9 +120,15 @@ describe("chooseReply", () => {
   });
 
   it("answers a title request from the same endpoint with a short label", () => {
+    // The instruction the title job really sends: no fixture marker in it, so a
+    // real model cannot echo one back as the conversation's name.
     const reply = chooseReply({
       messages: [
-        { role: "system", content: `Name the conversation. ${TITLE_REQUEST_MARKER}` },
+        {
+          role: "system",
+          content:
+            "Name the conversation that begins with the message below. Answer with a title only: one line.",
+        },
         user("Plan the schema and the API"),
       ],
       offeredTools: [],

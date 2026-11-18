@@ -130,6 +130,28 @@ test("a conversation's pill appears with its first prompt and carries the genera
   }
 });
 
+test("a person who signs up asks for the change channels without a reload", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-join-${id}@example.com`;
+  const askedFrom: string[] = [];
+
+  // The page a person lands on after signing up rendered while they were signed
+  // out, so its join was refused; the dashboard is the first page that can join.
+  page.on("request", (request) => {
+    if (request.url().includes("/api/realtime/token")) askedFrom.push(page.url());
+  });
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    await expect
+      .poll(() => askedFrom.filter((url) => url.endsWith("/dashboard")).length)
+      .toBeGreaterThan(0);
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
 test("a workspace created in one tab reaches an open page in another", async ({
   context,
   page,

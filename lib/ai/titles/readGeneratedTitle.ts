@@ -3,6 +3,10 @@ import { clampTitle, collapseWhitespace } from "./internals";
 const LEADING_LABEL = /^(?:(?:conversation|chat)\s*)?title\s*:\s*/i;
 const WRAPPING = /^[\s"'`*#“”‘’]+|[\s"'`*#“”‘’]+$/g;
 const TRAILING_PUNCTUATION = /[.:]+$/;
+/** A name is words: a rule of dashes is a model filling in a blank. */
+const NAMED_WITH_WORDS = /[\p{L}\p{N}]/u;
+/** A whole answer in brackets is a placeholder echoed from the request. */
+const PLACEHOLDER = /^[[(<{].*[)\]}>]$/;
 
 /**
  * The model's answer as a title, or `null` when there is nothing usable. A model
@@ -22,5 +26,7 @@ export function readGeneratedTitle(raw: string): string | null {
     firstLine.replace(LEADING_LABEL, "").replace(WRAPPING, "").replace(TRAILING_PUNCTUATION, ""),
   );
 
-  return title.length === 0 ? null : clampTitle(title);
+  if (!NAMED_WITH_WORDS.test(title) || PLACEHOLDER.test(title)) return null;
+
+  return clampTitle(title);
 }

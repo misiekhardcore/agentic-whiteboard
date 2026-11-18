@@ -17,8 +17,12 @@ export const SCRIPTED_DELETED_REPLY = "**Deleted.**\n\nThe workspace and its his
 export const SCRIPTED_DENIED_REPLY =
   "**Nothing changed.**\n\nYou denied it, so I left the workspace alone.";
 
-/** Marked in the system message of a title request; the title module owns it. */
-export const TITLE_REQUEST_MARKER = "[[conversation-title]]";
+/**
+ * The title job's instruction, recognised by its opening words. Nothing extra is
+ * added to the text: a real model reads it, and a marker it can echo becomes a
+ * conversation's name.
+ */
+export const TITLE_INSTRUCTION_PREFIX = "Name the conversation";
 
 function textOf(content) {
   if (typeof content === "string") return content;
@@ -121,7 +125,7 @@ function isTitleRequest(messages) {
     (message) =>
       message.role === "system" &&
       typeof message.content === "string" &&
-      message.content.includes(TITLE_REQUEST_MARKER),
+      message.content.trimStart().startsWith(TITLE_INSTRUCTION_PREFIX),
   );
 }
 

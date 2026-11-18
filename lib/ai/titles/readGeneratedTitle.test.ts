@@ -39,5 +39,9 @@ describe("readGeneratedTitle", () => {
     expect(readGeneratedTitle("   \n\t")).toBeNull();
     expect(readGeneratedTitle("Title:")).toBeNull();
     expect(readGeneratedTitle('""')).toBeNull();
+    // Observed from a real endpoint: the model echoed a bracketed token from
+    // the request instead of naming the conversation.
+    expect(readGeneratedTitle("[[conversation-title]]")).toBeNull();
+    expect(readGeneratedTitle("---")).toBeNull();
   });
 });

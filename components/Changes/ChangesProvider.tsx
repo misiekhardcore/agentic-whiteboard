@@ -5,7 +5,7 @@ import {
   REALTIME_SUBSCRIBE_STATES,
   type SupabaseClient,
 } from "@supabase/supabase-js";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
@@ -51,8 +51,11 @@ type SessionChannels = {
  */
 export function ChangesProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const handlers = useRef(new Map<string, Set<ChangeHandler>>());
   const refreshedOnce = useRef(false);
+  const joined = useRef<SupabaseClient | null>(null);
+  const joining = useRef(false);
 
   const applyChanges = useCallback((keys: string[]) => {
     const involved = new Set<ChangeHandler>();
@@ -64,62 +67,70 @@ export function ChangesProvider({ children }: { children: ReactNode }) {
     for (const handler of involved) handler();
   }, []);
 
-  useEffect(() => {
-    let disposed = false;
-    let client: SupabaseClient | undefined;
-    const channels: { unsubscribe: () => Promise<unknown> }[] = [];
+  const join = useCallback(async () => {
+    if (joined.current || joining.current) return;
+    joining.current = true;
 
-    void (async () => {
-      try {
-        const response = await fetch(routes.realtimeTokenApi);
-        // 204 means this deployment has no Realtime; every page still refreshes
-        // on focus, so there is nothing to join.
-        if (!response.ok || response.status === 204) return;
+    try {
+      const response = await fetch(routes.realtimeTokenApi);
+      // 204 means this deployment has no Realtime; every page still refreshes
+      // on focus, so there is nothing to join.
+      if (!response.ok || response.status === 204) return;
 
-        const session = (await response.json()) as SessionChannels;
-        if (disposed) return;
+      const session = (await response.json()) as SessionChannels;
+      const client = createClient(session.url, session.key, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      await client.realtime.setAuth(session.token);
 
-        client = createClient(session.url, session.key, {
-          auth: { persistSession: false, autoRefreshToken: false },
+      for (const topic of session.topics) {
+        const channel = client.channel(topic, { config: { private: true } });
+
+        channel.on("broadcast", { event: CHANGE_EVENT }, (message) => {
+          applyChanges((message.payload as ChangeEvent).keys ?? []);
         });
-        await client.realtime.setAuth(session.token);
-        if (disposed) return;
 
-        for (const topic of session.topics) {
-          const channel = client.channel(topic, { config: { private: true } });
-
-          channel.on("broadcast", { event: CHANGE_EVENT }, (message) => {
-            applyChanges((message.payload as ChangeEvent).keys ?? []);
-          });
-
-          channel.subscribe((status) => {
-            if (status !== REALTIME_SUBSCRIBE_STATES.SUBSCRIBED) return;
-            // The first subscription is the page that is already rendered; a
-            // later one is a reconnect, and may have missed a change.
-            if (!refreshedOnce.current) {
-              refreshedOnce.current = true;
-              return;
-            }
-            router.refresh();
-          });
-
-          channels.push(channel);
-        }
-      } catch (error) {
-        console.error("[changes] could not join the change channels", error);
+        channel.subscribe((status) => {
+          if (status !== REALTIME_SUBSCRIBE_STATES.SUBSCRIBED) return;
+          // The first subscription is the page that is already rendered; a
+          // later one is a reconnect, and may have missed a change.
+          if (!refreshedOnce.current) {
+            refreshedOnce.current = true;
+            return;
+          }
+          router.refresh();
+        });
       }
-    })();
 
+      joined.current = client;
+    } catch (error) {
+      console.error("[changes] could not join the change channels", error);
+    } finally {
+      joining.current = false;
+    }
+  }, [applyChanges, router]);
+
+  // A page rendered signed out has nothing to join, and the page a person lands
+  // on after signing up is the first that does, so each navigation asks again.
+  useEffect(() => {
+    void join();
+  }, [join, pathname]);
+
+  useEffect(
+    () => () => {
+      const client = joined.current;
+      joined.current = null;
+      if (client) void client.removeAllChannels();
+    },
+    [],
+  );
+
+  useEffect(() => {
     const onFocus = () => router.refresh();
     window.addEventListener("focus", onFocus);
 
-    return () => {
-      disposed = true;
-      window.removeEventListener("focus", onFocus);
-      for (const channel of channels) void channel.unsubscribe();
-      if (client) void client.removeAllChannels();
-    };
-  }, [applyChanges, router]);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [router]);
 
   const value = useMemo<ChangesContextValue>(
     () => ({

@@ -1,12 +1,12 @@
-import { TITLE_REQUEST_MARKER, TITLE_SOURCE_MAX_LENGTH } from "./constants";
+import { TITLE_SOURCE_MAX_LENGTH } from "./constants";
 
 /**
- * The instruction a title request carries. The marker is a fact about the
- * request the scripted fixture recognises; the words around it are what a real
- * model reads, and asking for one plain line is what keeps the answer usable.
+ * The instruction a title request carries. Nothing in it exists for a test: a
+ * real model reads every character, and a token it can echo is a name it will
+ * give the conversation.
  */
 export const TITLE_INSTRUCTION = [
-  `Name the conversation that begins with the message below. ${TITLE_REQUEST_MARKER}`,
+  "Name the conversation that begins with the message below.",
   "Answer with a title only: one line, at most 60 characters, no quotes, no trailing period,",
   "in the language of the message, describing what the person wants done rather than repeating",
   "it word for word.",
