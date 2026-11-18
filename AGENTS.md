@@ -61,7 +61,10 @@ into "confirm the change is what was asked" — never into "skip the tests".
 - **Ubiquitous language.** Use the words the domain already uses (`owner`,
   `member`, `entitlement`, `plan`, `seat`, `workspace`, `run`, `prompt`,
   `invitation`, `surface`). Do not invent synonyms in code for concepts the
-  schema or UI already names.
+  schema or UI already names. The definitions and the context that owns each
+  one are in
+  [docs/ubiquitous-language.md](docs/ubiquitous-language.md); add a term there
+  before using it in code.
 - **Ports and adapters.** Keep the domain independent of frameworks: the domain
   module takes plain inputs and returns plain results; Stripe, Better Auth,
   Drizzle, SMTP and the AI provider sit behind adapter modules. Dependencies
