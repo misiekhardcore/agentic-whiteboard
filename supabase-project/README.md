@@ -71,7 +71,7 @@ database.
 | --------- | ------------------------ | --------------------------------------------------------------- |
 | `public`  | `postgres`               | app tables, including Better Auth's `user`, `account`, `session`, `verification` and the `organization` plugin tables |
 | `storage` | `supabase_storage_admin` | Storage's own tables, created by its migrations                  |
-| `_realtime` | `supabase_admin`       | Realtime's own tables, created by its migrations                 |
+| `_realtime` | `supabase_admin`       | Realtime's own tables, created by `volumes/db/realtime.sql` and its migrations |
 | `app_private` | `postgres`           | RLS helpers with no public grants, such as `is_org_member`      |
 | `drizzle` | `postgres`               | Drizzle migration journal                                        |
 
@@ -107,6 +107,13 @@ privileges on Better Auth's tables) and the `SELECT` policy on
 `realtime.messages` for the `app:user:<id>` and `app:org:<id>` topics. There is no
 `INSERT` policy, so only the server publishes.
 
+The gateway adapts the public paths to what the service expects:
+`/realtime/v1/websocket` is rewritten to `/socket/websocket`, `/realtime/v1/api/*`
+to `/api/*`, and the host is rewritten to the seeded tenant
+(`realtime-dev.supabase-realtime`) because Realtime reads the tenant from the
+host's first label. Both routes are exempt from the dashboard's basic auth and
+from the default RBAC deny, and are gated by the apikey check instead.
+
 Studio and postgres-meta follow `POSTGRES_DB`, so the dashboard shows the live
 app tables. GraphQL is not installed, hence `PGRST_DB_SCHEMAS=public`.
 
@@ -134,7 +141,7 @@ more values are required in `.env` and have no defaults:
 
 | Variable            | Meaning                                                        |
 | ------------------- | -------------------------------------------------------------- |
-| `REALTIME_DB_ENC_KEY` | At least 16 characters, stable: encrypts Realtime's own rows. |
+| `REALTIME_DB_ENC_KEY` | Exactly 16 characters (`openssl rand -hex 8`), stable: encrypts Realtime's own rows with AES-128; a longer key stops it at boot. |
 | `SECRET_KEY_BASE`     | At least 64 characters (`openssl rand -base64 64`), stable.   |
 
 Regenerate the whole configuration (new EC pair, new `sb_` keys, new internal

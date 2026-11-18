@@ -17,6 +17,12 @@
 --   docker exec -i supabase-db psql -U postgres -d agentic-whiteboard \
 --     < utils/realtime-rls.sql
 
+-- Realtime runs its own migrations here on first boot and cannot create the
+-- schema itself: it connects with `search_path TO _realtime` before migrating.
+-- The db init script creates it on a fresh cluster; this covers one that was
+-- initialized before that script existed.
+CREATE SCHEMA IF NOT EXISTS _realtime AUTHORIZATION supabase_admin;
+
 -- Membership is a `public.member` row. The lookup runs as the definer because
 -- `authenticated` is granted nothing on Better Auth's tables
 -- (utils/better-auth-rls.sql revokes it); the function answers one boolean.
@@ -32,8 +38,8 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM public.member
-    WHERE "organizationId" = organization_id
-      AND "userId" = user_id
+    WHERE organization_id = is_org_member.organization_id
+      AND user_id = is_org_member.user_id
   );
 $$;
 

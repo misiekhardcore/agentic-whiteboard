@@ -264,6 +264,8 @@ services:
       # Role passwords and JWT expiry for the retained services.
       - ./volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
       - ./volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
+      # Realtime's schema must exist before it connects and migrates.
+      - ./volumes/db/realtime.sql:/docker-entrypoint-initdb.d/init-scripts/98-realtime.sql:Z
       # PGDATA directory is persisted between restarts
       - ./volumes/db/data:/var/lib/postgresql/data:Z
       # Use named volume to persist pgsodium decryption key between restarts
