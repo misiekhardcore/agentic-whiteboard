@@ -131,7 +131,7 @@ describe("generateConversationTitle", () => {
     expect(title).toBeNull();
   });
 
-  it("leaves a reasoning model room to answer inside the output budget", async () => {
+  it("spends only the title budget on the request", async () => {
     let maxOutputTokens: number | undefined;
 
     await generateConversationTitle({
@@ -142,10 +142,11 @@ describe("generateConversationTitle", () => {
       maxRetries: 0,
     });
 
-    // A model that reasons before answering spends part of this budget on that
-    // reasoning; a title-sized cap makes it return no text at all.
+    // The budget is the title's, not the turn's: naming is a six-word answer.
+    // It does not have to leave room for reasoning, because the request turns
+    // reasoning off (see the provider-options test below).
     expect(maxOutputTokens).toBe(TITLE_OUTPUT_TOKENS);
-    expect(maxOutputTokens).toBeGreaterThanOrEqual(256);
+    expect(maxOutputTokens).toBeLessThanOrEqual(128);
   });
 
   it("sends the caller's provider options, so naming can turn reasoning off", async () => {

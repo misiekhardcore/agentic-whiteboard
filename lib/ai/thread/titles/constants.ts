@@ -2,11 +2,10 @@
 export const TITLE_PROMPT_LENGTH = 2000;
 
 /**
- * The output budget. A title is a handful of words, but a model that reasons
- * before answering spends part of the budget on that reasoning: capped to the
- * title alone it can finish with no text at all and the conversation is never
- * named. The bound is generous enough to reach an answer and small enough that
- * the request stays cheap.
+ * The output budget. A title is six words, and naming is sent reasoning off, so
+ * the answer is the only thing the model can spend this on; 64 tokens is
+ * several times what a six-word title needs and keeps the request cheap. The
+ * budget is not what makes a model answer: `reasoning_effort: "none"` is.
  */
 export const TITLE_OUTPUT_TOKENS = 64;
 
