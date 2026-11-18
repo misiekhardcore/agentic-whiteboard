@@ -5,7 +5,6 @@ import {
   isProviderId,
   PROVIDER_DEFAULTS,
   readInteger,
-  readProviderApiKey,
   readValue,
 } from "./internals";
 import type { AiConfig, AiEnvironment } from "./types";
@@ -41,11 +40,18 @@ export function resolveAiConfig(env: AiEnvironment = process.env): AiConfig {
     );
   }
 
+  const apiKey = readValue(env.AI_API_KEY);
+  if (providerValue === "groq" && !apiKey) {
+    throw new AiConfigurationError(
+      'AI_API_KEY is required when AI_PROVIDER is "groq". Create a key at https://console.groq.com/keys.',
+    );
+  }
+
   return {
     provider: providerValue,
     model,
     baseURL,
-    apiKey: readValue(env.AI_API_KEY) ?? readProviderApiKey(providerValue, env) ?? defaults.apiKey,
+    apiKey: apiKey ?? defaults.apiKey,
     toolApprovalSecret,
     maxSteps: readInteger("AI_MAX_STEPS", env.AI_MAX_STEPS, DEFAULT_MAX_STEPS, 1),
     maxRetries: readInteger("AI_MAX_RETRIES", env.AI_MAX_RETRIES, defaults.maxRetries, 0),

@@ -34,7 +34,6 @@ export type AiEnvironment = Pick<
   | "AI_MAX_STEPS"
   | "AI_MAX_RETRIES"
   | "AI_API_KEY"
-  | "GROQ_API_KEY"
 >;
 
 /**
@@ -55,7 +54,6 @@ export type AiTitleEnvironment = Pick<
   typeof process.env,
   | "AI_PROVIDER"
   | "AI_API_KEY"
-  | "GROQ_API_KEY"
   | "AI_TITLE_PROVIDER"
   | "AI_TITLE_MODEL"
   | "AI_TITLE_BASE_URL"

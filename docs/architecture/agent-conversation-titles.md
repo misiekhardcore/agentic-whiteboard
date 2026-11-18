@@ -69,7 +69,7 @@ before streaming would make every first prompt slower for a cosmetic gain.
 ```
 AI_TITLE_PROVIDER="groq"                 # follows AI_PROVIDER when unset
 AI_TITLE_MODEL="qwen/qwen3.8-27b"        # unset: the agent's model names
-GROQ_API_KEY="…"                         # or AI_TITLE_API_KEY
+AI_TITLE_API_KEY="…"                     # or the shared AI_API_KEY
 ```
 
 `groq` is a provider of its own because it has a documented base URL and its own

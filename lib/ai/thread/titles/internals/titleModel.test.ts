@@ -11,7 +11,7 @@ describe("the model that names conversations", () => {
   it("uses the dedicated title model and turns its reasoning off", () => {
     vi.stubEnv("AI_TITLE_PROVIDER", "groq");
     vi.stubEnv("AI_TITLE_MODEL", "qwen/qwen3.8-27b");
-    vi.stubEnv("GROQ_API_KEY", "groq-key");
+    vi.stubEnv("AI_TITLE_API_KEY", "groq-key");
     vi.stubEnv("AI_PROVIDER", "lmstudio");
     vi.stubEnv("AI_MODEL", "qwen3.5-9b-claude-4.6-opus-reasoning-distilled");
 

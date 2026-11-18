@@ -38,12 +38,12 @@ describe("resolveAiConfig", () => {
     });
   });
 
-  it("reaches Groq's documented endpoint and reads its key from the environment", () => {
+  it("reaches Groq's documented endpoint and reads its key from AI_API_KEY", () => {
     expect(
       resolveAiConfig({
         AI_PROVIDER: "groq",
         AI_MODEL: "qwen/qwen3.8-27b",
-        GROQ_API_KEY: "groq-key",
+        AI_API_KEY: "groq-key",
       }),
     ).toEqual({
       provider: "groq",
@@ -53,6 +53,17 @@ describe("resolveAiConfig", () => {
       maxSteps: 20,
       maxRetries: 2,
     });
+  });
+
+  it("names AI_API_KEY when Groq has no key, instead of sending a placeholder", () => {
+    const legacyEnvironment = {
+      AI_PROVIDER: "groq",
+      AI_MODEL: "qwen/qwen3.8-27b",
+      GROQ_API_KEY: "groq-key",
+    };
+
+    expect(() => resolveAiConfig(legacyEnvironment)).toThrow(/AI_API_KEY is required/);
+    expect(() => resolveAiConfig(legacyEnvironment)).toThrow(/console\.groq\.com/);
   });
 
   it("allows an API key override for LM Studio auth", () => {

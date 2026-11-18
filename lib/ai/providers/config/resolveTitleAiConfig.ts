@@ -1,6 +1,6 @@
 import { AI_PROVIDER_IDS } from "./AI_PROVIDER_IDS";
 import { AiConfigurationError } from "./AiConfigurationError";
-import { isProviderId, PROVIDER_DEFAULTS, readProviderApiKey, readValue } from "./internals";
+import { isProviderId, PROVIDER_DEFAULTS, readValue } from "./internals";
 import type { AiTitleConfig, AiTitleEnvironment } from "./types";
 
 /**
@@ -32,15 +32,18 @@ export function resolveTitleAiConfig(env: AiTitleEnvironment = process.env): AiT
     );
   }
 
+  const apiKey = readValue(env.AI_TITLE_API_KEY) ?? readValue(env.AI_API_KEY);
+  if (providerValue === "groq" && !apiKey) {
+    throw new AiConfigurationError(
+      'AI_TITLE_API_KEY or AI_API_KEY is required when AI_TITLE_PROVIDER is "groq".',
+    );
+  }
+
   return {
     provider: providerValue,
     model,
     baseURL,
-    apiKey:
-      readValue(env.AI_TITLE_API_KEY) ??
-      readProviderApiKey(providerValue, env) ??
-      readValue(env.AI_API_KEY) ??
-      defaults.apiKey,
+    apiKey: apiKey ?? defaults.apiKey,
     reasoningEffort: "none",
   };
 }

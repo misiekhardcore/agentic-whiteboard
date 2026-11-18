@@ -14,7 +14,7 @@ describe("resolveTitleAiConfig", () => {
       resolveTitleAiConfig({
         AI_TITLE_PROVIDER: "groq",
         AI_TITLE_MODEL: " qwen/qwen3.8-27b ",
-        GROQ_API_KEY: "groq-key",
+        AI_TITLE_API_KEY: "groq-key",
       }),
     ).toEqual({
       provider: "groq",
@@ -37,15 +37,35 @@ describe("resolveTitleAiConfig", () => {
     });
   });
 
-  it("prefers a title-specific key over the provider's shared key", () => {
+  it("prefers a title-specific key over the shared AI_API_KEY", () => {
     const config = resolveTitleAiConfig({
       AI_TITLE_PROVIDER: "groq",
       AI_TITLE_MODEL: "qwen/qwen3.8-27b",
       AI_TITLE_API_KEY: "title-key",
-      GROQ_API_KEY: "shared-key",
+      AI_API_KEY: "shared-key",
     });
 
     expect(config?.apiKey).toBe("title-key");
+  });
+
+  it("reuses the shared AI_API_KEY when there is no title-specific key", () => {
+    const config = resolveTitleAiConfig({
+      AI_TITLE_PROVIDER: "groq",
+      AI_TITLE_MODEL: "qwen/qwen3.8-27b",
+      AI_API_KEY: "shared-key",
+    });
+
+    expect(config?.apiKey).toBe("shared-key");
+  });
+
+  it("names the key variables when Groq is chosen without a key", () => {
+    const legacyEnvironment = {
+      AI_TITLE_PROVIDER: "groq",
+      AI_TITLE_MODEL: "qwen/qwen3.8-27b",
+      GROQ_API_KEY: "groq-key",
+    };
+
+    expect(() => resolveTitleAiConfig(legacyEnvironment)).toThrow(/AI_TITLE_API_KEY or AI_API_KEY/);
   });
 
   it("rejects an unknown title provider and names the supported ids", () => {
