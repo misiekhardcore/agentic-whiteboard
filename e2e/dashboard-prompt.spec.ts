@@ -570,6 +570,24 @@ async function seedScrollThread(email: string, conversationId: string): Promise<
   });
 }
 
+/**
+ * The generated name is written by a background request, so the page that
+ * started it was rendered before the name existed. Reloading reads the stored
+ * title; the retry covers the request still running when the turn closed.
+ */
+async function titledSwitcherLink(page: Page, title: string) {
+  const link = page
+    .getByRole("group", { name: "Recent conversations" })
+    .getByRole("link", { name: title });
+
+  await expect(async () => {
+    await page.reload();
+    await expect(link).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
+
+  return link;
+}
+
 test("a new conversation starts empty and the switcher brings the last one back", async ({
   page,
 }) => {
@@ -586,10 +604,10 @@ test("a new conversation starts empty and the switcher brings the last one back"
     await composer.press("Enter");
     await expect(thread).toContainText("Stub agent: First thread");
 
-    // The request that names the conversation runs alongside the reply, so the
-    // pill starts with the first prompt and swaps to the generated title.
-    const switcher = page.getByRole("group", { name: "Recent conversations" });
-    await expect(switcher.getByRole("link", { name: "Stub title: First thread" })).toBeVisible();
+    // The request that names the conversation ran while the reply streamed, so
+    // the next load labels the pill with the title rather than the prompt.
+    await expect(page.getByRole("button", { name: "Stop prompt" })).toHaveCount(0);
+    await titledSwitcherLink(page, "Stub title: First thread");
 
     await page.getByRole("button", { name: "New conversation" }).click();
 
@@ -605,8 +623,9 @@ test("a new conversation starts empty and the switcher brings the last one back"
 
     // A pill is a link to the conversation, styled as a button, named by the
     // title generated for it rather than by the prompt it came from.
-    await expect(switcher.getByRole("link", { name: "Stub title: First thread" })).toBeVisible();
-    await switcher.getByRole("link", { name: "Stub title: First thread" }).click();
+    await expect(page.getByRole("button", { name: "Stop prompt" })).toHaveCount(0);
+    const firstThread = await titledSwitcherLink(page, "Stub title: First thread");
+    await firstThread.click();
 
     await expect(thread).toContainText("Stub agent: First thread");
     await expect(thread).not.toContainText("Second thread");

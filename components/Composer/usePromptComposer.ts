@@ -6,12 +6,10 @@ import { useState } from "react";
 
 import { composerHint } from "@/lib/ai/thread/composer";
 import { threadText } from "@/lib/ai/thread/parts";
-import type { DashboardConversation } from "@/lib/ai/thread/rules";
 
 import { useAgentSession } from "./useAgentSession";
 import { useComposerVoice } from "./useComposerVoice";
 import { useConversationNavigation } from "./useConversationNavigation";
-import { useConversationTitles } from "./useConversationTitles";
 import { useDraftField } from "./useDraftField";
 import { usePromptSend } from "./usePromptSend";
 
@@ -24,8 +22,6 @@ export type PromptComposerInput = {
   initialMessages: UIMessage[];
   /** The newest stored prompt failed, so it can be retried for free. */
   initialCanRetry: boolean;
-  /** The server's recent conversations, whose titles may still be arriving. */
-  initialConversations: DashboardConversation[];
   /** The person's stored read-aloud preference. */
   initialReadAloud: boolean;
   /** The stored browser voice, or "" for the platform's own default. */
@@ -45,7 +41,6 @@ export function usePromptComposer({
   initialConversationId,
   initialMessages,
   initialCanRetry,
-  initialConversations,
   initialReadAloud,
   initialReadAloudVoice,
 }: PromptComposerInput) {
@@ -54,7 +49,6 @@ export function usePromptComposer({
   // conversation the browser is already sending into.
   const [conversationId] = useState(initialConversationId);
   const field = useDraftField({ fieldRef });
-  const titles = useConversationTitles({ conversationId, initialConversations });
   const session = useAgentSession({ conversationId, initialMessages });
   const voice = useComposerVoice({
     draft: field.draft,
@@ -77,7 +71,6 @@ export function usePromptComposer({
     fieldValue: voice.fieldValue,
     closeDictation,
     initialCanRetry,
-    onPromptSent: titles.refresh,
   });
   const navigation = useConversationNavigation({
     conversationId,
@@ -113,7 +106,6 @@ export function usePromptComposer({
 
   return {
     conversationId,
-    conversations: titles.conversations,
     messages,
     status: session.status,
     stop: session.stop,
