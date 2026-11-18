@@ -33,6 +33,9 @@ before streaming would make every first prompt slower for a cosmetic gain.
 | Retry             | Failed or empty output stores nothing; the next prompt tries again                 | A conversation with a missing name is not an error worth blocking on; the derived label stays readable in the meantime.                                                                                                                                                                                                                                            |
 | Idempotence       | Conditional update on `title IS NULL`                                              | Two attempts — a retry, a branch, two tabs — can race; the first stored title wins and the later one observes it instead of overwriting.                                                                                                                                                                                                                           |
 | Client update     | Poll the session-scoped title endpoint until a title exists or a bounded wait ends | The page render happens before the naming request finishes. The endpoint is scoped by the session like every other conversation read. The wait is bounded (90s, every 1.5s) because the naming request cannot report its own progress: it runs in the turn's route, so an in-process flag is not visible to the title read and looked abandoned on the first poll. |
+| Model choice      | Optionally a dedicated title model (`AI_TITLE_MODEL`), otherwise the agent's       | A local reasoning model spends the request on deliberation before naming, and a hosted small model answers for a few thousandths of a cent. Naming is a six-word label, so it is the one place a different model earns its keep: `titleModel` is the single resolver and picks the dedicated connection when one is configured.                                    |
+| Reasoning         | The dedicated model is sent `reasoning_effort: "none"`                             | A name must arrive quickly and answer, not reason. Local models ignore the field harmlessly; models that cannot disable thinking reject the value, which is why it is only sent for the dedicated model and never for the fallback.                                                                                                                                |
+| Retries           | The dedicated model is not retried; the next prompt reschedules                    | Naming is best effort and already retried by every accepted prompt. Retrying inside the turn that triggered a name would spend the turn's time on a label.                                                                                                                                                                                                         |
 | Scripted provider | The stub answers a title request with a `Stub title:` name                         | The e2e suite must be able to observe the swap without a model, and the prefix keeps a scripted demo visibly scripted.                                                                                                                                                                                                                                             |
 | Allowance         | Not counted as a prompt                                                            | It is not a conversation turn and opens no `agentPrompt` row; counting it would charge a person for a label.                                                                                                                                                                                                                                                       |
 
@@ -60,6 +63,18 @@ before streaming would make every first prompt slower for a cosmetic gain.
   is stored.
 - A branch is named from the first prompt copied into it, not from the reply it
   branched at, because that prompt is what the branch starts with.
+
+## Configuration
+
+```
+AI_TITLE_PROVIDER="groq"                 # follows AI_PROVIDER when unset
+AI_TITLE_MODEL="qwen/qwen3.8-27b"        # unset: the agent's model names
+GROQ_API_KEY="…"                         # or AI_TITLE_API_KEY
+```
+
+`groq` is a provider of its own because it has a documented base URL and its own
+key variable, so the common local setup - agent on LM Studio, names on Groq -
+is two variables rather than a second OpenAI-compatible block copied by hand.
 
 ## Deferred
 

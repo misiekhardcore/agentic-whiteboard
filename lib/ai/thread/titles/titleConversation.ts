@@ -7,6 +7,7 @@ import { agentConversations, agentMessages, agentPrompts } from "@/lib/db/schema
 
 import { generateConversationTitle } from "./generateConversationTitle";
 import { titleModel } from "./internals/titleModel";
+import type { TitleProviderOptions } from "./internals/types";
 
 /**
  * Ensures a conversation has a generated title, from its first live user
@@ -23,12 +24,15 @@ export async function titleConversation({
   userId,
   model,
   maxRetries,
+  providerOptions,
 }: {
   conversationId: string;
   userId: string;
   /** An explicit model for tests or a caller that already resolved one. */
   model?: LanguageModel;
   maxRetries?: number;
+  /** Provider settings for that model, such as turning reasoning off. */
+  providerOptions?: TitleProviderOptions;
 }): Promise<string | null> {
   const [conversation] = await db
     .select({ title: agentConversations.title })
@@ -59,7 +63,7 @@ export async function titleConversation({
   const prompt = first ? storedText(first.content).trim() : "";
   if (!prompt) return null;
 
-  const resolved = model ? { model, maxRetries: maxRetries ?? 0 } : titleModel();
+  const resolved = model ? { model, maxRetries: maxRetries ?? 0, providerOptions } : titleModel();
   if (!resolved) return null;
 
   let title: string | null;
@@ -68,6 +72,7 @@ export async function titleConversation({
       prompt,
       model: resolved.model,
       maxRetries: resolved.maxRetries,
+      providerOptions: resolved.providerOptions,
     });
   } catch (error) {
     console.error(

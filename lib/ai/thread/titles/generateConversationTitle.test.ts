@@ -80,6 +80,29 @@ describe("generateConversationTitle", () => {
     expect(maxOutputTokens).toBeGreaterThanOrEqual(256);
   });
 
+  it("sends the caller's provider options, so naming can turn reasoning off", async () => {
+    let sent: unknown;
+
+    await generateConversationTitle({
+      prompt: "Plan the database schema",
+      model: new MockLanguageModelV4({
+        doGenerate: (options) => {
+          sent = options.providerOptions;
+          return Promise.resolve({
+            content: [{ type: "text" as const, text: "Title: Schema planning" }],
+            finishReason: { unified: "stop" as const, raw: "stop" },
+            usage: USAGE,
+            warnings: [],
+          });
+        },
+      }),
+      maxRetries: 0,
+      providerOptions: { groq: { reasoningEffort: "none" } },
+    });
+
+    expect(sent).toEqual({ groq: { reasoningEffort: "none" } });
+  });
+
   it("names the conversation from the prompt, bounded to what the model needs", async () => {
     let sent: unknown;
     await generateConversationTitle({

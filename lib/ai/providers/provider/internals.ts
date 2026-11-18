@@ -13,7 +13,13 @@ type LanguageModelProvider = {
   languageModel(modelId: string): LanguageModel;
 };
 
-export type ProviderFactory = (config: AiConfig) => LanguageModelProvider;
+/**
+ * What a provider needs to be constructed. Narrower than the full config, so a
+ * caller with only a connection - the title model - can build one too.
+ */
+export type ProviderConnection = Pick<AiConfig, "provider" | "baseURL" | "apiKey">;
+
+export type ProviderFactory = (connection: ProviderConnection) => LanguageModelProvider;
 
 export /**
  * Both current providers speak the OpenAI Chat Completions protocol. Adding a
@@ -25,17 +31,23 @@ export /**
  * Callers only know about `LanguageModel`, so nothing else changes.
  */
 const providerFactories = {
-  lmstudio: (config: AiConfig) =>
+  lmstudio: (connection: ProviderConnection) =>
     createOpenAICompatible({
       name: "lmstudio",
-      baseURL: config.baseURL,
-      apiKey: config.apiKey,
+      baseURL: connection.baseURL,
+      apiKey: connection.apiKey,
     }),
-  "openai-compatible": (config: AiConfig) =>
+  groq: (connection: ProviderConnection) =>
+    createOpenAICompatible({
+      name: "groq",
+      baseURL: connection.baseURL,
+      apiKey: connection.apiKey,
+    }),
+  "openai-compatible": (connection: ProviderConnection) =>
     createOpenAICompatible({
       name: "openai-compatible",
-      baseURL: config.baseURL,
-      apiKey: config.apiKey,
+      baseURL: connection.baseURL,
+      apiKey: connection.apiKey,
     }),
   // Scripted replies for local demos and the e2e suite; see `stub.ts`.
   stub: () => ({ languageModel: () => createStubModel() }),
@@ -48,6 +60,6 @@ export /**
  */
 const providerCache = new Map<string, LanguageModelProvider>();
 
-export function providerKey(config: AiConfig): string {
-  return JSON.stringify([config.provider, config.baseURL, config.apiKey]);
+export function providerKey(connection: ProviderConnection): string {
+  return JSON.stringify([connection.provider, connection.baseURL, connection.apiKey]);
 }

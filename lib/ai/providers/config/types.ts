@@ -34,4 +34,30 @@ export type AiEnvironment = Pick<
   | "AI_MAX_STEPS"
   | "AI_MAX_RETRIES"
   | "AI_API_KEY"
+  | "GROQ_API_KEY"
+>;
+
+/**
+ * A model used only to name conversations. It is deliberately smaller and
+ * cheaper than the agent's, and it is asked not to reason: a label must arrive
+ * quickly and answer, not deliberate over six words.
+ */
+export type AiTitleConfig = {
+  provider: AiProviderId;
+  model: string;
+  baseURL: string;
+  apiKey: string;
+  /** Forwarded as `reasoning_effort`; "none" disables reasoning where allowed. */
+  reasoningEffort: string;
+};
+
+export type AiTitleEnvironment = Pick<
+  typeof process.env,
+  | "AI_PROVIDER"
+  | "AI_API_KEY"
+  | "GROQ_API_KEY"
+  | "AI_TITLE_PROVIDER"
+  | "AI_TITLE_MODEL"
+  | "AI_TITLE_BASE_URL"
+  | "AI_TITLE_API_KEY"
 >;

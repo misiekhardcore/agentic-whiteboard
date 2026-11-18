@@ -5,6 +5,7 @@ import {
   isProviderId,
   PROVIDER_DEFAULTS,
   readInteger,
+  readProviderApiKey,
   readValue,
 } from "./internals";
 import type { AiConfig, AiEnvironment } from "./types";
@@ -44,7 +45,7 @@ export function resolveAiConfig(env: AiEnvironment = process.env): AiConfig {
     provider: providerValue,
     model,
     baseURL,
-    apiKey: readValue(env.AI_API_KEY) ?? defaults.apiKey,
+    apiKey: readValue(env.AI_API_KEY) ?? readProviderApiKey(providerValue, env) ?? defaults.apiKey,
     toolApprovalSecret,
     maxSteps: readInteger("AI_MAX_STEPS", env.AI_MAX_STEPS, DEFAULT_MAX_STEPS, 1),
     maxRetries: readInteger("AI_MAX_RETRIES", env.AI_MAX_RETRIES, defaults.maxRetries, 0),

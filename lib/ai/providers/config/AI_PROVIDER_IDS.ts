@@ -6,4 +6,4 @@
  * This module is pure except for `getAiConfig`, which reads `process.env` at
  * call time so hot reload picks up edits without a server restart.
  */
-export const AI_PROVIDER_IDS = ["lmstudio", "openai-compatible", "stub"] as const;
+export const AI_PROVIDER_IDS = ["lmstudio", "openai-compatible", "groq", "stub"] as const;

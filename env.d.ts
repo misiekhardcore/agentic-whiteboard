@@ -14,5 +14,10 @@ declare namespace NodeJS {
     STRIPE_SECRET_KEY: string;
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: string;
     STRIPE_WEBHOOK_SECRET?: string;
+    GROQ_API_KEY?: string;
+    AI_TITLE_PROVIDER?: string;
+    AI_TITLE_MODEL?: string;
+    AI_TITLE_BASE_URL?: string;
+    AI_TITLE_API_KEY?: string;
   }
 }

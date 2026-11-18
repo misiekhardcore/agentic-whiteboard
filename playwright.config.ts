@@ -47,6 +47,12 @@ export default defineConfig({
           PORT: new URL(baseURL).port || "3000",
           AI_PROVIDER: "stub",
           AI_MODEL: "stub-model",
+          // Conversation names are a request of their own, so a developer who
+          // names threads with a hosted model would otherwise make the suite
+          // depend on that account and network. The stub answers titles too.
+          AI_TITLE_PROVIDER: "",
+          AI_TITLE_MODEL: "",
+          AI_TITLE_API_KEY: "",
           // Hold the first chunk back so a spec can act while a reply is still
           // streaming; the scripted provider is otherwise instantaneous.
           AI_STUB_DELAY_MS: process.env.AI_STUB_DELAY_MS ?? "1500",

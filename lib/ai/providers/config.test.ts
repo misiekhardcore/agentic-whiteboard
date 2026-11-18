@@ -38,6 +38,23 @@ describe("resolveAiConfig", () => {
     });
   });
 
+  it("reaches Groq's documented endpoint and reads its key from the environment", () => {
+    expect(
+      resolveAiConfig({
+        AI_PROVIDER: "groq",
+        AI_MODEL: "qwen/qwen3.8-27b",
+        GROQ_API_KEY: "groq-key",
+      }),
+    ).toEqual({
+      provider: "groq",
+      model: "qwen/qwen3.8-27b",
+      baseURL: "https://api.groq.com/openai/v1",
+      apiKey: "groq-key",
+      maxSteps: 20,
+      maxRetries: 2,
+    });
+  });
+
   it("allows an API key override for LM Studio auth", () => {
     expect(resolveAiConfig({ AI_MODEL: "local", AI_API_KEY: "token" }).apiKey).toBe("token");
   });

@@ -17,6 +17,13 @@ export const PROVIDER_DEFAULTS = {
     // A dead local socket should fail immediately instead of retrying.
     maxRetries: 0,
   },
+  groq: {
+    // Groq documents this as its OpenAI-compatible base URL.
+    baseURL: "https://api.groq.com/openai/v1",
+    // A hosted provider is unusable without its key; `GROQ_API_KEY` supplies it.
+    apiKey: "not-needed",
+    maxRetries: 2,
+  },
   "openai-compatible": {
     // Hosted compatible endpoints have no sensible default.
     baseURL: null,
@@ -33,6 +40,13 @@ export const PROVIDER_DEFAULTS = {
 } satisfies Record<AiProviderId, ProviderDefaults>;
 
 export const DEFAULT_MAX_STEPS = 20;
+
+/**
+ * Providers whose key has its own conventional variable. A person who already
+ * has a Groq key should not have to copy it into `AI_API_KEY` for the app to
+ * work, and the title configuration reads the same variable.
+ */
+export const PROVIDER_KEY_VARIABLES = { groq: "GROQ_API_KEY" } as const;
 
 export function readValue(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -60,4 +74,13 @@ export function readInteger(
 
 export function isProviderId(value: string): value is AiProviderId {
   return (AI_PROVIDER_IDS as readonly string[]).includes(value);
+}
+
+/** The provider's own key variable, when it has one, read from the environment. */
+export function readProviderApiKey(
+  provider: AiProviderId,
+  env: Partial<Record<string, string | undefined>>,
+): string | undefined {
+  const variable = PROVIDER_KEY_VARIABLES[provider as keyof typeof PROVIDER_KEY_VARIABLES];
+  return variable ? readValue(env[variable]) : undefined;
 }
