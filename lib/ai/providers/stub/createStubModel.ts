@@ -5,7 +5,7 @@ import { STUB_MODEL_ID } from "./constants";
 import { chooseStream, STUB_USAGE, stubTitle } from "./internals";
 
 /**
- * A scripted provider, selected with `AI_PROVIDER=stub`.
+ * A scripted provider, selected with `AI_STUB=1`.
  *
  * The e2e suite needs a deterministic model that can also call a tool, so the
  * dashboard flow can be exercised without a GPU or a hosted endpoint. Every

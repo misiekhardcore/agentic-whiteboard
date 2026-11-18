@@ -41,18 +41,23 @@ export default defineConfig({
     : {
         command: "pnpm dev",
         // The prompt specs drive the agent, so they need the scripted provider
-        // rather than whatever `.env.local` points at. Running the app with
-        // your own server (`E2E_SKIP_WEB_SERVER`) means supplying these too.
+        // rather than whatever `.env.local` points at. Every connection value
+        // is given here because the app has none of its own; running the app
+        // with your own server (`E2E_SKIP_WEB_SERVER`) means supplying these.
         env: {
           PORT: new URL(baseURL).port || "3000",
-          AI_PROVIDER: "stub",
+          AI_STUB: "1",
+          AI_BASE_URL: "http://stub.local/v1",
+          AI_API_KEY: "stub",
           AI_MODEL: "stub-model",
-          // Conversation names are a request of their own, so a developer who
-          // names threads with a hosted model would otherwise make the suite
-          // depend on that account and network. The stub answers titles too.
-          AI_TITLE_PROVIDER: "",
-          AI_TITLE_MODEL: "",
-          AI_TITLE_API_KEY: "",
+          AI_MAX_STEPS: "20",
+          AI_MAX_RETRIES: "0",
+          // Naming is a request of its own, so a developer who names threads
+          // with a hosted model would otherwise make the suite depend on that
+          // account and network. The stub answers titles too.
+          AI_TITLE_BASE_URL: "http://stub.local/v1",
+          AI_TITLE_API_KEY: "stub",
+          AI_TITLE_MODEL: "stub-model",
           // Hold the first chunk back so a spec can act while a reply is still
           // streaming; the scripted provider is otherwise instantaneous.
           AI_STUB_DELAY_MS: process.env.AI_STUB_DELAY_MS ?? "1500",

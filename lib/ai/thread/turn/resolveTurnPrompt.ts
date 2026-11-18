@@ -1,5 +1,7 @@
 import type { UIMessage } from "ai";
 
+import { modelSource } from "@/lib/ai/providers/config";
+
 import { findUserPromptTarget } from "../messages";
 import { lastUserText, promptIntent } from "../rules";
 
@@ -57,7 +59,7 @@ export async function resolveTurnPrompt({
   const opened = await openNewTurn({
     conversationId,
     actor,
-    provider: config.provider,
+    provider: modelSource(config.baseURL),
     model: config.model,
     submitted,
     // A rewind replaces a stored message whose id the browser still holds, so

@@ -40,10 +40,12 @@ function stubCompletion(messages: ChatMessage[][]) {
 }
 
 beforeEach(() => {
-  vi.stubEnv("AI_PROVIDER", "lmstudio");
   vi.stubEnv("AI_MODEL", "agent-test");
   vi.stubEnv("AI_BASE_URL", "http://127.0.0.1:9877/v1");
   vi.stubEnv("AI_API_KEY", "test-key");
+  vi.stubEnv("AI_STUB", "0");
+  vi.stubEnv("AI_MAX_STEPS", "20");
+  vi.stubEnv("AI_MAX_RETRIES", "0");
 });
 
 afterEach(() => {
@@ -89,9 +91,9 @@ describe("createAgent", () => {
     // Invalid values prove createAgent does not resolve env config at all on
     // the explicit-model path.
     vi.stubEnv("AI_MODEL", "");
-    vi.stubEnv("AI_PROVIDER", "");
     vi.stubEnv("AI_BASE_URL", "");
     vi.stubEnv("AI_API_KEY", "");
+    vi.stubEnv("AI_STUB", "");
     vi.stubEnv("AI_MAX_STEPS", "not-a-number");
     vi.stubEnv("AI_MAX_RETRIES", "not-a-number");
 

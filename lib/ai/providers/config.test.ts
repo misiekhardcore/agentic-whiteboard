@@ -1,125 +1,151 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AiConfigurationError, isAiConfigured, resolveAiConfig } from "@/lib/ai/providers/config";
+import {
+  AiConfigurationError,
+  isAiConfigured,
+  modelSource,
+  resolveAiConfig,
+  resolveTitleAiConfig,
+} from "./config";
+
+/** Every variable the agent needs, so a test only has to remove what it checks. */
+const complete = {
+  AI_BASE_URL: "https://endpoint.test/openai/v1/",
+  AI_API_KEY: " agent-key ",
+  AI_MODEL: " agent-model ",
+  AI_STUB: "0",
+  AI_MAX_STEPS: "20",
+  AI_MAX_RETRIES: "0",
+};
+
+const completeTitle = {
+  AI_STUB: "0",
+  AI_TITLE_BASE_URL: "https://names.test/openai/v1",
+  AI_TITLE_API_KEY: "title-key",
+  AI_TITLE_MODEL: "qwen/qwen3.8-27b",
+};
 
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
 describe("resolveAiConfig", () => {
-  it("defaults to LM Studio and trims the model id", () => {
-    expect(resolveAiConfig({ AI_MODEL: "  qwen/qwen3-4b  " })).toEqual({
-      provider: "lmstudio",
-      model: "qwen/qwen3-4b",
-      baseURL: "http://127.0.0.1:1234/v1",
-      apiKey: "lm-studio",
+  it("reads the connection from the environment, trimmed and without a trailing slash", () => {
+    expect(resolveAiConfig(complete)).toEqual({
+      baseURL: "https://endpoint.test/openai/v1",
+      apiKey: "agent-key",
+      model: "agent-model",
+      stub: false,
       maxSteps: 20,
       maxRetries: 0,
     });
   });
 
-  it("accepts a generic OpenAI-compatible endpoint without a trailing slash", () => {
-    expect(
-      resolveAiConfig({
-        AI_PROVIDER: "openai-compatible",
-        AI_MODEL: "openai/gpt-oss-20b",
-        AI_BASE_URL: "https://openrouter.ai/api/v1/",
-        AI_API_KEY: "secret",
-        AI_MAX_STEPS: "8",
-        AI_MAX_RETRIES: "3",
-      }),
-    ).toEqual({
-      provider: "openai-compatible",
-      model: "openai/gpt-oss-20b",
-      baseURL: "https://openrouter.ai/api/v1",
-      apiKey: "secret",
-      maxSteps: 8,
-      maxRetries: 3,
-    });
-  });
-
-  it("reaches Groq's documented endpoint and reads its key from AI_API_KEY", () => {
-    expect(
-      resolveAiConfig({
-        AI_PROVIDER: "groq",
-        AI_MODEL: "qwen/qwen3.8-27b",
-        AI_API_KEY: "groq-key",
-      }),
-    ).toEqual({
-      provider: "groq",
-      model: "qwen/qwen3.8-27b",
-      baseURL: "https://api.groq.com/openai/v1",
-      apiKey: "groq-key",
-      maxSteps: 20,
-      maxRetries: 2,
-    });
-  });
-
-  it("names AI_API_KEY when Groq has no key, instead of sending a placeholder", () => {
-    const legacyEnvironment = {
-      AI_PROVIDER: "groq",
-      AI_MODEL: "qwen/qwen3.8-27b",
-      GROQ_API_KEY: "groq-key",
-    };
-
-    expect(() => resolveAiConfig(legacyEnvironment)).toThrow(/AI_API_KEY is required/);
-    expect(() => resolveAiConfig(legacyEnvironment)).toThrow(/console\.groq\.com/);
-  });
-
-  it("allows an API key override for LM Studio auth", () => {
-    expect(resolveAiConfig({ AI_MODEL: "local", AI_API_KEY: "token" }).apiKey).toBe("token");
-  });
-
-  it("requires a model id and explains how to find one", () => {
+  it("has no defaults: an empty environment names every missing variable", () => {
     expect(() => resolveAiConfig({})).toThrow(AiConfigurationError);
-    expect(() => resolveAiConfig({})).toThrow(/\/v1\/models/);
-  });
-
-  it("rejects unknown providers and lists the supported ids", () => {
-    expect(() => resolveAiConfig({ AI_PROVIDER: "anthropic", AI_MODEL: "claude" })).toThrow(
-      /Unknown AI_PROVIDER "anthropic".*lmstudio, openai-compatible/,
+    expect(() => resolveAiConfig({})).toThrow(
+      /AI is not configured: set AI_BASE_URL, AI_API_KEY, AI_MODEL, AI_STUB, AI_MAX_STEPS, AI_MAX_RETRIES/,
     );
   });
 
-  it("accepts the scripted stub provider used by the e2e suite", () => {
-    expect(resolveAiConfig({ AI_PROVIDER: "stub", AI_MODEL: "stub-model" })).toEqual({
-      provider: "stub",
-      model: "stub-model",
-      baseURL: "stub://local",
-      apiKey: "stub",
-      maxSteps: 20,
-      maxRetries: 0,
-    });
+  it("names only what is actually missing", () => {
+    expect(() => resolveAiConfig({ ...complete, AI_MODEL: "  " })).toThrow(
+      /AI is not configured: set AI_MODEL\./,
+    );
   });
 
-  it("requires a base URL for a generic compatible endpoint", () => {
-    expect(() =>
-      resolveAiConfig({
-        AI_PROVIDER: "openai-compatible",
-        AI_MODEL: "some-model",
-      }),
-    ).toThrow(/AI_BASE_URL is required/);
+  it("says which model settings are required, not what the app would have used", () => {
+    expect(() => resolveAiConfig({ AI_BASE_URL: "", AI_API_KEY: "", AI_MODEL: "" })).toThrow(
+      /There are no defaults; every model setting comes from the environment\./,
+    );
   });
 
-  it("validates step and retry limits", () => {
-    expect(() => resolveAiConfig({ AI_MODEL: "local", AI_MAX_STEPS: "0" })).toThrow(
+  it("reads the scripted provider switch from AI_STUB and rejects anything else", () => {
+    expect(resolveAiConfig({ ...complete, AI_STUB: "1" }).stub).toBe(true);
+    expect(resolveAiConfig({ ...complete, AI_STUB: "0" }).stub).toBe(false);
+
+    expect(() => resolveAiConfig({ ...complete, AI_STUB: "yes" })).toThrow(
+      /AI_STUB must be "0" or "1"/,
+    );
+  });
+
+  it("validates the step and retry limits", () => {
+    expect(() => resolveAiConfig({ ...complete, AI_MAX_STEPS: "0" })).toThrow(
+      /AI_MAX_STEPS must be a whole number greater than or equal to 1/,
+    );
+    expect(() => resolveAiConfig({ ...complete, AI_MAX_STEPS: "2.5" })).toThrow(
       /AI_MAX_STEPS must be a whole number/,
     );
-    expect(() => resolveAiConfig({ AI_MODEL: "local", AI_MAX_STEPS: "2.5" })).toThrow(
-      /AI_MAX_STEPS must be a whole number/,
+    expect(() => resolveAiConfig({ ...complete, AI_MAX_RETRIES: "-1" })).toThrow(
+      /AI_MAX_RETRIES must be a whole number greater than or equal to 0/,
     );
-    expect(() => resolveAiConfig({ AI_MODEL: "local", AI_MAX_RETRIES: "-1" })).toThrow(
-      /AI_MAX_RETRIES must be a whole number/,
+  });
+
+  it("rejects a base URL that is only slashes", () => {
+    expect(() => resolveAiConfig({ ...complete, AI_BASE_URL: "//" })).toThrow(
+      /AI_BASE_URL must be a URL/,
+    );
+  });
+
+  it("keeps the approval secret optional but refuses a guessable one", () => {
+    expect(resolveAiConfig(complete).toolApprovalSecret).toBeUndefined();
+    expect(
+      resolveAiConfig({ ...complete, AI_TOOL_APPROVAL_SECRET: "x".repeat(32) }).toolApprovalSecret,
+    ).toBe("x".repeat(32));
+    expect(() => resolveAiConfig({ ...complete, AI_TOOL_APPROVAL_SECRET: "short" })).toThrow(
+      /at least 32 characters/,
+    );
+  });
+
+  it("does not read a provider name at all", () => {
+    // The old AI_PROVIDER vocabulary is gone: any extra variable is ignored and
+    // the connection is whatever the URL says.
+    expect(resolveAiConfig({ ...complete, AI_PROVIDER: "anthropic" }).baseURL).toBe(
+      "https://endpoint.test/openai/v1",
     );
   });
 });
 
+describe("resolveTitleAiConfig", () => {
+  it("reads its own endpoint, with no fallback to the agent's", () => {
+    expect(resolveTitleAiConfig(completeTitle)).toEqual({
+      baseURL: "https://names.test/openai/v1",
+      apiKey: "title-key",
+      model: "qwen/qwen3.8-27b",
+      stub: false,
+    });
+  });
+
+  it("requires its own variables even when the agent's are complete", () => {
+    expect(() => resolveTitleAiConfig(complete)).toThrow(
+      /AI is not configured: set AI_TITLE_BASE_URL, AI_TITLE_API_KEY, AI_TITLE_MODEL/,
+    );
+  });
+
+  it("shares the scripted-provider switch with the agent", () => {
+    expect(resolveTitleAiConfig({ ...completeTitle, AI_STUB: "1" }).stub).toBe(true);
+    expect(() => resolveTitleAiConfig({ ...completeTitle, AI_STUB: "" })).toThrow(/AI_STUB/);
+  });
+});
+
+describe("modelSource", () => {
+  it("records the host a prompt ran against, not a provider name", () => {
+    expect(modelSource("https://api.groq.com/openai/v1")).toBe("api.groq.com");
+    expect(modelSource("http://127.0.0.1:1234/v1")).toBe("127.0.0.1:1234");
+  });
+});
+
 describe("isAiConfigured", () => {
-  it("is false without a model and true with a valid configuration", () => {
+  it("is false without an environment and true with a complete one", () => {
+    vi.stubEnv("AI_BASE_URL", "");
+    vi.stubEnv("AI_API_KEY", "");
     vi.stubEnv("AI_MODEL", "");
+    vi.stubEnv("AI_STUB", "");
+    vi.stubEnv("AI_MAX_STEPS", "");
+    vi.stubEnv("AI_MAX_RETRIES", "");
     expect(isAiConfigured()).toBe(false);
 
-    vi.stubEnv("AI_MODEL", "local-model");
+    for (const [name, value] of Object.entries(complete)) vi.stubEnv(name, value);
     expect(isAiConfigured()).toBe(true);
   });
 });

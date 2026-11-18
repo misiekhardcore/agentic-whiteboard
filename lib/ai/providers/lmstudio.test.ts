@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getAiConfig } from "@/lib/ai/providers/config";
-import { getLanguageModel } from "@/lib/ai/providers/provider";
+import { createModel } from "@/lib/ai/providers/model";
 import { createAgent } from "@/lib/ai/runtime/agent";
 
 type ChatMessage = {
@@ -113,9 +113,10 @@ async function startServer(respond: (request: CapturedRequest, index: number) =>
 }
 
 beforeEach(() => {
-  vi.stubEnv("AI_PROVIDER", "lmstudio");
   vi.stubEnv("AI_MODEL", "lmstudio-test-model");
   vi.stubEnv("AI_API_KEY", "local-test-key");
+  vi.stubEnv("AI_STUB", "0");
+  vi.stubEnv("AI_MAX_STEPS", "20");
   vi.stubEnv("AI_MAX_RETRIES", "0");
 });
 
@@ -135,14 +136,13 @@ describe("LM Studio OpenAI-compatible path", () => {
 
     const config = getAiConfig();
     expect(config).toMatchObject({
-      provider: "lmstudio",
       baseURL,
       model: "lmstudio-test-model",
       apiKey: "local-test-key",
     });
 
     const result = await generateText({
-      model: getLanguageModel(config),
+      model: createModel(config),
       prompt: "Say hi",
       maxRetries: 0,
     });

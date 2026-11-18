@@ -53,17 +53,25 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-import { titleConversation } from "./titleConversation";
+import { TITLE_OUTPUT_TOKENS } from "./constants";
+import { generateConversationTitle, titleConversation } from "./titleConversation";
 
 const USAGE = {
   inputTokens: { total: 8, noCache: 8, cacheRead: 0, cacheWrite: 0 },
   outputTokens: { total: 4, text: 4, reasoning: 0 },
 };
 
-function modelReturning(text: string, onCall?: () => void): LanguageModel {
+function modelReturning(
+  text: string,
+  onCall?: (options: {
+    prompt: unknown;
+    maxOutputTokens?: number;
+    providerOptions?: unknown;
+  }) => void,
+): LanguageModel {
   return new MockLanguageModelV4({
-    doGenerate: () => {
-      onCall?.();
+    doGenerate: (options) => {
+      onCall?.(options);
       return Promise.resolve({
         content: [{ type: "text" as const, text }],
         finishReason: { unified: "stop" as const, raw: "stop" },
@@ -90,6 +98,86 @@ beforeEach(() => {
   mocks.written = [];
   vi.spyOn(console, "error").mockImplementation(() => undefined);
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
+});
+
+describe("generateConversationTitle", () => {
+  it("normalises the model's reply into a name", async () => {
+    const title = await generateConversationTitle({
+      prompt: "Plan the database schema",
+      model: modelReturning('Title: "Schema planning."'),
+      maxRetries: 0,
+    });
+
+    expect(title).toBe("Schema planning");
+  });
+
+  it("has no title when the model answered with nothing", async () => {
+    const title = await generateConversationTitle({
+      prompt: "Plan the database schema",
+      model: modelReturning("   "),
+      maxRetries: 0,
+    });
+
+    expect(title).toBeNull();
+  });
+
+  it("has no title when the model answered instead of naming the conversation", async () => {
+    const title = await generateConversationTitle({
+      prompt: "Plan the database schema",
+      model: modelReturning("I cannot answer that question as asked."),
+      maxRetries: 0,
+    });
+
+    expect(title).toBeNull();
+  });
+
+  it("leaves a reasoning model room to answer inside the output budget", async () => {
+    let maxOutputTokens: number | undefined;
+
+    await generateConversationTitle({
+      prompt: "Plan the database schema",
+      model: modelReturning("Title: Schema planning", (options) => {
+        maxOutputTokens = options.maxOutputTokens;
+      }),
+      maxRetries: 0,
+    });
+
+    // A model that reasons before answering spends part of this budget on that
+    // reasoning; a title-sized cap makes it return no text at all.
+    expect(maxOutputTokens).toBe(TITLE_OUTPUT_TOKENS);
+    expect(maxOutputTokens).toBeGreaterThanOrEqual(256);
+  });
+
+  it("sends the caller's provider options, so naming can turn reasoning off", async () => {
+    let sent: unknown;
+
+    await generateConversationTitle({
+      prompt: "Plan the database schema",
+      model: modelReturning("Title: Schema planning", (options) => {
+        sent = options.providerOptions;
+      }),
+      maxRetries: 0,
+      providerOptions: { ai: { reasoningEffort: "none" } },
+    });
+
+    expect(sent).toEqual({ ai: { reasoningEffort: "none" } });
+  });
+
+  it("names the conversation from the prompt, bounded to what the model needs", async () => {
+    let sent: unknown;
+
+    await generateConversationTitle({
+      prompt: "x".repeat(5000),
+      model: modelReturning("Title", (options) => {
+        sent = options.prompt;
+      }),
+      maxRetries: 0,
+    });
+
+    // Either shape the SDK may hand the model: the point is that a huge prompt
+    // is not resent in full just to name the conversation.
+    expect(JSON.stringify(sent)).not.toContain("x".repeat(2001));
+  });
 });
 
 describe("titleConversation", () => {
@@ -135,15 +223,18 @@ describe("titleConversation", () => {
     expect(mocks.written).toEqual([]);
   });
 
-  it("stores nothing when the model cannot be reached", async () => {
-    const title = await titleConversation({
-      conversationId: "conversation_1",
-      userId: "user_1",
-      model: failingModel(),
-      maxRetries: 0,
-    });
+  it("reports a provider failure and stores nothing", async () => {
+    // Swallowing it is the scheduler's job, so the service never hides an
+    // outage: `startConversationTitle` logs it and the turn is unaffected.
+    await expect(
+      titleConversation({
+        conversationId: "conversation_1",
+        userId: "user_1",
+        model: failingModel(),
+        maxRetries: 0,
+      }),
+    ).rejects.toThrow("provider is down");
 
-    expect(title).toBeNull();
     expect(mocks.written).toEqual([]);
   });
 

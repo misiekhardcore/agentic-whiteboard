@@ -3,7 +3,7 @@ import { config as loadEnv } from "dotenv";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { type AiConfig, getAiConfig } from "@/lib/ai/providers/config";
-import { getLanguageModel } from "@/lib/ai/providers/provider";
+import { createModel } from "@/lib/ai/providers/model";
 import { createAgent } from "@/lib/ai/runtime/agent";
 
 /**
@@ -34,7 +34,7 @@ describe.skipIf(!live)("live AI provider", () => {
 
   it("answers a prompt through the configured provider", async () => {
     const result = await generateText({
-      model: getLanguageModel(config),
+      model: createModel(config),
       prompt: "Reply with exactly one word: pong",
       maxRetries: 0,
     });

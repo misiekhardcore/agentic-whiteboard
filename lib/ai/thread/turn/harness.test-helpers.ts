@@ -99,10 +99,11 @@ vi.mock("../titles", () => ({
 
 vi.mock("@/lib/ai/providers/config", () => ({
   AiConfigurationError: class AiConfigurationError extends Error {},
+  modelSource: (baseURL: string) => new URL(baseURL).host,
   getAiConfig: () => ({
-    provider: "stub",
+    stub: true,
     model: "stub-model",
-    baseURL: "stub://local",
+    baseURL: "http://stub.local/v1",
     apiKey: "stub",
     maxSteps: 1,
     maxRetries: 0,

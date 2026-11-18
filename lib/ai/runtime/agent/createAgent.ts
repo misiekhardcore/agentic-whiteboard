@@ -1,7 +1,7 @@
 import { isStepCount, ToolLoopAgent } from "ai";
 
 import { type AiConfig, getAiConfig } from "@/lib/ai/providers/config";
-import { getLanguageModel } from "@/lib/ai/providers/provider";
+import { createModel } from "@/lib/ai/providers/model";
 import { DEFAULT_AGENT_INSTRUCTIONS } from "@/lib/ai/runtime/instructions";
 
 import { DEFAULT_AGENT_MAX_RETRIES, DEFAULT_AGENT_MAX_STEPS } from "./internals";
@@ -19,7 +19,7 @@ export function createAgent(options: CreateAgentOptions = {}) {
 
   if (!model) {
     config = getAiConfig();
-    model = getLanguageModel(config);
+    model = createModel(config);
   }
 
   const approvalNames = options.toolsRequiringApproval ?? [];
