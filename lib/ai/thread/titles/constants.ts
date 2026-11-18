@@ -8,7 +8,7 @@ export const TITLE_PROMPT_LENGTH = 2000;
  * named. The bound is generous enough to reach an answer and small enough that
  * the request stays cheap.
  */
-export const TITLE_OUTPUT_TOKENS = 512;
+export const TITLE_OUTPUT_TOKENS = 64;
 
 /**
  * The request names the material and the expected answer, rather than passing
