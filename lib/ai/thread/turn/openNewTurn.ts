@@ -1,11 +1,12 @@
 import type { UIMessage } from "ai";
 
+import { titleFromPrompt } from "@/lib/ai/titles";
 import { getOrganizationEntitlements, getUserEntitlements } from "@/lib/billing/entitlements";
 
 import { promptAllowance } from "../allowance";
 import { markThreadStream } from "../live";
 import { openDashboardPrompt } from "../prompts";
-import type { PromptPosition } from "../rules";
+import { lastUserText, type PromptPosition } from "../rules";
 
 import { BUSY, CONVERSATION_MISSING } from "./internals/constants";
 import { jsonError } from "./internals/jsonError";
@@ -61,6 +62,9 @@ export async function openNewTurn({
     userId,
     provider,
     model,
+    // The conversation is named by the prompt that creates it, before any model
+    // is asked: the switcher has a label the moment the send is accepted.
+    title: titleFromPrompt(lastUserText([submitted]) ?? ""),
     discardFrom,
   });
   if (opened.kind === "busy") {

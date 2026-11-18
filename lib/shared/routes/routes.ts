@@ -34,4 +34,6 @@ export const routes = {
   agentPromptsApi: "/api/agent/prompts",
   /** The session's conversations, for the dashboard's history dialog. */
   agentConversationsApi: "/api/agent/conversations",
+  /** A short-lived Realtime token and the channels this session may join. */
+  realtimeTokenApi: "/api/realtime/token",
 } as const;

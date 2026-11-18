@@ -25,7 +25,7 @@ export async function GET(): Promise<Response> {
   return Response.json({
     conversations: conversations.map((conversation): ConversationHistoryEntry => ({
       id: conversation.id,
-      preview: conversation.preview,
+      title: conversation.title,
       updatedAt: conversation.updatedAt.toISOString(),
     })),
   });

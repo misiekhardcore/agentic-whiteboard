@@ -1,9 +1,10 @@
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 
+import { titleFromPrompt } from "@/lib/ai/titles";
 import { db } from "@/lib/db";
 import { agentConversations, agentMessages, agentPrompts } from "@/lib/db/schema";
 
-import { branchableStatus, promptsThrough } from "../rules";
+import { branchableStatus, promptsThrough, storedText } from "../rules";
 
 import type { BranchResult } from "./types";
 
@@ -97,8 +98,18 @@ export async function branchConversation({
       byPrompt.set(message.promptId, owned);
     }
 
+    // A fork is named by the newest prompt it carries: the branch starts at the
+    // turn the person chose, so that is the request it continues.
+    const newestUserMessage = [...sourceMessages]
+      .reverse()
+      .find((message) => message.role === "USER");
+
     const branchId = crypto.randomUUID();
-    await tx.insert(agentConversations).values({ id: branchId, userId });
+    await tx.insert(agentConversations).values({
+      id: branchId,
+      userId,
+      title: titleFromPrompt(newestUserMessage ? storedText(newestUserMessage.content) : ""),
+    });
 
     const base = Date.now();
     let tick = 0;

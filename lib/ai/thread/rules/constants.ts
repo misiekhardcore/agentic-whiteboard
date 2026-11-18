@@ -6,7 +6,6 @@
 export const CONVERSATION_HISTORY_LIMIT = 200;
 
 /** How long a conversation's label may be before it is cut. */
-export const CONVERSATION_PREVIEW_LENGTH = 48;
 
 /**
  * Rules for the dashboard's prompt thread. Pure, so the route, the persistence

@@ -1,13 +1,12 @@
 import { z } from "zod";
 
 import { capabilityFailureSchema } from "@/lib/capabilities/define";
-import { routes } from "@/lib/shared/routes";
 
 export /**
  * The organization's operations.
  *
  * They are capabilities like any other — same validation, same refusal shape,
- * same revalidation — but `callers: ["human"]` says the agent may not perform
+ * same declared changes — but `callers: ["human"]` says the agent may not perform
  * them. That is a policy decision, not a missing adapter: promoting one later is
  * this line, and the handler already enforces the role.
  *
@@ -19,5 +18,3 @@ const outcome = z.discriminatedUnion("ok", [
   z.object({ ok: z.literal(true) }),
   capabilityFailureSchema,
 ]);
-
-export const MENU = { path: routes.dashboardOrganization, layout: true } as const;

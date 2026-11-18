@@ -1,9 +1,9 @@
 # Self-hosted Supabase (slim)
 
-Postgres, PostgREST, Storage (+ imgproxy) and the Studio dashboard behind one
-Envoy gateway. Supabase Auth, Realtime, Edge Functions, Supavisor and Logflare
-were removed: the app handles auth with Better Auth and only needs a database,
-file storage and a dashboard.
+Postgres, PostgREST, Storage (+ imgproxy), Realtime and the Studio dashboard
+behind one Envoy gateway. Supabase Auth, Edge Functions, Supavisor and Logflare
+were removed: the app handles auth with Better Auth and needs a database, file
+storage, a dashboard, and Realtime for its change events.
 
 ## Services
 
@@ -13,6 +13,7 @@ file storage and a dashboard.
 | `db`       | `supabase-db`        | `127.0.0.1:54322`         |
 | `rest`     | `supabase-rest`      | internal                  |
 | `storage`  | `supabase-storage`   | internal                  |
+| `realtime` | `supabase-realtime`  | internal (via `/realtime/v1/`) |
 | `imgproxy` | `supabase-imgproxy`  | internal                  |
 | `meta`     | `supabase-meta`      | internal                  |
 | `studio`   | `supabase-studio`    | internal                  |
@@ -38,6 +39,8 @@ Desktop's bind mounts do not support).
   `DASHBOARD_PASSWORD` from `.env`, then open the default project.
 - REST: `http://localhost:8000/rest/v1/`
 - Storage: `http://localhost:8000/storage/v1/`
+- Realtime: `ws://localhost:8000/realtime/v1/websocket` and
+  `POST http://localhost:8000/realtime/v1/api/broadcast`.
 - Storage S3 protocol: `http://localhost:8000/storage/v1/s3` using
   `S3_PROTOCOL_ACCESS_KEY_ID` / `S3_PROTOCOL_ACCESS_KEY_SECRET`.
 - Postgres: `postgresql://postgres:<POSTGRES_PASSWORD>@127.0.0.1:54322/agentic-whiteboard`
@@ -68,6 +71,8 @@ database.
 | --------- | ------------------------ | --------------------------------------------------------------- |
 | `public`  | `postgres`               | app tables, including Better Auth's `user`, `account`, `session`, `verification` and the `organization` plugin tables |
 | `storage` | `supabase_storage_admin` | Storage's own tables, created by its migrations                  |
+| `_realtime` | `supabase_admin`       | Realtime's own tables, created by its migrations                 |
+| `app_private` | `postgres`           | RLS helpers with no public grants, such as `is_org_member`      |
 | `drizzle` | `postgres`               | Drizzle migration journal                                        |
 
 `postgres` is kept only as the maintenance database that the image, health
@@ -92,7 +97,15 @@ docker exec -i supabase-db psql -U supabase_admin -d agentic-whiteboard \
   < utils/app-db-grants.sql
 docker exec -i supabase-db psql -U postgres -d agentic-whiteboard \
   < utils/better-auth-rls.sql
+docker exec -i supabase-db psql -U postgres -d agentic-whiteboard \
+  < utils/realtime-rls.sql
 ```
+
+`utils/realtime-rls.sql` is what lets a browser read its own change events: it
+creates the `app_private.is_org_member` helper (the `authenticated` role holds no
+privileges on Better Auth's tables) and the `SELECT` policy on
+`realtime.messages` for the `app:user:<id>` and `app:org:<id>` topics. There is no
+`INSERT` policy, so only the server publishes.
 
 Studio and postgres-meta follow `POSTGRES_DB`, so the dashboard shows the live
 app tables. GraphQL is not installed, hence `PGRST_DB_SCHEMAS=public`.
@@ -112,6 +125,17 @@ Both key generations live in `.env` and work simultaneously:
 contain the EC P-256 pair plus `JWT_SECRET` as a symmetric JWK. `JWT_KEYS` is
 currently read by nothing because Supabase Auth is not running — it is kept in
 sync with `JWT_JWKS` in case the auth service is ever added again.
+
+Realtime is the exception to the translated keys: it verifies only HS256 tokens
+against `JWT_SECRET` (`API_JWT_SECRET`), so it never sees the gateway's ES256
+tokens. The app therefore mints its own token per session and broadcasts with the
+legacy `SERVICE_ROLE_KEY`; the browser connects with the legacy `ANON_KEY`. Two
+more values are required in `.env` and have no defaults:
+
+| Variable            | Meaning                                                        |
+| ------------------- | -------------------------------------------------------------- |
+| `REALTIME_DB_ENC_KEY` | At least 16 characters, stable: encrypts Realtime's own rows. |
+| `SECRET_KEY_BASE`     | At least 64 characters (`openssl rand -base64 64`), stable.   |
 
 Regenerate the whole configuration (new EC pair, new `sb_` keys, new internal
 JWTs) and reload the services that consume it:
@@ -133,7 +157,8 @@ Notes:
 
 - The gateway config is `volumes/api/envoy/`: `cds.yaml` (upstreams),
   `lds.template.yaml` (routes/filters) and `docker-entrypoint.sh` (fills
-  secrets into the template). Only the four running upstreams are wired.
+  secrets into the template). Only the running upstreams are wired; the Realtime
+  websocket route keeps the connection open and passes the upgrade.
 - Studio's Authentication section shows errors because GoTrue is not
   installed; the Table Editor shows the Better Auth tables under `public`.
   There is no `auth` schema, so policies that call `auth.uid()` would never

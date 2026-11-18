@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 
+import { RefreshOnChanges } from "@/components/Changes";
 import { getOrganizationEntitlements } from "@/lib/billing/entitlements";
 import { getSessionAccount } from "@/lib/identity/account";
 import { canManageTeam } from "@/lib/organizations/membership";
 import { listOrganizationMembers, listPendingInvitations } from "@/lib/organizations/queries";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 import { routes, signInPath } from "@/lib/shared/routes";
 
 import { OrganizationTeamView } from "./_components/OrganizationTeamView";
@@ -33,7 +35,12 @@ export default async function OrganizationPage() {
   const { teams, activeTeam, session } = account;
 
   if (!activeTeam) {
-    return <PersonalOrganizationsView teams={teams} />;
+    return (
+      <>
+        <RefreshOnChanges keys={[CHANGE_KEYS.account]} />
+        <PersonalOrganizationsView teams={teams} />
+      </>
+    );
   }
 
   const [members, pendingInvitations, entitlements] = await Promise.all([
@@ -43,13 +50,16 @@ export default async function OrganizationPage() {
   ]);
 
   return (
-    <OrganizationTeamView
-      organization={activeTeam}
-      members={members}
-      pendingInvitations={pendingInvitations}
-      entitlements={entitlements}
-      currentUserId={session.user.id}
-      canManage={canManageTeam(activeTeam.role)}
-    />
+    <div className="stack">
+      <RefreshOnChanges keys={[CHANGE_KEYS.account]} />
+      <OrganizationTeamView
+        organization={activeTeam}
+        members={members}
+        pendingInvitations={pendingInvitations}
+        entitlements={entitlements}
+        currentUserId={session.user.id}
+        canManage={canManageTeam(activeTeam.role)}
+      />
+    </div>
   );
 }

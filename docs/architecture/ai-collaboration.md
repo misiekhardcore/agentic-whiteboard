@@ -38,9 +38,9 @@ already owns those concerns. Supabase Realtime remains valuable for the parts
 that are genuinely ephemeral and cross-surface: who is in a workspace, what the
 agent is doing, shared chat messages, and team-board invalidation.
 
-This also decouples the collaboration work from the local Supabase stack, which
-currently has **no Realtime service**: the slim compose file removed it and
-Envoy has no realtime upstream. Hocuspocus can ship before Realtime is restored.
+Hocuspocus and Realtime stay independent: the stack runs Realtime for the app's
+change events ([live-updates](live-updates.md)), and the collaboration room still
+has its own transport, so neither waits for the other.
 
 ## Components
 

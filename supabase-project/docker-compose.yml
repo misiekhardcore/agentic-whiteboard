@@ -1,6 +1,6 @@
 # Slim self-hosted Supabase: Postgres, PostgREST, Storage (+ imgproxy),
-# Studio and the Envoy API gateway. Auth, Realtime, Edge Functions,
-# Supavisor and Logflare were removed.
+# Realtime, Studio and the Envoy API gateway. Auth, Edge Functions, Supavisor
+# and Logflare were removed; Realtime carries the app's broadcast change events.
 #
 # Usage
 #   Start:            docker compose up -d --wait
@@ -121,6 +121,47 @@ services:
 
       PGRST_DB_USE_LEGACY_GUCS: "false"
       PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY}
+
+  # Realtime: private broadcast channels for the app's change events. Clients
+  # authenticate with an app-minted JWT and `realtime.messages` RLS decides which
+  # topic each person may read; see utils/realtime-rls.sql.
+  realtime:
+    container_name: supabase-realtime
+    image: supabase/realtime:v2.148.3
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sSfL --head -o /dev/null -H \"Authorization: Bearer ${ANON_KEY}\" http://localhost:4000/api/tenants/realtime-dev/health"
+        ]
+      timeout: 5s
+      interval: 30s
+      retries: 3
+      start_period: 20s
+    environment:
+      PORT: 4000
+      DB_HOST: ${POSTGRES_HOST}
+      DB_PORT: ${POSTGRES_PORT}
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      DB_AFTER_CONNECT_QUERY: "SET search_path TO _realtime"
+      DB_ENC_KEY: ${REALTIME_DB_ENC_KEY}
+      # The app mints HS256 tokens with this secret, so Realtime must verify
+      # with the same value.
+      API_JWT_SECRET: ${JWT_SECRET}
+      METRICS_JWT_SECRET: ${JWT_SECRET}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      ERL_AFLAGS: -proto_dist inet_tcp
+      DNS_NODES: "''"
+      RLIMIT_NOFILE: "10000"
+      APP_NAME: realtime
+      SEED_SELF_HOST: "true"
+      RUN_JANITOR: "true"
 
   # Storage API. It talks to Postgres through PostgREST.
   storage:

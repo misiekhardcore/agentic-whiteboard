@@ -99,7 +99,7 @@ export function ConversationHistoryList({
                 aria-current={current ? "true" : undefined}
                 className="flex items-baseline justify-between gap-3 rounded-lg px-3 py-2 text-sm hover:bg-muted aria-[current=true]:bg-muted"
               >
-                <span className="truncate">{entry.preview}</span>
+                <span className="truncate">{entry.title}</span>
                 <span className="shrink-0 text-xs text-muted-foreground">
                   {formatDay(new Date(entry.updatedAt))}
                 </span>

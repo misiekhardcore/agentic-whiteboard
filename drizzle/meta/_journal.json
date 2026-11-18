@@ -99,6 +99,13 @@
       "when": 1794853150007,
       "tag": "0013_condemned_bulldozer",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1795020880094,
+      "tag": "0014_certain_yellowjacket",
+      "breakpoints": true
     }
   ]
 }

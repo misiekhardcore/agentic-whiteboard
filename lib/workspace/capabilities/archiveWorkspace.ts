@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { defineCapability } from "@/lib/capabilities/define";
-import { routes } from "@/lib/shared/routes";
+import { CHANGE_KEYS, workspaceChangeKey } from "@/lib/shared/changes";
 
 import { authorizeWorkspace } from "../access";
 import { presentArchiveWorkspace } from "../presentation";
@@ -19,11 +19,9 @@ export const archiveWorkspace = defineCapability({
   output: summaryOutput,
   callers: ["human", "agent"] as const,
   approval: "always" as const,
-  invalidates: (output) => [
-    routes.dashboard,
-    routes.dashboardArchive,
-    routes.workspaces,
-    output.workspace.link,
+  changes: (output) => [
+    { key: CHANGE_KEYS.workspaces, scope: "account" },
+    { key: workspaceChangeKey(output.workspace.id), scope: "account" },
   ],
   notFound: NOT_FOUND,
   authorize: async (ctx, input) => authorizeWorkspace(ctx.actor, input.workspaceId, "edit"),

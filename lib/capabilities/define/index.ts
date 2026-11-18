@@ -9,7 +9,7 @@ export type {
   CapabilitySuccess,
   ClientCapability,
   ClientToolHandler,
-  RevalidationTarget,
+  Change,
 } from "./types";
 export { capabilityFailureSchema } from "./capabilityFailureSchema";
 export { failure } from "./failure";

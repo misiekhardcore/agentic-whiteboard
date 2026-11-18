@@ -1,17 +1,17 @@
-import type { AI_PROVIDER_IDS } from "./AI_PROVIDER_IDS";
-
-export type AiProviderId = (typeof AI_PROVIDER_IDS)[number];
-
+/**
+ * One OpenAI-compatible endpoint, chosen entirely by the deployment. There is no
+ * provider id, no per-vendor default and no fallback endpoint: the code cannot
+ * assume whose server answers, so every value is required.
+ */
 export type AiConfig = {
-  provider: AiProviderId;
-  /** The provider's model id, e.g. one returned by LM Studio's /v1/models. */
-  model: string;
   /** Base URL including the version segment, e.g. http://127.0.0.1:1234/v1. */
   baseURL: string;
   apiKey: string;
+  /** The endpoint's model id. */
+  model: string;
   /** Upper bound for the agentic tool loop. */
   maxSteps: number;
-  /** SDK retry count. Local servers fail fast by default. */
+  /** SDK retry count. */
   maxRetries: number;
   /**
    * Signs each tool-approval request. Approval responses travel through the
@@ -27,7 +27,6 @@ export type AiConfig = {
  */
 export type AiEnvironment = Pick<
   typeof process.env,
-  | "AI_PROVIDER"
   | "AI_MODEL"
   | "AI_BASE_URL"
   | "AI_TOOL_APPROVAL_SECRET"

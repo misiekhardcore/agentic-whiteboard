@@ -3,10 +3,12 @@ import { Folder } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { RefreshOnChanges } from "@/components/Changes";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { CreateWorkspaceDialog } from "@/components/Workspaces/CreateWorkspaceDialog";
 import { WorkspaceCard } from "@/components/Workspaces/WorkspaceCard";
 import { getSessionAccount } from "@/lib/identity/account";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 import { routes, signInPath } from "@/lib/shared/routes";
 import { listAccountWorkspaces } from "@/lib/workspace/queries";
 
@@ -32,6 +34,7 @@ export default async function WorkspacesPage() {
 
   return (
     <div className="stack">
+      <RefreshOnChanges keys={[CHANGE_KEYS.workspaces, CHANGE_KEYS.account]} />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">All workspaces</h1>

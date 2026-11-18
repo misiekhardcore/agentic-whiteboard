@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { defineCapability, success } from "@/lib/capabilities/define";
-import { routes } from "@/lib/shared/routes";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 
 import { cancelInvitation as cancelInvitationFor } from "../invitations";
 
@@ -14,7 +14,7 @@ export const cancelInvitation = defineCapability({
   input: z.object({ invitationId: z.string() }),
   output: outcome,
   callers: ["human"] as const,
-  invalidates: () => [routes.dashboardOrganization],
+  changes: () => [{ key: CHANGE_KEYS.account, scope: "account" }],
   handler: async (ctx, input) => {
     const refusal = await cancelInvitationFor({
       userId: ctx.actor.userId,

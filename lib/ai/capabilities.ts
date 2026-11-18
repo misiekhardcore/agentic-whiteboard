@@ -6,7 +6,7 @@ import {
   failure,
   success,
 } from "@/lib/capabilities/define";
-import { routes } from "@/lib/shared/routes";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 
 import {
   BRANCH_MISSING,
@@ -14,6 +14,7 @@ import {
   branchConversation as branchConversationInto,
 } from "./thread/branches";
 import { conversationIdProblem } from "./thread/rules";
+import { refineConversationTitle } from "./titles";
 
 /**
  * The dashboard thread's operations that are not a prompt.
@@ -37,7 +38,7 @@ export const branchConversation = defineCapability({
     capabilityFailureSchema,
   ]),
   callers: ["human"] as const,
-  invalidates: () => [routes.dashboard],
+  changes: () => [{ key: CHANGE_KEYS.conversations, scope: "person" }],
   handler: async (ctx, input) => {
     const result = await branchConversationInto({
       userId: ctx.actor.userId,
@@ -47,6 +48,17 @@ export const branchConversation = defineCapability({
 
     if (result.kind === "missing") return failure(BRANCH_MISSING);
     if (result.kind === "unfinished") return failure(BRANCH_UNFINISHED);
+
+    // The fork is named from what it copied, in the background; the copy is
+    // already complete without a generated title.
+    void refineConversationTitle({
+      conversationId: result.conversationId,
+      userId: ctx.actor.userId,
+    }).catch((error) => {
+      console.error(
+        `[ai] titles failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
 
     return success({ conversationId: result.conversationId });
   },

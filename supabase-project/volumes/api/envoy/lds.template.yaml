@@ -265,6 +265,36 @@ resources:
                             #              address_prefix: ::1
                             #              prefix_len: 128
 
+                      # Realtime change events. The websocket route keeps the
+                      # connection open (timeout 0) and passes the upgrade;
+                      # the HTTP path carries server-side broadcasts. Both are
+                      # listed as protected routes, so the gateway demands the
+                      # stack's anon key before it forwards the request.
+                      - name: realtime-v1-ws-protected
+                        match:
+                          prefix: /realtime/v1/websocket
+                        route:
+                          cluster: realtime
+                          prefix_rewrite: /websocket
+                          timeout: 0s
+                          idle_timeout: 0s
+                          upgrade_configs:
+                            - upgrade_type: websocket
+                              enabled: true
+
+                      - name: realtime-v1-api-protected
+                        match:
+                          prefix: /realtime/v1/
+                        route:
+                          cluster: realtime
+                          prefix_rewrite: /
+                          timeout: 60s
+                        request_headers_to_add:
+                          - header:
+                              key: X-Forwarded-Prefix
+                              value: /realtime/v1
+                            append_action: ADD_IF_ABSENT
+
                       - match:
                           prefix: /
                         route:

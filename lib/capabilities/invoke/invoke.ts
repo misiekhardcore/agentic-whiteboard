@@ -1,3 +1,4 @@
+import { publishChanges } from "../changes";
 import { type Capability, type CapabilityContext, type CapabilityOutput, failure } from "../define";
 
 import { inputFieldErrors } from "./internals";
@@ -35,6 +36,13 @@ export async function invoke<I, T, R>(
   // A handler that returns the wrong shape is a bug in the handler, not a
   // refusal: fail loudly instead of handing a caller a malformed result.
   capability.output.parse(output);
+
+  // Published here rather than in the entry points, so a person's action, an
+  // agent's tool call and a future caller all tell the interface the same way.
+  // A refusal changes nothing and broadcasts nothing.
+  if (output.ok && capability.changes) {
+    await publishChanges({ changes: capability.changes(output), actor: ctx.actor });
+  }
 
   return output;
 }

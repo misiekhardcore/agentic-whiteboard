@@ -36,11 +36,11 @@ export function ConversationSwitcher({
             size="sm"
             className="h-auto max-w-56 rounded-full py-1 text-xs"
             aria-current={current ? "true" : undefined}
-            title={conversation.preview}
+            title={conversation.title}
             asChild
           >
             <Link href={routes.dashboardConversation(conversation.id)}>
-              <span className="truncate">{conversation.preview}</span>
+              <span className="truncate">{conversation.title}</span>
             </Link>
           </Button>
         );

@@ -1,7 +1,9 @@
 import { Badge } from "@konopskidev/ui/components/badge";
 import { redirect } from "next/navigation";
 
+import { RefreshOnChanges } from "@/components/Changes";
 import { getSessionBillingOverview } from "@/lib/billing/overview";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 import { routes, signInPath } from "@/lib/shared/routes";
 
 import { PlanSection } from "./_components/PlanSection";
@@ -25,6 +27,7 @@ export default async function BillingPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+      <RefreshOnChanges keys={[CHANGE_KEYS.account]} />
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-h2 font-semibold">Billing</h1>

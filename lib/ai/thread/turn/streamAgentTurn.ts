@@ -9,6 +9,7 @@ import {
 } from "@/lib/ai/runtime/instructions";
 import { createWorkspaceTools } from "@/lib/ai/tools";
 import { approvalGatedCapabilityNames } from "@/lib/capabilities/registry";
+import { type Change, CHANGE_KEYS_HEADER, changeKeysHeaderValue } from "@/lib/shared/changes";
 
 import { clearThreadStream } from "../live";
 import { closePrompt } from "../prompts";
@@ -30,6 +31,7 @@ export async function streamAgentTurn({
   promptId,
   history,
   continuing,
+  changes,
   uiContext,
   signal,
 }: {
@@ -39,6 +41,8 @@ export async function streamAgentTurn({
   /** The turn's history, read back from the database rather than from the body. */
   history: UIMessage[];
   continuing: boolean;
+  /** What the send already changed, announced on the response for this tab. */
+  changes: Change[];
   uiContext: UiContext | null;
   signal: AbortSignal;
 }): Promise<Response> {
@@ -61,6 +65,12 @@ export async function streamAgentTurn({
       originalMessages: history,
       generateMessageId: generateId,
       abortSignal: signal,
+      // The tab that sent the prompt re-reads its route from this header, so it
+      // does not wait for a socket that may not be configured. Other tabs only
+      // hear the broadcast.
+      ...(changes.length > 0
+        ? { headers: { [CHANGE_KEYS_HEADER]: changeKeysHeaderValue(changes) } }
+        : {}),
       onStepEnd: ({ usage: stepUsage }) => {
         usageFromStream = stepUsage;
       },

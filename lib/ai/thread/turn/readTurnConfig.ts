@@ -19,12 +19,5 @@ export function readTurnConfig(): TurnConfig | TurnFailure {
     return { error: jsonError(notConfigured(error.message), 503) };
   }
 
-  if (config.provider === "stub") {
-    // A scripted server left running is otherwise indistinguishable from a real
-    // one from the outside: the thread looks answered, and no model request is
-    // made. Say so in the log the run is watched in.
-    console.warn("[ai] answering with the scripted stub provider; no request is sent to a model");
-  }
-
   return config;
 }

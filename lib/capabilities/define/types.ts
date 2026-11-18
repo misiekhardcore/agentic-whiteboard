@@ -1,6 +1,9 @@
 import type { z } from "zod";
 
 import type { AccountActor } from "@/lib/identity/actor";
+import type { Change } from "@/lib/shared/changes";
+
+export type { Change };
 
 import type { ToolPresentation } from "../presentation";
 
@@ -55,13 +58,6 @@ export type CapabilityOptions = { signal?: AbortSignal };
 /** Client-only tools are performed by the browser; there is no server execute. */
 export type ClientToolHandler = "openWorkspace";
 
-/**
- * A route path a successful call changes. `layout` mirrors
- * `revalidatePath(path, "layout")`: an account-wide change (a profile, a role,
- * a plan) invalidates the shell, not one page.
- */
-export type RevalidationTarget = string | { path: string; layout?: boolean };
-
 export type Capability<I, T, R = undefined> = {
   /** The tool name and the stored key. Renaming one breaks history. */
   name: string;
@@ -74,8 +70,12 @@ export type Capability<I, T, R = undefined> = {
   approval?: "always";
   /** When set, the browser performs this call and the server only offers it. */
   client?: ClientToolHandler;
-  /** Route paths to revalidate after a successful human call. */
-  invalidates?: (output: CapabilitySuccess<T>) => RevalidationTarget[];
+  /**
+   * The datasets a successful call changes, published to the interface. A
+   * capability declares what a person will see change, not which route it
+   * happened to render.
+   */
+  changes?: (output: CapabilitySuccess<T>) => Change[];
   /** What a missing resource reports; defaults to a generic sentence. */
   notFound?: string;
   /**

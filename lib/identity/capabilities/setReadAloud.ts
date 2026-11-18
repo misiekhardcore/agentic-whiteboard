@@ -6,7 +6,7 @@ import {
   failure,
   success,
 } from "@/lib/capabilities/define";
-import { routes } from "@/lib/shared/routes";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 
 import { saveReadAloud } from "../settings";
 
@@ -21,7 +21,7 @@ export const setReadAloud = defineCapability({
   input: z.object({ enabled: z.boolean() }),
   output: z.discriminatedUnion("ok", [z.object({ ok: z.literal(true) }), capabilityFailureSchema]),
   callers: ["human"] as const,
-  invalidates: () => [routes.dashboard],
+  changes: () => [{ key: CHANGE_KEYS.settings, scope: "person" }],
   handler: async (ctx, input) => {
     try {
       await saveReadAloud(ctx.actor.userId, input.enabled);

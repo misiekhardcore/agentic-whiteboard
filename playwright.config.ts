@@ -15,6 +15,8 @@ const skipWebServer = Boolean(process.env.E2E_SKIP_WEB_SERVER);
 const ownServerPort = process.env.E2E_PORT ?? "3100";
 const baseURL =
   process.env.E2E_BASE_URL ?? `http://localhost:${skipWebServer ? "3000" : ownServerPort}`;
+const scriptedModelPort = process.env.SCRIPTED_MODEL_PORT ?? "3311";
+const scriptedModelUrl = `http://127.0.0.1:${scriptedModelPort}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -34,37 +36,55 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   // CI starts the production server itself (with the Stripe CLI's signing
-  // secret) and sets E2E_SKIP_WEB_SERVER. Locally Playwright starts its own
-  // server on `E2E_PORT` (default :3100), so `pnpm dev` must be stopped first.
+  // secret) and sets E2E_SKIP_WEB_SERVER. Locally Playwright starts both its
+  // own app server on `E2E_PORT` (default :3100) and the scripted model, so
+  // `pnpm dev` must be stopped first.
   webServer: skipWebServer
     ? undefined
-    : {
-        command: "pnpm dev",
-        // The prompt specs drive the agent, so they need the scripted provider
-        // rather than whatever `.env.local` points at. Running the app with
-        // your own server (`E2E_SKIP_WEB_SERVER`) means supplying these too.
-        env: {
-          PORT: new URL(baseURL).port || "3000",
-          AI_PROVIDER: "stub",
-          AI_MODEL: "stub-model",
-          // Hold the first chunk back so a spec can act while a reply is still
-          // streaming; the scripted provider is otherwise instantaneous.
-          AI_STUB_DELAY_MS: process.env.AI_STUB_DELAY_MS ?? "1500",
-          // The script emits a word per chunk. A gap between them leaves time
-          // to observe a reply (and the speech it drives) mid-flight.
-          AI_STUB_CHUNK_DELAY_MS: process.env.AI_STUB_CHUNK_DELAY_MS ?? "120",
-          // The approval specs need signed requests; a fixed test value is
-          // enough because the stub never leaves the machine.
-          AI_TOOL_APPROVAL_SECRET:
-            process.env.AI_TOOL_APPROVAL_SECRET ?? "e2e-tool-approval-secret-0123456789abcdef",
+    : [
+        {
+          // The app has one provider path: HTTP chat completions. The suite
+          // points it at a scripted endpoint instead of shipping a fake model.
+          command: "node scripts/scripted-model/server.mjs",
+          env: {
+            SCRIPTED_MODEL_PORT: scriptedModelPort,
+            // Hold the first chunk back so a spec can act while a reply is
+            // still streaming; the scripted endpoint is otherwise instant.
+            SCRIPTED_DELAY_MS: process.env.SCRIPTED_DELAY_MS ?? "1500",
+            // The script emits a word per chunk. A gap between them leaves time
+            // to observe a reply (and the speech it drives) mid-flight.
+            SCRIPTED_CHUNK_DELAY_MS: process.env.SCRIPTED_CHUNK_DELAY_MS ?? "120",
+          },
+          url: `${scriptedModelUrl}/health`,
+          reuseExistingServer: true,
+          timeout: 30_000,
         },
-        url: baseURL,
-        // Never reuse: a server someone already has open runs whatever provider
-        // their environment selects, and the prompt specs need the scripted one.
-        // Next allows a single dev server per project directory, so `pnpm dev`
-        // being up makes this fail with its own message naming the process to
-        // stop — better than the specs quietly driving the real model.
-        reuseExistingServer: false,
-        timeout: 120_000,
-      },
+        {
+          command: "pnpm dev",
+          // Running the app with your own server (`E2E_SKIP_WEB_SERVER`) means
+          // supplying these values too.
+          env: {
+            PORT: new URL(baseURL).port || "3000",
+            AI_BASE_URL: `${scriptedModelUrl}/v1`,
+            AI_API_KEY: "scripted",
+            AI_MODEL: "scripted-model",
+            TITLE_AI_BASE_URL: `${scriptedModelUrl}/v1`,
+            TITLE_AI_API_KEY: "scripted",
+            TITLE_AI_MODEL: "scripted-model",
+            // The approval specs need signed requests; a fixed test value is
+            // enough because the scripted endpoint never leaves the machine.
+            AI_TOOL_APPROVAL_SECRET:
+              process.env.AI_TOOL_APPROVAL_SECRET ?? "e2e-tool-approval-secret-0123456789abcdef",
+          },
+          url: baseURL,
+          // Never reuse: a server someone already has open runs whatever
+          // endpoint their environment selects, and the prompt specs need the
+          // scripted one. Next allows a single dev server per project
+          // directory, so `pnpm dev` being up makes this fail with its own
+          // message naming the process to stop — better than the specs quietly
+          // driving a real model.
+          reuseExistingServer: false,
+          timeout: 120_000,
+        },
+      ],
 });

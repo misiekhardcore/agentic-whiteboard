@@ -37,7 +37,7 @@ export type PromptPosition = { id: string; createdAt: Date };
 /** One entry in the dashboard's conversation switcher. */
 export type DashboardConversation = {
   id: string;
-  preview: string;
+  title: string;
   updatedAt: Date;
 };
 
@@ -48,7 +48,7 @@ export type DashboardConversation = {
  */
 export type ConversationHistoryEntry = {
   id: string;
-  preview: string;
+  title: string;
   updatedAt: string;
 };
 

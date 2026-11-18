@@ -2,17 +2,15 @@ import { generateText, jsonSchema, tool } from "ai";
 import { config as loadEnv } from "dotenv";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { type AiConfig, getAiConfig } from "@/lib/ai/providers/config";
-import { getLanguageModel } from "@/lib/ai/providers/provider";
+import { type AiConfig, getAiConfig, getLanguageModel } from "@/lib/ai/providers";
 import { createAgent } from "@/lib/ai/runtime/agent";
 
 /**
- * Live smoke test against whatever provider `.env` configures — LM Studio by
- * default. It is skipped unless AI_LIVE is set so the regular suite needs no
- * server; run it with `pnpm test:ai`.
+ * Live smoke test against the endpoint `.env` configures. It is skipped unless
+ * AI_LIVE is set so the regular suite needs no server; run it with
+ * `pnpm test:ai`.
  *
- * Expects LM Studio's local server to be running with a chat model loaded and
- * AI_MODEL set to that model's id.
+ * Expects that endpoint to be reachable with the configured model loaded.
  */
 const live = process.env.AI_LIVE === "1";
 
@@ -27,7 +25,7 @@ describe.skipIf(!live)("live AI provider", () => {
       await fetch(`${config.baseURL}/models`);
     } catch {
       throw new Error(
-        `No server answered at ${config.baseURL}. Start LM Studio's local server with a model loaded, or point AI_BASE_URL at your endpoint.`,
+        `No server answered at ${config.baseURL}. Start the model server, or point AI_BASE_URL at a reachable endpoint.`,
       );
     }
   });

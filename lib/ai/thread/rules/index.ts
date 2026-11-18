@@ -8,11 +8,7 @@ export type {
   PromptTarget,
   StoredPromptMessage,
 } from "./types";
-export {
-  CONVERSATION_HISTORY_LIMIT,
-  CONVERSATION_PREVIEW_LENGTH,
-  PROMPT_MAX_LENGTH,
-} from "./constants";
+export { CONVERSATION_HISTORY_LIMIT, PROMPT_MAX_LENGTH } from "./constants";
 export { storedParts } from "./storedParts";
 export { storedText } from "./storedText";
 export { promptProblem } from "./promptProblem";
@@ -27,7 +23,6 @@ export { promptsFromBranch } from "./promptsFromBranch";
 export { branchableStatus } from "./branchableStatus";
 export { promptsThrough } from "./promptsThrough";
 export { applyApprovalAnswer } from "./applyApprovalAnswer";
-export { conversationPreview } from "./conversationPreview";
 export { conversationIdProblem } from "./conversationIdProblem";
 export { threadMessages } from "./threadMessages";
 export { supersedeApprovals } from "./supersedeApprovals";

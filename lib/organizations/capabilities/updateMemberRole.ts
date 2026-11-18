@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { defineCapability, success } from "@/lib/capabilities/define";
-import { routes } from "@/lib/shared/routes";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 
 import { changeMemberRole } from "../invitations";
 
@@ -18,7 +18,7 @@ export const updateMemberRole = defineCapability({
   }),
   output: outcome,
   callers: ["human"] as const,
-  invalidates: () => [routes.dashboardOrganization],
+  changes: () => [{ key: CHANGE_KEYS.account, scope: "account" }],
   handler: async (ctx, input) => {
     const refusal = await changeMemberRole({
       userId: ctx.actor.userId,

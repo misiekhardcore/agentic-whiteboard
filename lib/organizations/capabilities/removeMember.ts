@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { defineCapability, success } from "@/lib/capabilities/define";
-import { routes } from "@/lib/shared/routes";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 
 import { removeMember as removeMemberFor } from "../invitations";
 
@@ -14,7 +14,7 @@ export const removeMember = defineCapability({
   input: z.object({ organizationId: z.string(), memberId: z.string() }),
   output: outcome,
   callers: ["human"] as const,
-  invalidates: () => [routes.dashboardOrganization],
+  changes: () => [{ key: CHANGE_KEYS.account, scope: "account" }],
   handler: async (ctx, input) => {
     const refusal = await removeMemberFor({
       userId: ctx.actor.userId,

@@ -21,7 +21,7 @@ vi.mock("./access", () => accessMock);
 
 import type { CapabilityContext } from "@/lib/capabilities/define";
 import { invoke } from "@/lib/capabilities/invoke";
-import { routes } from "@/lib/shared/routes";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 
 import {
   archiveWorkspace,
@@ -221,10 +221,13 @@ describe("archive surfaces", () => {
     },
   };
 
-  it("refreshes the archive page whenever a workspace enters or leaves it", () => {
-    expect(archiveWorkspace.invalidates?.(archived)).toContain(routes.dashboardArchive);
-    expect(restoreWorkspace.invalidates?.(archived)).toContain(routes.dashboardArchive);
-    expect(deleteWorkspace.invalidates?.(archived)).toContain(routes.dashboardArchive);
+  it("tells the interface whenever a workspace enters or leaves a list", () => {
+    for (const capability of [archiveWorkspace, restoreWorkspace, deleteWorkspace]) {
+      expect(capability.changes?.(archived)).toContainEqual({
+        key: CHANGE_KEYS.workspaces,
+        scope: "account",
+      });
+    }
   });
 });
 

@@ -5,11 +5,14 @@ import { TooltipProvider } from "@konopskidev/ui/components/tooltip";
 import type { ReactNode } from "react";
 import { Toaster } from "sonner";
 
+import { ChangesProvider } from "@/components/Changes";
+
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
       <TooltipProvider>
-        {children}
+        {/* One subscription for the whole app: a change reaches every open tab. */}
+        <ChangesProvider>{children}</ChangesProvider>
         <ThemedToaster />
       </TooltipProvider>
     </ThemeProvider>

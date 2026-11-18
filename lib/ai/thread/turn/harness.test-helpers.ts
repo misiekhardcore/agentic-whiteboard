@@ -93,10 +93,9 @@ vi.mock("../conversations", () => ({
 vi.mock("@/lib/ai/providers/config", () => ({
   AiConfigurationError: class AiConfigurationError extends Error {},
   getAiConfig: () => ({
-    provider: "stub",
-    model: "stub-model",
-    baseURL: "stub://local",
-    apiKey: "stub",
+    model: "scripted-model",
+    baseURL: "http://127.0.0.1:3311/v1",
+    apiKey: "scripted",
     maxSteps: 1,
     maxRetries: 0,
     toolApprovalSecret: "e2e-tool-approval-secret-0123456789abcdef",
