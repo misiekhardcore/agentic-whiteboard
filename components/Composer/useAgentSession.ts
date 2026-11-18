@@ -37,7 +37,6 @@ export function useAgentSession({
   const router = useRouter();
   const applyChanges = useChangesContext()?.applyChanges ?? ignoreChanges;
   const [failure, setFailure] = useState<PromptFailure | null>(null);
-
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -93,6 +92,11 @@ export function useAgentSession({
       if (typeof input?.workspaceId === "string") {
         router.push(routes.workspace(input.workspaceId));
       }
+    },
+    // The datasets the turn's tools changed arrive with the reply, after they
+    // ran: the header named what the send itself changed, before the stream.
+    onFinish: ({ message }) => {
+      applyChanges((message.metadata as { changeKeys?: string[] } | undefined)?.changeKeys ?? []);
     },
     onError: (error) => {
       const next = promptFailure(error);

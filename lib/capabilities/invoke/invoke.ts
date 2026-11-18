@@ -41,7 +41,9 @@ export async function invoke<I, T, R>(
   // agent's tool call and a future caller all tell the interface the same way.
   // A refusal changes nothing and broadcasts nothing.
   if (output.ok && capability.changes) {
-    await publishChanges({ changes: capability.changes(output), actor: ctx.actor });
+    const changes = capability.changes(output);
+    await publishChanges({ changes, actor: ctx.actor });
+    ctx.onChanges?.(changes);
   }
 
   return output;

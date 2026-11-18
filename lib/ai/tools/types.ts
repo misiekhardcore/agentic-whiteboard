@@ -1,3 +1,4 @@
+import type { Change } from "@/lib/capabilities/define";
 import type { AccountActor } from "@/lib/identity/actor";
 
 /**
@@ -18,4 +19,6 @@ export type WorkspaceToolOptions = {
   promptId?: string;
   /** Approval-gated capabilities are offered only when this is true. */
   allowApprovalTools?: boolean;
+  /** Told what a call changed, so the reply can carry it back to the browser. */
+  onChanges?: (changes: Change[]) => void;
 };

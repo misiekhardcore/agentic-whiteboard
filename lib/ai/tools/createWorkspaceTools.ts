@@ -7,12 +7,13 @@ import type { WorkspaceToolActor, WorkspaceToolOptions } from "./types";
 
 export function createWorkspaceTools(
   actor: WorkspaceToolActor,
-  { promptId, allowApprovalTools = false }: WorkspaceToolOptions = {},
+  { promptId, allowApprovalTools = false, onChanges }: WorkspaceToolOptions = {},
 ): ToolSet {
   const ctx: CapabilityContext = {
     actorType: "agent",
     actor,
     promptId,
+    onChanges,
   };
 
   const tools: ToolSet = {};

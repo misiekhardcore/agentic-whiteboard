@@ -157,6 +157,27 @@ describe("invoke", () => {
     });
   });
 
+  it("tells the caller's own stream what changed, so a tool's write reaches its tab", async () => {
+    const { capability } = renameCapability({
+      changes: () => [{ key: "workspaces", scope: "account" }],
+    });
+    const onChanges = vi.fn();
+
+    await invoke(capability, { ...agentContext, onChanges }, { id: "thing_1", value: "Launch" });
+    expect(onChanges).toHaveBeenCalledWith([{ key: "workspaces", scope: "account" }]);
+
+    onChanges.mockClear();
+    await invoke(
+      renameCapability({
+        changes: () => [{ key: "workspaces", scope: "account" }],
+        handler: () => ({ ok: false, error: "That name is taken." }),
+      }).capability,
+      { ...agentContext, onChanges },
+      { id: "thing_1", value: "Launch" },
+    );
+    expect(onChanges).not.toHaveBeenCalled();
+  });
+
   it("publishes nothing when the call changed nothing", async () => {
     const { capability } = renameCapability({
       changes: () => [{ key: "workspaces", scope: "account" }],

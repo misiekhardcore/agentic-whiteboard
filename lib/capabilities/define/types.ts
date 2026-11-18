@@ -51,6 +51,11 @@ export type CapabilityContext = {
   promptId?: string;
   /** The run's stop signal, forwarded to every write. */
   abortSignal?: AbortSignal;
+  /**
+   * Told what a successful call changed, for a caller that answers in a stream:
+   * a tool's changes reach that browser through the reply it is already reading.
+   */
+  onChanges?: (changes: Change[]) => void;
 };
 
 export type CapabilityOptions = { signal?: AbortSignal };

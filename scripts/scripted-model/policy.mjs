@@ -71,20 +71,25 @@ function toolResults(run) {
     .join("\n");
 }
 
+/** What the chat-completions wire carries for a call the person denied. */
+const DENIAL_TEXT = /tool call execution denied/i;
+
 /**
  * A refusal is the capability's `ok: false`, or the `execution-denied` output
- * the SDK gives a tool call the person denied. Reading the structure rather
- * than the text keeps a workspace named "Denied plan" from looking refused.
+ * the SDK gives a tool call the person denied. The SDK sends that output to a
+ * chat-completions endpoint as plain text, not JSON, so both shapes are read
+ * here. Each tool message is read on its own: a run carries one per call.
  */
 function refused(run) {
   return run.some((message) => {
     if (message.role !== "tool") return false;
 
+    const text = textOf(message.content);
     try {
-      const output = JSON.parse(textOf(message.content));
+      const output = JSON.parse(text);
       return output?.ok === false || output?.type === "execution-denied";
     } catch {
-      return false;
+      return DENIAL_TEXT.test(text);
     }
   });
 }

@@ -93,6 +93,33 @@ describe("chooseReply", () => {
     });
   });
 
+  it("reads the plain-text denial a chat-completions endpoint actually receives", () => {
+    // The SDK converts an `execution-denied` output to its reason text before
+    // the request leaves the app, so the run carries no JSON to inspect.
+    const denied = [
+      user('archive workspace "Denied plan"'),
+      {
+        role: "assistant",
+        content: null,
+        tool_calls: [{ function: { name: "listWorkspaces", arguments: "{}" } }],
+      },
+      { role: "tool", content: JSON.stringify({ ok: true, workspaces: [{ id: "ws_1" }] }) },
+      {
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          { function: { name: "archiveWorkspace", arguments: '{"workspaceId":"ws_1"}' } },
+        ],
+      },
+      { role: "tool", content: "Tool call execution denied." },
+    ];
+
+    expect(chooseReply({ messages: denied, offeredTools })).toEqual({
+      kind: "text",
+      text: SCRIPTED_DENIED_REPLY,
+    });
+  });
+
   it("answers a title request from the same endpoint with a short label", () => {
     const reply = chooseReply({
       messages: [

@@ -52,11 +52,20 @@ export async function streamAgentTurn({
 
   let failed = false;
   let usageFromStream: unknown = null;
+  // What the tools changed while the answer was streaming. The header was sent
+  // before they ran, so the reply itself carries these back to this browser.
+  const changedByTools = new Set<string>();
 
   try {
     return await createAgentUIStreamResponse({
       agent: createAgent({
-        tools: createWorkspaceTools(actor, { promptId, allowApprovalTools }),
+        tools: createWorkspaceTools(actor, {
+          promptId,
+          allowApprovalTools,
+          onChanges: (toolChanges) => {
+            for (const change of toolChanges) changedByTools.add(change.key);
+          },
+        }),
         instructions: buildInstructions(DEFAULT_AGENT_INSTRUCTIONS, uiContext),
         toolsRequiringApproval: allowApprovalTools ? approvalGatedCapabilityNames : undefined,
         toolApprovalSecret: config.toolApprovalSecret,
@@ -71,6 +80,10 @@ export async function streamAgentTurn({
       ...(changes.length > 0
         ? { headers: { [CHANGE_KEYS_HEADER]: changeKeysHeaderValue(changes) } }
         : {}),
+      messageMetadata: ({ part }) =>
+        part.type === "finish" && changedByTools.size > 0
+          ? { changeKeys: [...changedByTools] }
+          : undefined,
       onStepEnd: ({ usage: stepUsage }) => {
         usageFromStream = stepUsage;
       },
