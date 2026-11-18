@@ -7,7 +7,7 @@ declare namespace NodeJS {
     AI_BASE_URL: string;
     AI_API_KEY: string;
     AI_MODEL: string;
-    AI_STUB: string;
+    AI_STUB?: string;
     AI_MAX_STEPS: string;
     AI_MAX_RETRIES: string;
     AI_TOOL_APPROVAL_SECRET?: string;

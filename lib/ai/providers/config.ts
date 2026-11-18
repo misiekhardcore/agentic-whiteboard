@@ -4,6 +4,9 @@
  * Nothing here has a default — an incomplete deployment is a configuration
  * error naming every variable it still needs, so a wrong setup fails at the
  * first request with the fix in the message rather than at the provider.
+ *
+ * The one exception is `AI_STUB`, which turns the scripted provider on: it is a
+ * test switch, so it is optional and off unless a deployment sets it.
  */
 export class AiConfigurationError extends Error {
   constructor(message: string) {
@@ -44,7 +47,6 @@ const AGENT_VARIABLES = [
   "AI_BASE_URL",
   "AI_API_KEY",
   "AI_MODEL",
-  "AI_STUB",
   "AI_MAX_STEPS",
   "AI_MAX_RETRIES",
 ] as const;
@@ -96,11 +98,14 @@ function readCount(name: string, value: string, minimum: number): number {
   return parsed;
 }
 
-function readStub(value: string): boolean {
+/**
+ * The scripted provider is a test switch, not a setting a deployment has to
+ * state: unset means off, and only a value that means nothing is refused.
+ */
+function readStub(value: string | undefined): boolean {
+  if (value === undefined) return false;
   if (value !== "0" && value !== "1") {
-    throw new AiConfigurationError(
-      `AI_STUB must be "0" or "1", received "${value}". It is required: a deployment states whether it answers with the scripted provider.`,
-    );
+    throw new AiConfigurationError(`AI_STUB must be "0" or "1" when set, received "${value}".`);
   }
 
   return value === "1";
@@ -120,7 +125,7 @@ export function resolveAiConfig(env: AiEnvironment = process.env): AiConfig {
     baseURL: readBaseURL("AI_BASE_URL", settings.AI_BASE_URL),
     apiKey: settings.AI_API_KEY,
     model: settings.AI_MODEL,
-    stub: readStub(settings.AI_STUB),
+    stub: readStub(valueOf(env.AI_STUB)),
     maxSteps: readCount("AI_MAX_STEPS", settings.AI_MAX_STEPS, 1),
     maxRetries: readCount("AI_MAX_RETRIES", settings.AI_MAX_RETRIES, 0),
     toolApprovalSecret,
@@ -147,7 +152,7 @@ export function getAiConfig(): AiConfig {
  */
 export function resolveTitleAiConfig(env: AiEnvironment = process.env): TitleAiConfig {
   const settings = readRequired(env, TITLE_VARIABLES);
-  const stub = readStub(valueOf(env.AI_STUB) ?? "");
+  const stub = readStub(valueOf(env.AI_STUB));
 
   return {
     baseURL: readBaseURL("AI_TITLE_BASE_URL", settings.AI_TITLE_BASE_URL),
