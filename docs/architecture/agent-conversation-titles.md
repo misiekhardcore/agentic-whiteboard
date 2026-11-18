@@ -29,7 +29,7 @@ before streaming would make every first prompt slower for a cosmetic gain.
 | Output budget     | 512 tokens                                                                         | A model that reasons before answering spends part of the budget on that reasoning; capped to the title alone it can return no text at all, and a title-shaped cap is exactly what made local reasoning models fail here.                                                                                                                                           |
 | Source            | The first live user message of the conversation                                    | A later prompt continues a thread; naming it after the newest prompt would let every message rename the conversation.                                                                                                                                                                                                                                              |
 | Trigger           | Every accepted new prompt, and every successful branch                             | A new prompt is the moment the conversation exists and its first message is stored. Re-scheduling on later prompts is the retry: the service skips when a title is already stored, so a provider outage costs one attempt.                                                                                                                                         |
-| Timing            | `after()` from `next/server`                                                       | Next guarantees the request runs after the response. The name never delays the reply and never shares its abort signal.                                                                                                                                                                                                                                            |
+| Timing            | Started with the turn, kept alive by `after()` from `next/server`                  | The name is generated alongside the reply rather than after it, so it is ready while the person is still reading. `after()` only holds the response's process open until the promise settles, so the turn never awaits a label and never shares its abort signal.                                                                                                  |
 | Retry             | Failed or empty output stores nothing; the next prompt tries again                 | A conversation with a missing name is not an error worth blocking on; the derived label stays readable in the meantime.                                                                                                                                                                                                                                            |
 | Idempotence       | Conditional update on `title IS NULL`                                              | Two attempts — a retry, a branch, two tabs — can race; the first stored title wins and the later one observes it instead of overwriting.                                                                                                                                                                                                                           |
 | Client update     | Poll the session-scoped title endpoint until a title exists or a bounded wait ends | The page render happens before the naming request finishes. The endpoint is scoped by the session like every other conversation read. The wait is bounded (90s, every 1.5s) because the naming request cannot report its own progress: it runs in the turn's route, so an in-process flag is not visible to the title read and looked abandoned on the first poll. |
@@ -38,14 +38,17 @@ before streaming would make every first prompt slower for a cosmetic gain.
 
 ## Flow
 
-1. A new prompt is accepted and its user message stored.
-2. `scheduleConversationTitle` registers the work with `after()`.
-3. After the response the title service checks ownership and the stored title,
-   reads the first live user message, asks the model for a `Title:` line,
-   normalises it, and writes it conditionally.
-4. The composer, which started watching after the turn, reads
+1. A new prompt is accepted and its user message stored. The pill and the
+   thread show the first prompt cut to one line, so a label exists immediately.
+2. `startConversationTitle` begins the naming request at that moment, in
+   parallel with the turn, and hands the same promise to `after()`.
+3. The title service checks ownership and the stored title, reads the first live
+   user message, asks the model for a `Title:` line, normalises it, and writes it
+   conditionally. This usually finishes while the reply is still streaming.
+4. The composer, which started watching when the prompt was sent, reads
    `/api/agent/conversations/[id]/title` until it carries a title. It stops on a
-   title, on unmount, or after a bounded wait; a title swaps the pill in place.
+   title, on unmount, or after a bounded wait; a title swaps the pill in place,
+   mid-reply if the name arrived first.
 
 ## Consequences
 

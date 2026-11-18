@@ -586,8 +586,8 @@ test("a new conversation starts empty and the switcher brings the last one back"
     await composer.press("Enter");
     await expect(thread).toContainText("Stub agent: First thread");
 
-    // The request that names the conversation runs after the reply, so the pill
-    // starts with the first prompt and swaps to the generated title.
+    // The request that names the conversation runs alongside the reply, so the
+    // pill starts with the first prompt and swaps to the generated title.
     const switcher = page.getByRole("group", { name: "Recent conversations" });
     await expect(switcher.getByRole("link", { name: "Stub title: First thread" })).toBeVisible();
 

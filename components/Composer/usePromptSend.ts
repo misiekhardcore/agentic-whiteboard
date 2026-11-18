@@ -20,6 +20,7 @@ export function usePromptSend({
   fieldValue,
   closeDictation,
   initialCanRetry,
+  onPromptSent,
 }: {
   session: AgentSession;
   field: ReturnType<typeof useDraftField>;
@@ -29,6 +30,8 @@ export function usePromptSend({
   closeDictation: () => void;
   /** The newest stored prompt failed, so it can be retried for free. */
   initialCanRetry: boolean;
+  /** A new prompt was sent, so the server has started naming the conversation. */
+  onPromptSent: () => void;
 }) {
   const [canRetry, setCanRetry] = useState(initialCanRetry);
   const promptToSend = submittedPrompt(fieldValue);
@@ -66,6 +69,9 @@ export function usePromptSend({
       editId ? { text: promptToSend, messageId: editId } : { text: promptToSend },
     );
     field.setDraft("");
+    // A new prompt is when the conversation gets its name, so watch for it now
+    // rather than when the reply ends: the name is generated alongside the turn.
+    onPromptSent();
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {

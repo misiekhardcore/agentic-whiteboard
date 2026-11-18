@@ -30,9 +30,9 @@ function titleResponse(body: unknown): string | null {
  * A conversation is named in the background once its first prompt is accepted,
  * so the label starts out derived from that prompt. This hook watches for the
  * stored title — on mount when a title is already being generated (a branch),
- * and after every finished turn — and swaps it in without a reload. Titles are
- * kept apart from the server's list so a refresh cannot put the derived label
- * back.
+ * and when a new prompt is sent, which is when the naming request starts — and
+ * swaps it in without a reload. Titles are kept apart from the server's list so
+ * a refresh cannot put the derived label back.
  *
  * The watch asks for the title itself rather than for a "still working" flag:
  * the naming request runs in the turn's route, so a flag held in that process's
@@ -49,8 +49,8 @@ export function useConversationTitles({
   initialConversations: DashboardConversation[];
 }) {
   const [generatedTitles, setGeneratedTitles] = useState<Record<string, string>>({});
-  // Bumped after each turn, and set on mount for a conversation whose title is
-  // already being generated (a branch); zero means nothing is worth waiting for.
+  // Bumped when a prompt is sent, and set on mount for a conversation whose
+  // title is already being generated (a branch); zero means nothing to wait for.
   const [attempt, setAttempt] = useState(() =>
     initialConversations.some(
       (conversation) => conversation.id === conversationId && conversation.title === null,
@@ -110,7 +110,7 @@ export function useConversationTitles({
     };
   }, [attempt, conversationId]);
 
-  /** Watches for a title again; called when a turn that may have scheduled one ends. */
+  /** Watches for a title again; called when a prompt that starts one is sent. */
   const refresh = useCallback(() => setAttempt((current) => current + 1), []);
 
   const conversations = useMemo(

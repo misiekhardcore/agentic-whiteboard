@@ -60,7 +60,7 @@ describe("which turns the model is shown", () => {
     expect(mocks.stored[0]?.messageId).toBe("message_user");
   });
 
-  it("schedules a generated title after accepting a new prompt", async () => {
+  it("starts naming the conversation alongside a new prompt", async () => {
     mocks.history = [userMessage("message_user", "Plan the schema")];
 
     await send(body([userMessage("message_user", "Plan the schema")]));

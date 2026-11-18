@@ -6,7 +6,7 @@ import { promptAllowance } from "../allowance";
 import { markThreadStream } from "../live";
 import { openDashboardPrompt } from "../prompts";
 import type { PromptPosition } from "../rules";
-import { scheduleConversationTitle } from "../titles";
+import { startConversationTitle } from "../titles";
 
 import { BUSY, CONVERSATION_MISSING } from "./internals/constants";
 import { jsonError } from "./internals/jsonError";
@@ -83,10 +83,10 @@ export async function openNewTurn({
   });
   if ("error" in recorded) return recorded;
 
-  // Naming is a request of its own, scheduled after this response; it reads the
-  // stored first message rather than the browser's body. A retry and an
-  // approval answer reuse a prompt and leave the name alone.
-  scheduleConversationTitle({ conversationId, userId });
+  // Naming is a request of its own that runs alongside this turn, reading the
+  // stored first message rather than the browser's body. A retry and an approval
+  // answer reuse a prompt and leave the name alone.
+  startConversationTitle({ conversationId, userId });
 
   return { promptId: opened.promptId, history: recorded.history };
 }

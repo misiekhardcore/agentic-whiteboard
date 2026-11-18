@@ -92,7 +92,7 @@ vi.mock("../conversations", () => ({
 }));
 
 vi.mock("../titles", () => ({
-  scheduleConversationTitle: vi.fn((options: { conversationId: string; userId: string }) => {
+  startConversationTitle: vi.fn((options: { conversationId: string; userId: string }) => {
     mocks.titled.push(options);
   }),
 }));

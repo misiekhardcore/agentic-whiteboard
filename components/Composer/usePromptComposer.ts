@@ -55,11 +55,7 @@ export function usePromptComposer({
   const [conversationId] = useState(initialConversationId);
   const field = useDraftField({ fieldRef });
   const titles = useConversationTitles({ conversationId, initialConversations });
-  const session = useAgentSession({
-    conversationId,
-    initialMessages,
-    onTurnFinished: titles.refresh,
-  });
+  const session = useAgentSession({ conversationId, initialMessages });
   const voice = useComposerVoice({
     draft: field.draft,
     setDraft: field.setDraft,
@@ -81,6 +77,7 @@ export function usePromptComposer({
     fieldValue: voice.fieldValue,
     closeDictation,
     initialCanRetry,
+    onPromptSent: titles.refresh,
   });
   const navigation = useConversationNavigation({
     conversationId,

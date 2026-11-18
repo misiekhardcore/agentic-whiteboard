@@ -24,14 +24,11 @@ type PromptFailure = ReturnType<typeof promptFailure>;
 export function useAgentSession({
   conversationId,
   initialMessages,
-  onTurnFinished,
 }: {
   /** The conversation this composer sends into; its id is chosen before it exists. */
   conversationId: string;
   /** The person's stored thread for that conversation. */
   initialMessages: UIMessage[];
-  /** Runs when a turn ends, for work the turn scheduled for after its response. */
-  onTurnFinished?: () => void;
 }) {
   const router = useRouter();
   const [failure, setFailure] = useState<PromptFailure | null>(null);
@@ -90,9 +87,6 @@ export function useAgentSession({
     onFinish: () => {
       // A tool may have created a workspace; the latest list is server-rendered.
       router.refresh();
-      // The title request was scheduled for after this response; watch for it so
-      // the pill swaps without another navigation.
-      onTurnFinished?.();
     },
   });
 
