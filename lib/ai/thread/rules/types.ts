@@ -38,6 +38,8 @@ export type PromptPosition = { id: string; createdAt: Date };
 export type DashboardConversation = {
   id: string;
   preview: string;
+  /** The generated name, or null while the preview is still the label. */
+  title: string | null;
   updatedAt: Date;
 };
 
@@ -49,6 +51,8 @@ export type DashboardConversation = {
 export type ConversationHistoryEntry = {
   id: string;
   preview: string;
+  /** The generated name, or null while the preview is still the label. */
+  title: string | null;
   updatedAt: string;
 };
 

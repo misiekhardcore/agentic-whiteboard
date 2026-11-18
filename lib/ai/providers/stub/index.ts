@@ -4,6 +4,7 @@ export {
   STUB_DENIED_REPLY,
   STUB_MODEL_ID,
   STUB_REPLY_PREFIX,
+  STUB_TITLE_PREFIX,
   STUB_TOOL_REPLY,
 } from "./constants";
 export { createStubModel } from "./createStubModel";

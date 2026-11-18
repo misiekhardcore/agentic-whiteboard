@@ -14,6 +14,7 @@ import {
   branchConversation as branchConversationInto,
 } from "./thread/branches";
 import { conversationIdProblem } from "./thread/rules";
+import { scheduleConversationTitle } from "./thread/titles";
 
 /**
  * The dashboard thread's operations that are not a prompt.
@@ -47,6 +48,13 @@ export const branchConversation = defineCapability({
 
     if (result.kind === "missing") return failure(BRANCH_MISSING);
     if (result.kind === "unfinished") return failure(BRANCH_UNFINISHED);
+
+    // A branch starts with copied history, so its first prompt already exists;
+    // the name is generated after this action responds, like a new prompt's.
+    scheduleConversationTitle({
+      conversationId: result.conversationId,
+      userId: ctx.actor.userId,
+    });
 
     return success({ conversationId: result.conversationId });
   },

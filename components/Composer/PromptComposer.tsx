@@ -44,6 +44,7 @@ export function PromptComposer({
     initialConversationId,
     initialMessages,
     initialCanRetry,
+    initialConversations,
     initialReadAloud,
     initialReadAloudVoice,
   });
@@ -55,7 +56,7 @@ export function PromptComposer({
     <section aria-labelledby="prompt-composer-title" className="topo-bg px-2 py-10 sm:py-14">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <ComposerHeader
-          conversations={initialConversations}
+          conversations={composer.conversations}
           conversationId={composer.conversationId}
           isBusy={composer.isBusy}
           onNewConversation={composer.startNewConversation}

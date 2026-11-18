@@ -60,6 +60,29 @@ describe("which turns the model is shown", () => {
     expect(mocks.stored[0]?.messageId).toBe("message_user");
   });
 
+  it("schedules a generated title after accepting a new prompt", async () => {
+    mocks.history = [userMessage("message_user", "Plan the schema")];
+
+    await send(body([userMessage("message_user", "Plan the schema")]));
+
+    expect(mocks.titled).toEqual([{ conversationId: "conversation_1", userId: "user_1" }]);
+  });
+
+  it("leaves the name alone when a failed prompt is retried", async () => {
+    mocks.target = {
+      promptId: "prompt_failed",
+      status: "FAILED",
+      isTip: true,
+      text: "Plan the schema",
+      createdAt: new Date("2026-11-16T12:00:00Z"),
+    };
+    mocks.history = [userMessage("message_failed", "Plan the schema")];
+
+    await send(body([userMessage("message_failed", "Plan the schema")]));
+
+    expect(mocks.titled).toEqual([]);
+  });
+
   it("fails the turn when the history cannot be read back", async () => {
     const { loadPromptHistory } = await import("../conversations");
     vi.mocked(loadPromptHistory).mockRejectedValueOnce(new Error("database is down"));

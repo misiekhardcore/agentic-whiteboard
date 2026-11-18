@@ -34,4 +34,7 @@ export const routes = {
   agentPromptsApi: "/api/agent/prompts",
   /** The session's conversations, for the dashboard's history dialog. */
   agentConversationsApi: "/api/agent/conversations",
+  /** One conversation's generated title, read while the composer waits for it. */
+  agentConversationTitleApi: (id: string) =>
+    `/api/agent/conversations/${encodeURIComponent(id)}/title`,
 } as const;

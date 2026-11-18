@@ -1,0 +1,1 @@
+ALTER TABLE "agentConversation" ADD COLUMN "title" text;

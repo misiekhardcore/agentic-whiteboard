@@ -11,6 +11,7 @@ export type {
 export {
   CONVERSATION_HISTORY_LIMIT,
   CONVERSATION_PREVIEW_LENGTH,
+  CONVERSATION_TITLE_MAX_LENGTH,
   PROMPT_MAX_LENGTH,
 } from "./constants";
 export { storedParts } from "./storedParts";
@@ -28,6 +29,8 @@ export { branchableStatus } from "./branchableStatus";
 export { promptsThrough } from "./promptsThrough";
 export { applyApprovalAnswer } from "./applyApprovalAnswer";
 export { conversationPreview } from "./conversationPreview";
+export { generatedConversationTitle } from "./generatedConversationTitle";
+export { conversationLabel } from "./conversationLabel";
 export { conversationIdProblem } from "./conversationIdProblem";
 export { threadMessages } from "./threadMessages";
 export { supersedeApprovals } from "./supersedeApprovals";

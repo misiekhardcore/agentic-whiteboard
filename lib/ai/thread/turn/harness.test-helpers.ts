@@ -34,6 +34,7 @@ const state = vi.hoisted(() => {
     resumed: [] as string[],
     resumeResult: resumeAnswer("resumed"),
     closed: [] as { status: string }[],
+    titled: [] as { conversationId: string; userId: string }[],
   };
 });
 
@@ -88,6 +89,12 @@ vi.mock("../prompts", () => ({
 
 vi.mock("../conversations", () => ({
   loadPromptHistory: vi.fn(() => Promise.resolve(mocks.history)),
+}));
+
+vi.mock("../titles", () => ({
+  scheduleConversationTitle: vi.fn((options: { conversationId: string; userId: string }) => {
+    mocks.titled.push(options);
+  }),
 }));
 
 vi.mock("@/lib/ai/providers/config", () => ({
@@ -174,4 +181,5 @@ export function resetMocks(): void {
   mocks.resumed = [];
   mocks.resumeResult = "resumed";
   mocks.closed = [];
+  mocks.titled = [];
 }

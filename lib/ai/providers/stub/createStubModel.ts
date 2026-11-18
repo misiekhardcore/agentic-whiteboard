@@ -2,7 +2,7 @@ import { type LanguageModel } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 
 import { STUB_MODEL_ID } from "./constants";
-import { chooseStream } from "./internals";
+import { chooseStream, STUB_USAGE, stubTitle } from "./internals";
 
 /**
  * A scripted provider, selected with `AI_PROVIDER=stub`.
@@ -27,5 +27,14 @@ export function createStubModel(): LanguageModel {
     doStream: ({ prompt, tools }) => {
       return Promise.resolve(chooseStream({ prompt, tools }));
     },
+    // A title request is the app's only non-streaming model call, so the script
+    // answers it with a name instead of a streamed reply.
+    doGenerate: ({ prompt }) =>
+      Promise.resolve({
+        content: [{ type: "text" as const, text: stubTitle(prompt) }],
+        finishReason: { unified: "stop" as const, raw: "stop" },
+        usage: STUB_USAGE,
+        warnings: [],
+      }),
   });
 }

@@ -9,6 +9,12 @@ export const CONVERSATION_HISTORY_LIMIT = 200;
 export const CONVERSATION_PREVIEW_LENGTH = 48;
 
 /**
+ * How long a generated title may be. A title is a name, not a summary, and the
+ * roundest useful bound is one a pill can show without becoming a sentence.
+ */
+export const CONVERSATION_TITLE_MAX_LENGTH = 60;
+
+/**
  * Rules for the dashboard's prompt thread. Pure, so the route, the persistence
  * adapter and the composer can share one definition of a sendable prompt, one
  * mapping between stored messages and AI SDK messages, and one answer to "is

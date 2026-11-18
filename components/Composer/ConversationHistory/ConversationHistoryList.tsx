@@ -6,7 +6,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Loading } from "@/components/Loading/Loading";
-import { CONVERSATION_HISTORY_LIMIT, type ConversationHistoryEntry } from "@/lib/ai/thread/rules";
+import {
+  CONVERSATION_HISTORY_LIMIT,
+  type ConversationHistoryEntry,
+  conversationLabel,
+} from "@/lib/ai/thread/rules";
 import { formatDay } from "@/lib/shared/format-date";
 import { routes } from "@/lib/shared/routes";
 
@@ -99,7 +103,7 @@ export function ConversationHistoryList({
                 aria-current={current ? "true" : undefined}
                 className="flex items-baseline justify-between gap-3 rounded-lg px-3 py-2 text-sm hover:bg-muted aria-[current=true]:bg-muted"
               >
-                <span className="truncate">{entry.preview}</span>
+                <span className="truncate">{conversationLabel(entry)}</span>
                 <span className="shrink-0 text-xs text-muted-foreground">
                   {formatDay(new Date(entry.updatedAt))}
                 </span>

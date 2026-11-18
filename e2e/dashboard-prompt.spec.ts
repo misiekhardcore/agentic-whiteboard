@@ -141,6 +141,10 @@ test("the composer sends on Enter, keeps Shift+Enter for new lines and streams a
     await expect(thread).not.toContainText("**");
     await expect(composer).toHaveValue("");
 
+    // The reply is stored when the turn closes. Wait for the stream to finish
+    // before reloading, or the reload can replay only the prompt it saw.
+    await expect(page.getByRole("button", { name: "Stop prompt" })).toHaveCount(0);
+
     // The thread is stored, so a reload replays it from the database.
     await page.reload();
     await expect(page.getByRole("list", { name: "Agent conversation" })).toContainText(
@@ -483,20 +487,22 @@ async function seedConversation({
   conversationId,
   prompt,
   minutesAgo,
+  title = null,
 }: {
   email: string;
   conversationId: string;
   prompt: string;
   minutesAgo: number;
+  title?: string | null;
 }): Promise<void> {
   const at = `${minutesAgo} minutes`;
 
   await withDb(async (db) => {
     await db.query(
-      `insert into "agentConversation" (id, "userId", "createdAt", "updatedAt")
-        select $1, id, now() - $3::interval, now() - $3::interval
+      `insert into "agentConversation" (id, "userId", title, "createdAt", "updatedAt")
+        select $1, id, $4, now() - $3::interval, now() - $3::interval
           from "user" where email = $2`,
-      [conversationId, email, at],
+      [conversationId, email, at, title],
     );
     await db.query(
       `insert into "agentPrompt" (id, "ownerId", "userId", "conversationId", status, provider, model, "createdAt")
@@ -580,6 +586,11 @@ test("a new conversation starts empty and the switcher brings the last one back"
     await composer.press("Enter");
     await expect(thread).toContainText("Stub agent: First thread");
 
+    // The request that names the conversation runs after the reply, so the pill
+    // starts with the first prompt and swaps to the generated title.
+    const switcher = page.getByRole("group", { name: "Recent conversations" });
+    await expect(switcher.getByRole("link", { name: "Stub title: First thread" })).toBeVisible();
+
     await page.getByRole("button", { name: "New conversation" }).click();
 
     // The new thread is a place, not a blank page: the URL names it, the thread
@@ -592,10 +603,10 @@ test("a new conversation starts empty and the switcher brings the last one back"
     await composer.press("Enter");
     await expect(thread).toContainText("Stub agent: Second thread");
 
-    // A pill is a link to the conversation, styled as a button.
-    const switcher = page.getByRole("group", { name: "Recent conversations" });
-    await expect(switcher.getByRole("link", { name: "First thread" })).toBeVisible();
-    await switcher.getByRole("link", { name: "First thread" }).click();
+    // A pill is a link to the conversation, styled as a button, named by the
+    // title generated for it rather than by the prompt it came from.
+    await expect(switcher.getByRole("link", { name: "Stub title: First thread" })).toBeVisible();
+    await switcher.getByRole("link", { name: "Stub title: First thread" }).click();
 
     await expect(thread).toContainText("Stub agent: First thread");
     await expect(thread).not.toContainText("Second thread");
@@ -629,6 +640,7 @@ test("the history dialog lists every conversation, including ones the pills cann
       conversationId: oldest,
       prompt: "The oldest thread",
       minutesAgo: 60,
+      title: "Generated oldest thread",
     });
     for (let index = 2; index <= 6; index += 1) {
       await seedConversation({
@@ -644,19 +656,20 @@ test("the history dialog lists every conversation, including ones the pills cann
     // The pills stop at the recent few, so the oldest thread is not among them.
     const switcher = page.getByRole("group", { name: "Recent conversations" });
     await expect(switcher).toBeVisible();
-    await expect(switcher.getByText("The oldest thread")).toHaveCount(0);
+    await expect(switcher.getByText("Generated oldest thread")).toHaveCount(0);
 
     await page.getByRole("button", { name: "History" }).click();
 
-    // The dialog reads the whole list, newest first.
+    // The dialog reads the whole list, newest first, and shows a stored title
+    // instead of the derived prompt.
     const dialog = page.getByRole("dialog", { name: "Conversation history" });
     const entries = dialog.getByRole("link");
     await expect(entries).toHaveCount(6);
     await expect(entries.first()).toContainText("Seeded thread 6");
-    await expect(dialog.getByRole("link", { name: "The oldest thread" })).toBeVisible();
+    await expect(dialog.getByRole("link", { name: "Generated oldest thread" })).toBeVisible();
 
     // Choosing one opens it and closes the dialog.
-    await dialog.getByRole("link", { name: "The oldest thread" }).click();
+    await dialog.getByRole("link", { name: "Generated oldest thread" }).click();
     await expect(dialog).toBeHidden();
     await expect(page).toHaveURL(new RegExp(`conversation=${oldest}`));
     const thread = page.getByRole("list", { name: "Agent conversation" });

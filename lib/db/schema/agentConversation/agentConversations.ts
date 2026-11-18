@@ -29,6 +29,13 @@ export const agentConversations = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
 
+    /**
+     * The name the model generated for this conversation. Null while it has not
+     * been named yet, which is why the read path carries the prompt-derived
+     * label as the fallback rather than a placeholder stored here.
+     */
+    title: text("title"),
+
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).defaultNow().notNull(),
 
     // Bumped when a prompt is accepted, so "the latest conversation" is the one

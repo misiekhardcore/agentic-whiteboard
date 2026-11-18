@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { createStubModel, STUB_REPLY_PREFIX, STUB_TOOL_REPLY } from "@/lib/ai/providers/stub";
+import {
+  createStubModel,
+  STUB_REPLY_PREFIX,
+  STUB_TITLE_PREFIX,
+  STUB_TOOL_REPLY,
+} from "@/lib/ai/providers/stub";
 
 /**
  * The stub is scripted, but the conversation it is handed is the whole thread.
@@ -15,6 +20,9 @@ type StubModel = {
     prompt: PromptMessage[];
     tools?: { name: string }[];
   }) => Promise<{ stream: ReadableStream<unknown> }>;
+  doGenerate: (options: { prompt: PromptMessage[] }) => Promise<{
+    content: { type: string; text: string }[];
+  }>;
 };
 
 const offeredTools = [
@@ -110,6 +118,24 @@ describe("stub model", () => {
 
   it("still calls create for a new create request", async () => {
     expect(await answer([user("create a new workspace for me")])).toBe("tool:createWorkspace");
+  });
+
+  it("names a conversation when asked for a title", async () => {
+    const result = await model().doGenerate({ prompt: [user("Plan the schema")] });
+
+    expect(result.content).toEqual([
+      { type: "text", text: `Title: ${STUB_TITLE_PREFIX} Plan the schema` },
+    ]);
+  });
+
+  it("names the conversation from the first message a title request quotes", async () => {
+    const result = await model().doGenerate({
+      prompt: [user('First message of the conversation:\n"""\nPlan the schema\n"""\n\nTitle:')],
+    });
+
+    expect(result.content).toEqual([
+      { type: "text", text: `Title: ${STUB_TITLE_PREFIX} Plan the schema` },
+    ]);
   });
 
   it("streams a reply in more than one piece that rejoins to the same answer", async () => {
