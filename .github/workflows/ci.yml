@@ -109,6 +109,11 @@ jobs:
       SCRIPTED_DELAY_MS: "1500"
       SCRIPTED_CHUNK_DELAY_MS: "120"
       AI_TOOL_APPROVAL_SECRET: e2e-tool-approval-secret-0123456789abcdef
+      # Change broadcasts go to the local sink below, so the live-update specs
+      # assert the publication without the Supabase stack in this job.
+      SUPABASE_URL: http://127.0.0.1:3312
+      SUPABASE_SERVICE_ROLE_KEY: scripted-service-role
+      BROADCAST_SINK_URL: http://127.0.0.1:3312
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
 
@@ -182,6 +187,19 @@ jobs:
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
+
+      - name: Start the broadcast sink
+        run: |
+          node scripts/broadcast-sink.mjs > /tmp/broadcast-sink.log 2>&1 &
+          for _ in $(seq 1 30); do
+            if curl -sf -o /dev/null http://127.0.0.1:3312/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "The broadcast sink did not start:"
+          cat /tmp/broadcast-sink.log
+          exit 1
 
       - name: Start the app
         env:

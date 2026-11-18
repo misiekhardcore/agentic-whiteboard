@@ -8,8 +8,12 @@ import { Client } from "pg";
  * A tab's own action refreshes from the server action's response, a prompt's tab
  * re-reads from the datasets the stream announces, and another tab re-reads on
  * focus (a broadcast does the same when the stack is configured, which the suite
- * does not start). These specs drive the first two and the focus fallback.
+ * does not start). These specs drive the first two and the focus fallback, and
+ * assert that the change keys left the server on the person's channel: the
+ * broadcast sink in `scripts/` records them, so a capability that stops
+ * publishing, or a channel name that drifts from the token route's, fails here.
  */
+const broadcastSinkUrl = process.env.BROADCAST_SINK_URL ?? "http://127.0.0.1:3312";
 
 async function signUp(page: Page, email: string, password: string) {
   await page.goto("/sign-up");
@@ -39,6 +43,33 @@ async function deleteAccount(email: string) {
       .catch(() => undefined);
     await db.query('delete from "user" where email = $1', [email]).catch(() => undefined);
   });
+}
+
+type PublishedBatch = { topic: string; keys: string[] };
+
+/**
+ * The change keys the app published for this person's channel, oldest first.
+ * The channel name is the one `personChangesTopic` builds, which is also what
+ * the token route hands the browser, so a mismatch between them shows up as an
+ * empty list rather than a passing spec.
+ */
+async function publishedKeys(email: string): Promise<string[]> {
+  const userId = await withDb(async (db) => {
+    const { rows } = await db.query<{ id: string }>('select id from "user" where email = $1', [
+      email,
+    ]);
+
+    return rows[0]?.id ?? null;
+  });
+
+  if (!userId) return [];
+
+  const response = await fetch(`${broadcastSinkUrl}/messages`);
+  const { messages } = (await response.json()) as { messages: PublishedBatch[] };
+
+  return messages
+    .filter((message) => message.topic === `app:user:${userId}`)
+    .flatMap((message) => message.keys);
 }
 
 /** The stored title of the person's newest conversation, once there is one. */
@@ -80,6 +111,12 @@ test("a conversation's pill appears with its first prompt and carries the genera
     const recent = page.getByRole("group", { name: "Recent conversations" });
     await expect(recent.getByRole("link")).toHaveCount(1);
     await expect(meter).toHaveAttribute("aria-valuetext", "1 of 20 used");
+
+    // The turn's keys left the server before the reply finished streaming, on
+    // the channel the browser subscribes to.
+    await expect
+      .poll(() => publishedKeys(email))
+      .toEqual(expect.arrayContaining(["conversations", "account"]));
 
     // The scripted endpoint answers a title request with "Scripted: <prompt>",
     // so a stored title that differs from the derived one is the background
@@ -123,6 +160,10 @@ test("a workspace created in one tab reaches an open page in another", async ({
 
     // The tab that submitted the form re-reads the route it is on.
     await expect(other.getByRole("link", { name: workspaceName })).toBeVisible();
+
+    // The capability's declared key reached the server's publish path, so the
+    // tabs that were not submitted in have something to react to.
+    await expect.poll(() => publishedKeys(email)).toContain("workspaces");
 
     // The other tab hears about it when the window regains focus, which is the
     // floor under a change it could not receive (a socket that is down, an

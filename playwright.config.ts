@@ -17,6 +17,8 @@ const baseURL =
   process.env.E2E_BASE_URL ?? `http://localhost:${skipWebServer ? "3000" : ownServerPort}`;
 const scriptedModelPort = process.env.SCRIPTED_MODEL_PORT ?? "3311";
 const scriptedModelUrl = `http://127.0.0.1:${scriptedModelPort}`;
+const broadcastSinkPort = process.env.BROADCAST_SINK_PORT ?? "3312";
+const broadcastSinkUrl = `http://127.0.0.1:${broadcastSinkPort}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -42,6 +44,16 @@ export default defineConfig({
   webServer: skipWebServer
     ? undefined
     : [
+        {
+          // Records what the app publishes for the change channels, so a spec
+          // can assert a capability's keys left the server without the
+          // Supabase stack running on this machine.
+          command: "node scripts/broadcast-sink.mjs",
+          env: { BROADCAST_SINK_PORT: broadcastSinkPort },
+          url: `${broadcastSinkUrl}/health`,
+          reuseExistingServer: true,
+          timeout: 30_000,
+        },
         {
           // The app has one provider path: HTTP chat completions. The suite
           // points it at a scripted endpoint instead of shipping a fake model.
@@ -71,6 +83,13 @@ export default defineConfig({
             TITLE_AI_BASE_URL: `${scriptedModelUrl}/v1`,
             TITLE_AI_API_KEY: "scripted",
             TITLE_AI_MODEL: "scripted-model",
+            // Every change broadcast goes to the sink instead of a stack, so
+            // the specs assert on the publication itself and never depend on a
+            // Realtime container being up. `SUPABASE_URL` is read only for
+            // this; the browser's stack address is NEXT_PUBLIC_SUPABASE_URL.
+            SUPABASE_URL: broadcastSinkUrl,
+            SUPABASE_SERVICE_ROLE_KEY: "scripted-service-role",
+            BROADCAST_SINK_URL: broadcastSinkUrl,
             // The approval specs need signed requests; a fixed test value is
             // enough because the scripted endpoint never leaves the machine.
             AI_TOOL_APPROVAL_SECRET:
