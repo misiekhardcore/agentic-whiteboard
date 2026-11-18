@@ -1,0 +1,1 @@
+export { updateOrganizationProfile } from "./updateOrganizationProfile";

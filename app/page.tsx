@@ -1,12 +1,13 @@
 import { Button } from "@konopskidev/ui/components/button";
 import Link from "next/link";
 
+import { SiteFooter } from "@/components/Site/SiteFooter";
+
 import { AudienceStrip } from "./_components/landing/audience-strip";
 import { ClosingCta } from "./_components/landing/closing-cta";
 import { FeatureShowcase } from "./_components/landing/feature-showcase";
 import { HowItWorks } from "./_components/landing/how-it-works";
 import { Pricing } from "./_components/landing/pricing";
-import { SiteFooter } from "./_components/site-footer";
 import { landing } from "./_data/landing";
 
 export default function Home({ searchParams }: PageProps<"/">) {

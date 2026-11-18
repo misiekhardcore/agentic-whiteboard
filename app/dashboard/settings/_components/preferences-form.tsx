@@ -6,7 +6,7 @@ import { NativeSelect, NativeSelectOption } from "@konopskidev/ui/components/nat
 import { Switch } from "@konopskidev/ui/components/switch";
 import { useMemo, useState, useTransition } from "react";
 
-import { useSpeechVoices } from "@/app/dashboard/_components/useSpeechVoices";
+import { useSpeechVoices } from "@/components/Voice/useSpeechVoices";
 import { READ_ALOUD_LANGUAGE, speechVoiceChoices } from "@/lib/ai/thread/read-aloud";
 import { setReadAloudAction, setReadAloudVoiceAction } from "@/lib/identity/actions";
 

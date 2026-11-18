@@ -54,12 +54,13 @@ function offendersIn(predicate: (file: string) => boolean, forbidden: RegExp[]):
  */
 const CLIENT_SAFE = [
   /^lib[\\/]shared[\\/]/,
-  /^lib[\\/]capabilities[\\/]presentations?\.ts$/,
-  /^lib[\\/]workspace[\\/](status|contracts|forms|presentation)\.ts$/,
-  /^lib[\\/]organizations[\\/]contracts\.ts$/,
-  /^lib[\\/]identity[\\/](forms|redirect)\.ts$/,
-  /^lib[\\/]billing[\\/]plans\.ts$/,
-  /^lib[\\/]ai[\\/]thread[\\/](parts|composer|read-aloud)\.ts$/,
+  /^lib[\\/]capabilities[\\/]presentations?[\\/]/,
+  /^lib[\\/]workspace[\\/](status|contracts|forms|presentation)[\\/]/,
+  /^lib[\\/]organizations[\\/]contracts[\\/]/,
+  /^lib[\\/]identity[\\/]forms[\\/]/,
+  /^lib[\\/]identity[\\/]redirect\.ts$/,
+  /^lib[\\/]billing[\\/]plans[\\/]/,
+  /^lib[\\/]ai[\\/]thread[\\/](parts|composer|read-aloud)[\\/]/,
 ];
 
 const SERVER_ONLY = [
@@ -76,9 +77,17 @@ const SERVER_ONLY = [
  * nothing else about the domain, which is what lets every context use it
  * without the kernel depending on them.
  */
-const KERNEL = [/^lib[\\/]capabilities[\\/](define|invoke|describe)\.ts$/];
+const KERNEL = [/^lib[\\/]capabilities[\\/](define|invoke|describe)[\\/]/];
 
-const KERNEL_ALLOWED = [/^zod$/, /^\.\//, /^@\/lib\/identity\/actor$/];
+// The kernel is now folders, so its own files import their siblings by relative
+// path; every other module in `lib/capabilities` stays out of the allowlist.
+const KERNEL_ALLOWED = [
+  /^zod$/,
+  /^\.\//,
+  /^\.\.\/(define|invoke|presentation)(\/|$)/,
+  /^@\/lib\/capabilities\/(define|invoke|presentation)(\/|$)/,
+  /^@\/lib\/identity\/actor$/,
+];
 
 /**
  * The content surfaces are leaves: each answers for its own rows, and the
@@ -87,7 +96,14 @@ const KERNEL_ALLOWED = [/^zod$/, /^\.\//, /^@\/lib\/identity\/actor$/];
  */
 const SURFACE_CONTEXTS = [/^lib[\\/](doc|canvas)[\\/]/];
 
-const SURFACE_ALLOWED = [/^@\/lib\/db(\/|$)/, /^@\/lib\/shared(\/|$)/, /^drizzle-orm/, /^\.\//];
+const SURFACE_ALLOWED = [
+  /^@\/lib\/db(\/|$)/,
+  /^@\/lib\/shared(\/|$)/,
+  /^drizzle-orm/,
+  /^\.\//,
+  // A split module lives one folder down but still belongs to its surface.
+  /^\.\.\/(contracts|queries)(\/|$)/,
+];
 
 describe("module boundaries", () => {
   it("keeps lib out of the presentation layer", () => {

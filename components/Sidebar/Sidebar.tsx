@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Suspense } from "react";
 
-import { CreateWorkspaceDialog } from "@/app/dashboard/_components/CreateWorkspaceDialog";
+import { CreateWorkspaceDialog } from "@/components/Workspaces/CreateWorkspaceDialog";
 import { routes } from "@/lib/shared/routes";
 
 import { Loading } from "../Loading/Loading";

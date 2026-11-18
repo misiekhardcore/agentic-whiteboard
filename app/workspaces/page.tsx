@@ -3,9 +3,9 @@ import { Folder } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { CreateWorkspaceDialog } from "@/app/dashboard/_components/CreateWorkspaceDialog";
-import { WorkspaceCard } from "@/app/dashboard/_components/WorkspaceCard";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
+import { CreateWorkspaceDialog } from "@/components/Workspaces/CreateWorkspaceDialog";
+import { WorkspaceCard } from "@/components/Workspaces/WorkspaceCard";
 import { getSessionAccount } from "@/lib/identity/account";
 import { routes, signInPath } from "@/lib/shared/routes";
 import { listAccountWorkspaces } from "@/lib/workspace/queries";

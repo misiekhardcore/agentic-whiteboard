@@ -6,28 +6,22 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { PlanCard } from "@/app/_components/billing/plan-card";
 import { landing } from "@/app/_data/landing";
+import { CheckoutSheet } from "@/components/Billing/CheckoutSheet";
+import { PlanCard } from "@/components/Billing/PlanCard";
 import {
   type BillingAudience,
   getPlan,
   isPaidPlan,
   type Plan,
   planServesAudience,
+  plansForAudience,
 } from "@/lib/billing/plans";
 import type { TeamOption } from "@/lib/organizations/contracts";
 import { routes, signInPath } from "@/lib/shared/routes";
 import { cn } from "@/lib/utils";
 
-import { CheckoutSheet } from "./checkout-sheet";
-
 const AUDIENCES: readonly BillingAudience[] = ["personal", "team"];
-
-function plansFor(audience: BillingAudience): Plan[] {
-  return landing.pricing.planIds[audience]
-    .map((id) => getPlan(id))
-    .filter((plan): plan is Plan => Boolean(plan));
-}
 
 export function PricingTabs({
   signedIn,
@@ -99,7 +93,7 @@ export function PricingTabs({
         </TabsList>
 
         {AUDIENCES.map((option) => {
-          const plans = plansFor(option);
+          const plans = plansForAudience(option);
 
           return (
             <TabsContent key={option} value={option}>

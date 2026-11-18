@@ -1,0 +1,33 @@
+import { Suspense } from "react";
+
+import { AccountMenu } from "@/components/AccountMenu/AccountMenu";
+import { HeaderBilling } from "@/components/Billing/HeaderBilling";
+import { SignButton } from "@/components/SignButton/SignButton";
+
+import { BrandLockup } from "./Brand";
+import { HeaderDashboard } from "./HeaderDashboard";
+import { HeaderThemeSwitcher } from "./ThemeSwitcher";
+
+export function SiteHeader() {
+  return (
+    // The header's height is a token, not a result of its content: the shell
+    // never scrolls the document, so nothing here can be `sticky`, and the
+    // sidebar subtracts this same height from its own.
+    <header className="flex h-(--app-header-height) shrink-0 items-center justify-between gap-4 border-b px-6">
+      <BrandLockup href="/" textClassName="text-base" />
+      <nav className="flex items-center gap-4">
+        <Suspense fallback={null}>
+          <HeaderDashboard />
+        </Suspense>
+        <HeaderThemeSwitcher />
+        <Suspense fallback={null}>
+          <SignButton />
+        </Suspense>
+        <Suspense fallback={null}>
+          <HeaderBilling />
+        </Suspense>
+        <AccountMenu />
+      </nav>
+    </header>
+  );
+}

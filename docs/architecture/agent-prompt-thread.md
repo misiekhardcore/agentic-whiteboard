@@ -130,7 +130,7 @@ window, which meant that after every restart the person was locked out of their
 own thread until the window passed — and the row looked busy even though nothing
 was running.
 
-Instead, [lib/ai/thread/live.ts](../../lib/ai/thread/live.ts) keeps the prompts
+Instead, [lib/ai/thread/live](../../lib/ai/thread/live/index.ts) keeps the prompts
 this process is streaming, per person. Anything `QUEUED`/`RUNNING` in the
 database that is not in that set was left by a server that has since gone, so the
 next send retires it. The registry is exact because only the streaming process

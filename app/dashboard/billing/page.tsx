@@ -1,23 +1,11 @@
 import { Badge } from "@konopskidev/ui/components/badge";
-import { Button } from "@konopskidev/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@konopskidev/ui/components/card";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { CancelSubscriptionButton } from "@/app/_components/billing/cancel-subscription-button";
-import { ManageBillingButton } from "@/app/_components/billing/manage-billing-button";
-import { PlanSummary } from "@/app/_components/billing/plan-summary";
-import { UsageMeter } from "@/app/_components/billing/usage-meter";
-import { planFacts } from "@/lib/billing/details";
 import { getSessionBillingOverview } from "@/lib/billing/overview";
-import { isPaidPlan, limitLabels } from "@/lib/billing/plans";
 import { routes, signInPath } from "@/lib/shared/routes";
+
+import { PlanSection } from "./_components/PlanSection";
+import { UsageSection } from "./_components/UsageSection";
 
 export const metadata = {
   title: "Billing",
@@ -35,18 +23,6 @@ export default async function BillingPage() {
   const overview = await getSessionBillingOverview();
   if (!overview) redirect(signInPath(routes.dashboardBilling));
 
-  const { plan, subscription } = overview.entitlements;
-  const facts = planFacts(plan, subscription);
-  const paid = isPaidPlan(plan);
-
-  const { agentPrompts, workspaces } = overview.usage;
-  const reset = agentPrompts.periodEnd.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <header className="flex flex-col gap-1">
@@ -62,78 +38,8 @@ export default async function BillingPage() {
         </p>
       </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Plan</CardTitle>
-          <CardDescription>
-            {paid
-              ? "Billed through Stripe. Seats and the renewal date follow the subscription."
-              : "No subscription is needed for this plan."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-start justify-between gap-6">
-          <PlanSummary
-            plan={plan}
-            facts={facts}
-            status={subscription?.status}
-            seats={subscription?.seats}
-            cancelAtPeriodEnd={subscription?.cancelAtPeriodEnd}
-            className="min-w-0 flex-1"
-          />
-
-          <div className="flex gap-2">
-            {!paid && (
-              <Button asChild variant="primary" size="sm">
-                <Link href={overview.organizationId ? "/?billing=team#pricing" : "/#pricing"}>
-                  Upgrade
-                </Link>
-              </Button>
-            )}
-
-            {paid && overview.canManageBilling && (
-              <>
-                <ManageBillingButton organizationId={overview.organizationId ?? undefined} />
-                <CancelSubscriptionButton organizationId={overview.organizationId} />
-              </>
-            )}
-
-            {!overview.canManageBilling && (
-              <p className="max-w-48 text-xs text-muted-foreground">
-                Only organization owners and admins can change billing.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Usage</CardTitle>
-          <CardDescription>
-            Agent prompts are counted per member for {agentPrompts.periodLabel}; workspaces are
-            counted for the whole account.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-5">
-          <UsageMeter
-            label={limitLabels.agentPromptsPerMonth}
-            used={agentPrompts.used}
-            limit={agentPrompts.limit}
-            title={`Agent prompts ${agentPrompts.periodLabel} · resets ${reset}`}
-          />
-          <p className="text-xs text-muted-foreground">
-            {agentPrompts.periodLabel === "this billing period"
-              ? `Resets ${reset}, at the end of the period you’ve paid for.`
-              : `Resets ${reset}.`}
-          </p>
-
-          <UsageMeter
-            label={limitLabels.workspaces}
-            used={workspaces.used}
-            limit={workspaces.limit}
-          />
-        </CardContent>
-      </Card>
+      <PlanSection overview={overview} />
+      <UsageSection overview={overview} />
     </div>
   );
 }

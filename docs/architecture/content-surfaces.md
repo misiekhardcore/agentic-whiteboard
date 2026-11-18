@@ -43,14 +43,14 @@ dashboard calls once.
 ```text
 lib/
   workspace/
-    queries.ts      the account's workspaces (scope + archive flag)
-    recent.ts       composeRecentItems: workspaces + surfaces → one list
+    queries/        the account's workspaces (scope + archive flag)
+    recent/         composeRecentItems: workspaces + surfaces → one list
   doc/
-    contracts.ts    DocSurface
-    queries.ts      listDocSurfaces(workspaceIds)
+    contracts/      DocSurface
+    queries/        listDocSurfaces(workspaceIds)
   canvas/
-    contracts.ts    CanvasSurface
-    queries.ts      listCanvasSurfaces(workspaceIds)
+    contracts/      CanvasSurface
+    queries/        listCanvasSurfaces(workspaceIds)
 ```
 
 The dependency direction:
