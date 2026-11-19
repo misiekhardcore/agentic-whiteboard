@@ -84,7 +84,7 @@ if (wantsAppEnv) {
     ["NEXT_PUBLIC_SUPABASE_ANON_KEY", anonymousKey],
     ["JWT_SECRET", JWT_SECRET],
     ["BETTER_AUTH_SECRET", "e2e-only-secret-0123456789abcdef"],
-    ["BETTER_AUTH_URL", "http://localhost:3100"],
+    ["BETTER_AUTH_URL", "http://localhost:3000"],
     ["SMTP_HOST", "127.0.0.1"],
     ["SMTP_PORT", "2500"],
     ["SMTP_FROM", "Agentic Whiteboard <no-reply@localhost>"],

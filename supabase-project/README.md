@@ -105,7 +105,9 @@ docker exec -i supabase-db psql -U postgres -d agentic-whiteboard \
 creates the `app_private.is_org_member` helper (the `authenticated` role holds no
 privileges on Better Auth's tables) and the `SELECT` policy on
 `realtime.messages` for the `app:user:<id>` and `app:org:<id>` topics. There is no
-`INSERT` policy, so only the server publishes.
+`INSERT` policy, so only the server publishes. Apply it after the app's
+migrations: the helper reads `public.member`, so on a fresh database the policy
+is refused until that table exists.
 
 The gateway adapts the public paths to what the service expects:
 `/realtime/v1/websocket` is rewritten to `/socket/websocket`, `/realtime/v1/api/*`
