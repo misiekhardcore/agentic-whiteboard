@@ -11,7 +11,6 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
       <TooltipProvider>
-        {/* One subscription for the whole app: a change reaches every open tab. */}
         <ChangesProvider>{children}</ChangesProvider>
         <ThemedToaster />
       </TooltipProvider>

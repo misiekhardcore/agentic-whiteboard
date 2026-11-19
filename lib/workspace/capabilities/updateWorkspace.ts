@@ -5,6 +5,7 @@ import { CHANGE_KEYS, workspaceChangeKey } from "@/lib/shared/changes";
 
 import { authorizeWorkspace } from "../access";
 import { presentUpdateWorkspace } from "../presentation";
+import { workspaceIdSchema } from "../rules";
 import { updateWorkspaceWith } from "../service";
 import { WORKSPACE_STATUSES } from "../status";
 
@@ -15,7 +16,7 @@ export const updateWorkspace = defineCapability({
   description:
     "Rename a workspace, change its description or move it to another stage. Send only the fields that change; the others keep their current value. An empty description clears it. Requires the workspace id from `listWorkspaces`. This cannot archive or delete a workspace.",
   input: z.object({
-    workspaceId: z.string().min(1, "Choose a workspace."),
+    workspaceId: workspaceIdSchema,
     name: z.string().optional(),
     description: z.string().optional(),
     status: z.enum(WORKSPACE_STATUSES).optional(),

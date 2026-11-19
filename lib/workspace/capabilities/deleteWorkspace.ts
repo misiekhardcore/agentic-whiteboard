@@ -5,6 +5,7 @@ import { CHANGE_KEYS, workspaceChangeKey } from "@/lib/shared/changes";
 
 import { authorizeWorkspace } from "../access";
 import { presentDeleteWorkspace } from "../presentation";
+import { workspaceIdSchema } from "../rules";
 import { deleteWorkspaceWith } from "../service";
 
 import { linked, NOT_FOUND, summaryOutput } from "./internals";
@@ -14,7 +15,7 @@ export const deleteWorkspace = defineCapability({
   description:
     "Delete an archived workspace permanently, with its documents, canvas and agent history. Only an archived workspace can be deleted. This needs the person's approval: the call pauses and they confirm before anything changes.",
   input: z.object({
-    workspaceId: z.string().min(1, "Choose a workspace."),
+    workspaceId: workspaceIdSchema,
   }),
   output: summaryOutput,
   callers: ["human", "agent"] as const,

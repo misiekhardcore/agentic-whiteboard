@@ -5,6 +5,7 @@ import { CHANGE_KEYS, workspaceChangeKey } from "@/lib/shared/changes";
 
 import { authorizeWorkspace } from "../access";
 import { presentRestoreWorkspace } from "../presentation";
+import { workspaceIdSchema } from "../rules";
 import { restoreWorkspaceWith } from "../service";
 
 import { linked, NOT_FOUND, summaryOutput } from "./internals";
@@ -14,7 +15,7 @@ export const restoreWorkspace = defineCapability({
   description:
     "Bring an archived workspace back to the dashboard and into the plan meter. Requires the id of an archived workspace from `listWorkspaces` with `includeArchived: true`. Returns the restored workspace with its `link`.",
   input: z.object({
-    workspaceId: z.string().min(1, "Choose a workspace."),
+    workspaceId: workspaceIdSchema,
   }),
   output: summaryOutput,
   callers: ["human", "agent"] as const,

@@ -32,6 +32,7 @@ import {
   restoreWorkspace,
   updateWorkspace,
 } from "./capabilities";
+import { WORKSPACE_ID_INVALID_MESSAGE } from "./rules";
 
 const actor = {
   userId: "user_1",
@@ -49,7 +50,7 @@ const access = {
   kind: "personal" as const,
   permission: "edit" as const,
   workspace: {
-    id: "ws_1",
+    id: "wsone9k2m4p7q1r3s5t8u0vx",
     name: "Food delivery",
     description: "Order takeaway",
     status: "PLANNING" as const,
@@ -64,7 +65,7 @@ describe("createWorkspace capability", () => {
   it("hands back the new workspace and its in-app link", async () => {
     service.createWorkspaceFor.mockResolvedValue({
       ok: true,
-      workspace: { id: "ws_1", name: "Food delivery", status: "PLANNING" },
+      workspace: { id: "wsone9k2m4p7q1r3s5t8u0vx", name: "Food delivery", status: "PLANNING" },
     });
 
     const output = await invoke(createWorkspace, agent, {
@@ -79,10 +80,10 @@ describe("createWorkspace capability", () => {
     expect(output).toEqual({
       ok: true,
       workspace: {
-        id: "ws_1",
+        id: "wsone9k2m4p7q1r3s5t8u0vx",
         name: "Food delivery",
         status: "PLANNING",
-        link: "/workspace/ws_1",
+        link: "/workspace/wsone9k2m4p7q1r3s5t8u0vx",
       },
     });
   });
@@ -109,7 +110,7 @@ describe("read capabilities", () => {
   it("lists workspaces with a link each", async () => {
     queries.listWorkspacesFor.mockResolvedValue([
       {
-        id: "ws_1",
+        id: "wsone9k2m4p7q1r3s5t8u0vx",
         name: "Food delivery",
         description: null,
         status: "PLANNING",
@@ -123,12 +124,12 @@ describe("read capabilities", () => {
       ok: true,
       workspaces: [
         {
-          id: "ws_1",
+          id: "wsone9k2m4p7q1r3s5t8u0vx",
           name: "Food delivery",
           description: null,
           status: "PLANNING",
           archived: false,
-          link: "/workspace/ws_1",
+          link: "/workspace/wsone9k2m4p7q1r3s5t8u0vx",
         },
       ],
     });
@@ -139,7 +140,7 @@ describe("read capabilities", () => {
     queries.readWorkspaceWith.mockReturnValue({
       ok: true,
       workspace: {
-        id: "ws_1",
+        id: "wsone9k2m4p7q1r3s5t8u0vx",
         name: "Food delivery",
         description: "Order takeaway",
         status: "PLANNING",
@@ -147,18 +148,22 @@ describe("read capabilities", () => {
       },
     });
 
-    const output = await invoke(getWorkspace, agent, { workspaceId: "ws_1" });
+    const output = await invoke(getWorkspace, agent, { workspaceId: "wsone9k2m4p7q1r3s5t8u0vx" });
 
-    expect(accessMock.authorizeWorkspace).toHaveBeenCalledWith(actor, "ws_1", "view");
+    expect(accessMock.authorizeWorkspace).toHaveBeenCalledWith(
+      actor,
+      "wsone9k2m4p7q1r3s5t8u0vx",
+      "view",
+    );
     expect(output).toEqual({
       ok: true,
       workspace: {
-        id: "ws_1",
+        id: "wsone9k2m4p7q1r3s5t8u0vx",
         name: "Food delivery",
         description: "Order takeaway",
         status: "PLANNING",
         archived: false,
-        link: "/workspace/ws_1",
+        link: "/workspace/wsone9k2m4p7q1r3s5t8u0vx",
       },
     });
   });
@@ -166,10 +171,22 @@ describe("read capabilities", () => {
   it("reports a workspace it cannot see as missing, with a next step", async () => {
     accessMock.authorizeWorkspace.mockResolvedValue(null);
 
-    const output = await invoke(getWorkspace, agent, { workspaceId: "ws_other" });
+    const output = await invoke(getWorkspace, agent, { workspaceId: "wsother9k2m4p7q1r3s5t8u0" });
 
     expect(output).toMatchObject({ ok: false });
     expect(output).toHaveProperty("error", expect.stringContaining("could not be found"));
+  });
+
+  it("refuses a description where an id belongs, without looking it up", async () => {
+    accessMock.authorizeWorkspace.mockClear();
+
+    const output = await invoke(getWorkspace, agent, { workspaceId: "everything" });
+
+    expect(output).toMatchObject({
+      ok: false,
+      fieldErrors: { workspaceId: WORKSPACE_ID_INVALID_MESSAGE },
+    });
+    expect(accessMock.authorizeWorkspace).not.toHaveBeenCalled();
   });
 });
 
@@ -179,19 +196,19 @@ describe("updateWorkspace capability", () => {
     accessMock.authorizeWorkspace.mockResolvedValue(access);
     service.updateWorkspaceWith.mockResolvedValue({
       ok: true,
-      workspace: { id: "ws_1", name: "Launch", status: "PLANNING" },
+      workspace: { id: "wsone9k2m4p7q1r3s5t8u0vx", name: "Launch", status: "PLANNING" },
     });
 
     const output = await invoke(
       updateWorkspace,
       { ...agent, abortSignal: signal },
-      { workspaceId: "ws_1", name: "Launch" },
+      { workspaceId: "wsone9k2m4p7q1r3s5t8u0vx", name: "Launch" },
     );
 
     expect(service.updateWorkspaceWith).toHaveBeenCalledWith(
       access,
       {
-        id: "ws_1",
+        id: "wsone9k2m4p7q1r3s5t8u0vx",
         name: "Launch",
         description: undefined,
         status: undefined,
@@ -201,10 +218,10 @@ describe("updateWorkspace capability", () => {
     expect(output).toEqual({
       ok: true,
       workspace: {
-        id: "ws_1",
+        id: "wsone9k2m4p7q1r3s5t8u0vx",
         name: "Launch",
         status: "PLANNING",
-        link: "/workspace/ws_1",
+        link: "/workspace/wsone9k2m4p7q1r3s5t8u0vx",
       },
     });
   });
@@ -214,10 +231,10 @@ describe("archive surfaces", () => {
   const archived = {
     ok: true as const,
     workspace: {
-      id: "ws_1",
+      id: "wsone9k2m4p7q1r3s5t8u0vx",
       name: "Food delivery",
       status: "PLANNING" as const,
-      link: "/workspace/ws_1",
+      link: "/workspace/wsone9k2m4p7q1r3s5t8u0vx",
     },
   };
 
@@ -248,7 +265,9 @@ describe("removal capabilities", () => {
 
     expect(deleteWorkspace.approval).toBe("always");
 
-    const output = await invoke(deleteWorkspace, agent, { workspaceId: "ws_1" });
+    const output = await invoke(deleteWorkspace, agent, {
+      workspaceId: "wsone9k2m4p7q1r3s5t8u0vx",
+    });
 
     expect(output).toMatchObject({
       ok: false,
