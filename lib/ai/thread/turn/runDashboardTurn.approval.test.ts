@@ -37,6 +37,39 @@ describe("answering a parked approval", () => {
     expect(history[0]).toEqual(parkedHistory[0]);
   });
 
+  it("hands every answered decision to the model, not just the first", async () => {
+    mocks.history = [
+      userMessage("message_user", "Archive all three"),
+      assistantMessage("stored_reply", [
+        { type: "text", text: "Three workspaces need your approval." },
+        approvalPart("approval-requested", { toolCallId: "call_1", reference: "approval_1" }),
+        approvalPart("approval-requested", { toolCallId: "call_2", reference: "approval_2" }),
+        approvalPart("approval-requested", { toolCallId: "call_3", reference: "approval_3" }),
+      ]),
+    ];
+
+    const response = await send(
+      body([
+        userMessage("message_user", "Archive all three"),
+        assistantMessage("browser_reply", [
+          { type: "text", text: "Three workspaces need your approval." },
+          approvalPart("approval-responded", { toolCallId: "call_1", reference: "approval_1" }),
+          approvalPart("approval-responded", { toolCallId: "call_2", reference: "approval_2" }),
+          approvalPart("approval-responded", { toolCallId: "call_3", reference: "approval_3" }),
+        ]),
+      ]),
+    );
+
+    expect(response.status).toBe(200);
+
+    const history = mocks.streamed[0].uiMessages as UIMessage[];
+    const states = history[1].parts
+      .filter((part) => part.type === "tool-archiveWorkspace")
+      .map((part) => (part as { state: string }).state);
+
+    expect(states).toEqual(["approval-responded", "approval-responded", "approval-responded"]);
+  });
+
   it("refuses an answer to a question the turn never asked", async () => {
     const response = await send(
       body([

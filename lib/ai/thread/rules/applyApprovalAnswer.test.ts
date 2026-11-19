@@ -79,6 +79,84 @@ describe("applyApprovalAnswer", () => {
     });
   });
 
+  it("folds every decision answered in one message, not just the first", () => {
+    const threeStored: UIMessage[] = [
+      userMessage("message_user", "Archive all three"),
+      {
+        id: "stored_reply",
+        role: "assistant",
+        parts: [
+          { type: "text", text: "Three workspaces need your approval." },
+          toolPart({ state: "approval-requested", toolCallId: "call_1", approvalId: "approval_1" }),
+          toolPart({ state: "approval-requested", toolCallId: "call_2", approvalId: "approval_2" }),
+          toolPart({ state: "approval-requested", toolCallId: "call_3", approvalId: "approval_3" }),
+        ],
+      },
+    ];
+
+    const merged = applyApprovalAnswer({
+      history: threeStored,
+      answer: {
+        id: "browser_reply",
+        role: "assistant",
+        parts: [
+          { type: "text", text: "Three workspaces need your approval." },
+          toolPart({
+            state: "approval-responded",
+            approved: true,
+            toolCallId: "call_1",
+            approvalId: "approval_1",
+          }),
+          toolPart({
+            state: "approval-responded",
+            approved: true,
+            toolCallId: "call_2",
+            approvalId: "approval_2",
+          }),
+          toolPart({
+            state: "approval-responded",
+            approved: true,
+            toolCallId: "call_3",
+            approvalId: "approval_3",
+          }),
+        ],
+      },
+      reference: "approval_1",
+    });
+
+    const toolParts = (merged?.[1].parts ?? []).filter((part) =>
+      part.type.startsWith("tool-"),
+    ) as Extract<UIMessage["parts"][number], { type: `tool-${string}` }>[];
+
+    expect(toolParts.map((part) => part.state)).toEqual([
+      "approval-responded",
+      "approval-responded",
+      "approval-responded",
+    ]);
+  });
+
+  it("never answers a stored call with a different request's decision", () => {
+    const merged = applyApprovalAnswer({
+      history: stored,
+      answer: {
+        ...answer(),
+        parts: [
+          toolPart({ state: "approval-responded", approved: true }),
+          toolPart({
+            state: "approval-responded",
+            approved: true,
+            toolCallId: "call_2",
+            approvalId: "approval_2",
+          }),
+        ],
+      },
+      reference,
+    });
+
+    expect(merged?.[1].parts).toHaveLength(2);
+    expect(merged?.[1].parts).toEqual(answer().parts);
+  });
+
   it("refuses an answer for another question", () => {
     expect(
       applyApprovalAnswer({ history: stored, answer: answer(), reference: "approval_2" }),
