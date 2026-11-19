@@ -68,9 +68,15 @@ The answer arrives as a second POST carrying the whole conversation. Treated as
 a new prompt it would open, count and store a second `agentPrompt` — so a person
 who approves carefully pays twice for the privilege. The route classifies the
 request instead: an assistant message that carries an approval part is a
-continuation of the prompt that is waiting, matched through the signed
-reference, and its tokens are accrued onto that prompt's usage rather than
-replacing it.
+continuation of the prompt that is waiting, and its tokens are accrued onto that
+prompt's usage rather than replacing it.
+
+The thread such a continuation streams is the browser's own, not a re-read of
+the stored turn: the answer is the client's history, and every tool call it
+carries is authorized again by `invoke` when it runs, so a replayed answer can
+only ever repeat work the replayer is already allowed to do. What the server
+still decides is whether anything runs — the signature says the request was
+ours, and the conversation's `AWAITING_APPROVAL` row says it is still owed.
 
 ## Flow
 
@@ -115,7 +121,5 @@ once.
 ## Deferred
 
 - A queryable per-account action log (tool calls are only message parts today).
-- Expiring an unanswered approval (it is answerable for 24 hours, then treated as
-  gone).
 - Client tools beyond navigation, and returning their result into the run.
 - Per-capability rate limits and cost budgets.

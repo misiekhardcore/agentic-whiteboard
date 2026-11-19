@@ -34,11 +34,11 @@ export async function resolveTurnPrompt({
     }
   | TurnFailure
 > {
-  const { conversationId, messages, kind, newest, reference } = request;
+  const { conversationId, messages, kind } = request;
   const { userId } = actor;
 
-  if (kind === "continuation" && reference) {
-    const resumed = await resumeParkedTurn({ reference, answer: newest, userId });
+  if (kind === "continuation") {
+    const resumed = await resumeParkedTurn({ messages, conversationId, userId });
     return "error" in resumed ? resumed : { ...resumed, continuing: true, conversationId };
   }
 

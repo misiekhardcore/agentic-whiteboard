@@ -52,7 +52,7 @@ column.
 | Retry control    | Offered by the composer and by the thread when the stored tip failed          | The browser knows a send failed before it reached the route (the outage never wrote a row); the page knows the stored prompt failed. Both offer the same one-click retry, and both send the same message again.                                                                 |
 | Branch           | A new conversation holding a copy of the live turns through a reply           | "Carry on from here, without the rest" is a second thread, and a prompt belongs to one conversation — so the turns are copied rather than shared. Editing a copied turn rewinds the branch and leaves the original alone.                                                       |
 | Branch origin    | `agentPrompt.branchedFromId` marks a copy, and the count skips it             | The copy is history: the turn ran, and was paid for, where it came from. Counting it again would charge a person for branching, which does no work. Marking it says so in the row rather than in a query's shape.                                                               |
-| Branch point     | Only a turn that finished can be copied                                       | A queued, running or parked turn is not history yet, and a copy of a parked approval could never be answered: the answer is matched to the stored request, which lives in the original conversation.                                                                            |
+| Branch point     | Only a turn that finished can be copied                                       | A queued, running or parked turn is not history yet, and a copy of a parked approval could never be answered: the parked row, and the single-flight slot it reopens, belong to the original conversation.                                                                       |
 | Message actions  | Per message, revealed on hover; always visible where nothing can hover        | A long thread should read as a conversation, not as a wall of buttons. Copy and edit belong to the prompt; copy, read aloud, re-run (newest only) and branch belong to the reply. Re-running an older reply is not offered — that is what editing its prompt is for.            |
 | Icon buttons     | One label per button, used as its accessible name and its tooltip             | An icon is the whole control, so its meaning has to be on screen somewhere. One string cannot disagree with itself the way an `aria-label` and a tooltip written separately can, and it keeps the icon legible to a screen reader and a pointer alike.                          |
 
@@ -158,7 +158,6 @@ an approval lands in exactly one of them:
   knows a branch's replay is not an execution.
 - `messages.ts` — the message rows: the person's text before the stream, the
   agent's reply after it, and which stored prompt a repeated message names.
-- `approvals.ts` — the parked approval a browser answer may resume.
 - `orphans.ts` — which active prompts nothing is streaming, and retiring them
   before the next send takes the slot.
 - `live.ts` — the in-process registry of streams that answers "is anything
@@ -190,9 +189,10 @@ writer, and `turn.ts` is the only module that composes the others.
    The posted thread is a mirror, not the model's input: the turn reads the
    conversation's live turns back from the database (up to and including the prompt
    it just recorded), so a body that carries a discarded branch or an invented
-   reply is answered exactly like a clean one. The only things a body
-   contributes are the prompt being sent and, for a parked approval, the
-   answer — which is matched to the stored request before the turn resumes.
+   reply is answered exactly like a clean one. An approval answer is the
+   exception: it streams the posted thread, because the decision and the turn it
+   belongs to already exist in the browser, and each tool call in it is
+   authorized again by `invoke` when it runs.
 6. `promptIntent` decides append, retry or rewind. A retry reuses its row; an
    append checks the allowance and opens a counted prompt; a rewind checks the
    allowance, supersedes every live prompt from the branch point and opens a new

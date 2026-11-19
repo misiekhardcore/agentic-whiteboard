@@ -20,45 +20,33 @@ const answer = assistantMessage("browser_reply", [
 describe("answering a parked approval", () => {
   beforeEach(() => {
     resetMocks();
-    mocks.waiting = { promptId: "prompt_parked" };
+    mocks.parked = { promptId: "prompt_parked" };
+    // What the stored turn says is irrelevant now: the browser's thread is the
+    // model's input, and this is what proves it.
     mocks.history = parkedHistory;
   });
 
-  it("folds only the answer into the stored turn", async () => {
-    const response = await send(body([userMessage("message_user", "Archive it"), answer]));
+  it("streams the browser's thread instead of re-reading the stored one", async () => {
+    const sent = [userMessage("message_user", "Archive it"), answer];
+
+    const response = await send(body(sent));
 
     expect(response.status).toBe(200);
     expect(mocks.resumed).toEqual(["prompt_parked"]);
-
-    const [history] = [mocks.streamed[0].uiMessages as UIMessage[]];
-    expect(history).toHaveLength(2);
-    expect(history[1].id).toBe("browser_reply");
-    expect(history[1].parts).toEqual(answer.parts);
-    expect(history[0]).toEqual(parkedHistory[0]);
+    expect(mocks.streamed[0].uiMessages).toEqual(sent);
   });
 
   it("hands every answered decision to the model, not just the first", async () => {
-    mocks.history = [
+    const sent = [
       userMessage("message_user", "Archive all three"),
-      assistantMessage("stored_reply", [
-        { type: "text", text: "Three workspaces need your approval." },
-        approvalPart("approval-requested", { toolCallId: "call_1", reference: "approval_1" }),
-        approvalPart("approval-requested", { toolCallId: "call_2", reference: "approval_2" }),
-        approvalPart("approval-requested", { toolCallId: "call_3", reference: "approval_3" }),
+      assistantMessage("browser_reply", [
+        approvalPart("approval-responded", { toolCallId: "call_1", reference: "approval_1" }),
+        approvalPart("approval-responded", { toolCallId: "call_2", reference: "approval_2" }),
+        approvalPart("approval-responded", { toolCallId: "call_3", reference: "approval_3" }),
       ]),
     ];
 
-    const response = await send(
-      body([
-        userMessage("message_user", "Archive all three"),
-        assistantMessage("browser_reply", [
-          { type: "text", text: "Three workspaces need your approval." },
-          approvalPart("approval-responded", { toolCallId: "call_1", reference: "approval_1" }),
-          approvalPart("approval-responded", { toolCallId: "call_2", reference: "approval_2" }),
-          approvalPart("approval-responded", { toolCallId: "call_3", reference: "approval_3" }),
-        ]),
-      ]),
-    );
+    const response = await send(body(sent));
 
     expect(response.status).toBe(200);
 
@@ -70,22 +58,15 @@ describe("answering a parked approval", () => {
     expect(states).toEqual(["approval-responded", "approval-responded", "approval-responded"]);
   });
 
-  it("refuses an answer to a question the turn never asked", async () => {
-    const response = await send(
-      body([
-        userMessage("message_user", "Archive it"),
-        assistantMessage("browser_reply", [
-          approvalPart("approval-responded", { toolCallId: "call_other" }),
-        ]),
-      ]),
-    );
+  it("refuses to resume when the conversation has nothing waiting", async () => {
+    mocks.parked = null;
 
-    expect(response.status).toBe(400);
+    const response = await send(body([userMessage("message_user", "Archive it"), answer]));
+
+    expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
-      error:
-        "That approval does not match the prompt waiting for it. Reload the dashboard and answer it again.",
+      error: "That approval is no longer waiting. Send a new prompt to try again.",
     });
-    // The parked prompt is left exactly as it was, not resumed and not failed.
     expect(mocks.resumed).toEqual([]);
     expect(mocks.closed).toEqual([]);
     expect(mocks.streamed).toHaveLength(0);

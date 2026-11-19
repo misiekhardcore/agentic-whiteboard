@@ -1,7 +1,6 @@
 export type { TurnActor, TurnFailure } from "./types";
 export {
   APPROVAL_EXPIRED,
-  APPROVAL_MISMATCH,
   BUSY,
   CONVERSATION_MISSING,
   MESSAGE_ID_PATTERN,

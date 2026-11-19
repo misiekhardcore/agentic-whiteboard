@@ -25,7 +25,7 @@ const state = vi.hoisted(() => {
   return {
     history: [] as UIMessage[],
     target: null as Record<string, unknown> | null,
-    waiting: null as { promptId: string } | null,
+    parked: null as { promptId: string } | null,
     opened,
     promptId: "prompt_new",
     retryResult: retryAnswer("resumed"),
@@ -52,10 +52,6 @@ vi.mock("../allowance", () => ({
   promptAllowance: vi.fn(() => Promise.resolve({ message: null })),
 }));
 
-vi.mock("../approvals", () => ({
-  findAwaitingApprovalPrompt: vi.fn(() => Promise.resolve(mocks.waiting)),
-}));
-
 vi.mock("../messages", () => ({
   findUserPromptTarget: vi.fn(() => Promise.resolve(mocks.target)),
   appendUserPromptMessage: vi.fn((options: { messageId?: string }) => {
@@ -74,6 +70,7 @@ vi.mock("../prompts", () => ({
     ),
   ),
   retryFailedPrompt: vi.fn(() => Promise.resolve(mocks.retryResult)),
+  findParkedPrompt: vi.fn(() => Promise.resolve(mocks.parked)),
   markPromptRunning: vi.fn(() => Promise.resolve()),
   resumePrompt: vi.fn((promptId: string) => {
     mocks.resumed.push(promptId);
@@ -164,7 +161,7 @@ export const body = (messages: UIMessage[]) => ({
 export function resetMocks(): void {
   mocks.history = [];
   mocks.target = null;
-  mocks.waiting = null;
+  mocks.parked = null;
   mocks.opened = "opened";
   mocks.promptId = "prompt_new";
   mocks.retryResult = "resumed";

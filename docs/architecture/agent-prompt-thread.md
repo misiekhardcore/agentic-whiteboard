@@ -114,9 +114,9 @@ conversation into a workspace later is an update, not a second model.
    a provider error means `FAILED`; an outstanding approval means
    `AWAITING_APPROVAL`.
 7. Answering the approval posts the conversation again. The route recognises the
-   assistant message carrying the approval part as a continuation, matches the
-   signed reference to the parked prompt, resumes that row and accrues the new
-   tokens onto it. No second prompt is opened or counted.
+   assistant message carrying the approval part as a continuation, resumes the
+   conversation's `AWAITING_APPROVAL` row, streams the posted thread and accrues
+   the new tokens onto that row. No second prompt is opened or counted.
 8. The page reloads the thread from the database, so a refresh replays it; an
    answered request is dropped from the replay while the text around it stays.
 
@@ -156,7 +156,7 @@ follow-up the day this app needs a second instance.
   it ([capabilities](capabilities.md)). It cannot yet edit docs or canvases;
   those mutations still belong to the collaboration gateway described in
   [ai-collaboration](ai-collaboration.md).
-- A parked approval is answerable for 24 hours and survives a reload, because the
+- A parked approval survives a reload, because the
   request is stored with the message rather than held in the stream.
 - Restarting the server mid-reply costs the reply, not the thread: the orphaned
   row is retired on the next send and the person is told to send it again.
