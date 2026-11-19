@@ -165,6 +165,7 @@ pnpm db:up              # Local Supabase/Postgres + migrations prerequisites
 pnpm db:generate        # Generate a Drizzle migration after schema changes
 pnpm db:migrate         # Apply migrations
 pnpm test:e2e           # Playwright on :3100 with the scripted provider; needs a DB, and `pnpm dev` stopped
+pnpm test:e2e:realtime  # The socket spec only; needs `pnpm db:up` and `realtime-rls.sql` applied
 pnpm test:e2e:smtp      # Local SMTP sink used by the invitation flows
 ```
 

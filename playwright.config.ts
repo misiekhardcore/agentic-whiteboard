@@ -20,6 +20,13 @@ const scriptedModelUrl = `http://127.0.0.1:${scriptedModelPort}`;
 const broadcastSinkPort = process.env.BROADCAST_SINK_PORT ?? "3312";
 const broadcastSinkUrl = `http://127.0.0.1:${broadcastSinkPort}`;
 
+// The main suite records what the app publishes in a sink, so it can assert the
+// publication without a stack. `REALTIME_E2E=1` runs the other half instead: the
+// app is pointed at a real stack (`pnpm db:up`) and only the spec that reads a
+// change over an actual socket runs, because the sink-backed specs assert on the
+// sink.
+const realtime = Boolean(process.env.REALTIME_E2E);
+
 export default defineConfig({
   testDir: "./e2e",
   // One browser at a time: the billing flow talks to a real Stripe test account
@@ -36,7 +43,14 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: realtime ? /realtime\.spec\.ts$/ : undefined,
+      testIgnore: realtime ? undefined : /realtime\.spec\.ts$/,
+    },
+  ],
   // CI starts the production server itself (with the Stripe CLI's signing
   // secret) and sets E2E_SKIP_WEB_SERVER. Locally Playwright starts both its
   // own app server on `E2E_PORT` (default :3100) and the scripted model, so
@@ -44,16 +58,20 @@ export default defineConfig({
   webServer: skipWebServer
     ? undefined
     : [
-        {
-          // Records what the app publishes for the change channels, so a spec
-          // can assert a capability's keys left the server without the
-          // Supabase stack running on this machine.
-          command: "node scripts/broadcast-sink.mjs",
-          env: { BROADCAST_SINK_PORT: broadcastSinkPort },
-          url: `${broadcastSinkUrl}/health`,
-          reuseExistingServer: true,
-          timeout: 30_000,
-        },
+        ...(realtime
+          ? []
+          : [
+              {
+                // Records what the app publishes for the change channels, so a
+                // spec can assert a capability's keys left the server without
+                // the Supabase stack running on this machine.
+                command: "node scripts/broadcast-sink.mjs",
+                env: { BROADCAST_SINK_PORT: broadcastSinkPort },
+                url: `${broadcastSinkUrl}/health`,
+                reuseExistingServer: true,
+                timeout: 30_000,
+              },
+            ]),
         {
           // The app has one provider path: HTTP chat completions. The suite
           // points it at a scripted endpoint instead of shipping a fake model.
@@ -87,9 +105,14 @@ export default defineConfig({
             // the specs assert on the publication itself and never depend on a
             // Realtime container being up. `SUPABASE_URL` is read only for
             // this; the browser's stack address is NEXT_PUBLIC_SUPABASE_URL.
-            SUPABASE_URL: broadcastSinkUrl,
-            SUPABASE_SERVICE_ROLE_KEY: "scripted-service-role",
-            BROADCAST_SINK_URL: broadcastSinkUrl,
+            // A realtime run inherits the stack it was configured with.
+            ...(realtime
+              ? {}
+              : {
+                  SUPABASE_URL: broadcastSinkUrl,
+                  SUPABASE_SERVICE_ROLE_KEY: "scripted-service-role",
+                  BROADCAST_SINK_URL: broadcastSinkUrl,
+                }),
             // The approval specs need signed requests; a fixed test value is
             // enough because the scripted endpoint never leaves the machine.
             AI_TOOL_APPROVAL_SECRET:

@@ -74,13 +74,21 @@ HS256 against `JWT_SECRET`.
 A deployment without Realtime publishes nothing and warns once. Every page still
 renders from the database on navigation, and focus still refreshes it: the app
 is honest without a socket, rather than a stream of failed requests. That is also
-why the e2e suite runs without the stack.
+why the main e2e suite runs without the stack.
 
-The suite still asserts the publication: `scripts/broadcast-sink.mjs` stands in
-for the gateway's broadcast endpoint, and the live-update specs read it back, so
-a capability that stops publishing, or a topic that drifts from the one
-`realtime-rls.sql` authorizes, fails there. Delivery needs the real stack and is
-not covered by the suite.
+That suite asserts the publication: `scripts/broadcast-sink.mjs` stands in for the
+gateway's broadcast endpoint, and the live-update specs read it back, so a
+capability that stops publishing, or a topic that drifts from the one
+`realtime-rls.sql` authorizes, fails there.
+
+Delivery has its own run, because a sink cannot prove it: `pnpm test:e2e:realtime`
+starts no sink and expects a stack behind it (`pnpm db:up` plus
+`realtime-rls.sql`). `e2e/realtime.spec.ts` joins the private channel with a real
+socket, asserts the token route answered instead of `204`, and requires a second
+tab that never gained focus to re-read the page from the broadcast alone. The CI
+job `E2E (Realtime)` starts the same stack with `scripts/supabase-stack-env.mjs`
+and runs that suite, so the token route, the policy, the channel name and the
+publish are all covered by a check.
 
 ## Flow
 
@@ -115,6 +123,9 @@ still shows a person their own writes at once; only other tabs wait for focus.
 - Operating the stack now includes Realtime: the container, its two secrets in
   `supabase-project/.env`, the gateway routes, and `realtime-rls.sql` re-applied
   after a database reset.
+- Delivery is checked separately from the publication: the default suite cannot
+  fail when the socket stops working, so `pnpm test:e2e:realtime` and its CI job
+  exist for that half.
 
 ## Deferred
 

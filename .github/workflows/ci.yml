@@ -230,3 +230,69 @@ jobs:
             playwright-report
             test-results
           retention-days: 7
+
+  # The live-update design has two halves: a capability publishes its change
+  # keys, and a subscriber re-reads when they arrive. The E2E job above proves
+  # the publication, against a sink. This one starts the self-hosted stack and
+  # proves the delivery over a real Realtime socket, so a broken token route,
+  # RLS policy or channel name fails a check instead of passing on the focus
+  # fallback.
+  e2e-realtime:
+    name: E2E (Realtime)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4.4.0
+
+      - uses: pnpm/action-setup@v4.3.0
+
+      - uses: actions/setup-node@v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Writes supabase-project/.env for a fresh stack, then appends the
+      # matching app variables (DATABASE_URL, SUPABASE_*, JWT_SECRET) to the
+      # job. Both sides therefore agree on the secret the app signs tokens with.
+      - name: Write the stack's test configuration
+        run: node scripts/supabase-stack-env.mjs --app-env >> "$GITHUB_ENV"
+
+      # Only what the browser's change channels need: the database, Realtime and
+      # the gateway that fronts both. `--no-deps` keeps Studio out of the job.
+      - name: Start the Realtime stack
+        run: |
+          docker compose -f supabase-project/docker-compose.yml up -d --wait db realtime
+          docker compose -f supabase-project/docker-compose.yml up -d --wait --no-deps api-gw
+
+      - name: Authorize the change channels
+        run: |
+          docker exec -i supabase-db psql -U postgres -d agentic-whiteboard \
+            < supabase-project/utils/realtime-rls.sql
+
+      - name: Migrate the database
+        run: pnpm db:migrate
+
+      - name: Start the mail sink
+        run: pnpm test:e2e:smtp > /tmp/smtp-sink.log 2>&1 &
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run the realtime end-to-end test
+        env:
+          REALTIME_E2E: "1"
+        run: pnpm test:e2e:realtime
+
+      - name: Upload the report
+        if: failure()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: playwright-realtime-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
