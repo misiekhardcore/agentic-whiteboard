@@ -85,10 +85,15 @@ Delivery has its own run, because a sink cannot prove it: `pnpm test:e2e:realtim
 starts no sink and expects a stack behind it (`pnpm db:up` plus
 `realtime-rls.sql`). `e2e/realtime.spec.ts` joins the private channel with a real
 socket, asserts the token route answered instead of `204`, and requires a second
-tab that never gained focus to re-read the page from the broadcast alone. The CI
-job `E2E (Realtime)` starts the same stack with `scripts/supabase-stack-env.mjs`
-and runs that suite, so the token route, the policy, the channel name and the
-publish are all covered by a check.
+tab that never gained focus to re-read the page from the broadcast alone — once
+on the personal topic and once on an organization topic, where the change is
+asserted to arrive on `app:org:<id>` so members who did not act are included.
+The same spec mints a token for a person outside the organization and requires
+their join of that topic to be refused, with a member's join as the control. The
+CI job `E2E (Realtime)` starts the same stack with
+`scripts/supabase-stack-env.mjs` and runs that suite, so the token route, both
+branches of the policy, the channel names and the publish are all covered by a
+check.
 
 ## Flow
 
