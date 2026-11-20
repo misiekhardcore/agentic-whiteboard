@@ -127,26 +127,24 @@ Write the failing test before the production code, for every behaviour change.
 
 ## Project map
 
-| Path                 | Contents                                                                                                    |
-| -------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `app/`               | App Router routes, layouts, server actions, route handlers (`app/api`).                                     |
-| `lib/`               | One folder per bounded context; layers are folders inside a context. See below.                             |
-| `lib/capabilities/`  | The capability kernel: `define`, `invoke`, the human/route entry points, registry and thread presentations. |
-| `lib/identity/`      | Actor, session → active account, roles, better-auth adapter, pre-auth actions.                              |
-| `lib/organizations/` | Membership, slug rule, invitations, organization settings and their capabilities.                           |
-| `lib/workspace/`     | The reference context: status/contracts/forms, rules, access, queries, service, capabilities, actions.      |
-| `lib/doc/`           | The workspace's document surface: its contract and the scoped read; content arrives with the gateway.       |
-| `lib/canvas/`        | The workspace's canvas surface: its contract and the scoped read.                                           |
-| `lib/ai/`            | Providers, runtime (agent + instructions), thread (rules, store, allowance, turn, composer), tools adapter. |
-| `lib/billing/`       | Plans, entitlements, usage rules (pure), subscriptions, checkout, Stripe adapter.                           |
-| `lib/shared/`        | Routes, form-data reading and date formatting — the only genuinely shared primitives.                       |
-| `components/`        | Shared client UI grouped by area; `components/ui` are shadcn-style primitives.                              |
-| `lib/db/`            | Drizzle schema, connection, column helpers.                                                                 |
-| `drizzle/`           | Generated migrations — never hand-edit applied files.                                                       |
-| `e2e/`               | Playwright specs.                                                                                           |
-| `docs/architecture/` | Architecture records and decisions.                                                                         |
-| `scripts/`           | Local tooling (SMTP sink, etc.).                                                                            |
-| `.agents/skills/`    | Vendored skill docs for Supabase, Stripe, etc. Read the relevant `SKILL.md` before using that service.      |
+| Path                 | Contents                                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `app/`               | App Router routes, layouts, server actions, route handlers (`app/api`).                                         |
+| `lib/`               | One folder per bounded context; layers are folders inside a context. See below.                                 |
+| `lib/capabilities/`  | The capability kernel: `define`, `invoke`, the human/route entry points, registry and thread presentations.     |
+| `lib/identity/`      | Actor, session → active account, roles, better-auth adapter, pre-auth actions.                                  |
+| `lib/organizations/` | Membership, slug rule, invitations, organization settings and their capabilities.                               |
+| `lib/workspace/`     | The reference context: status/contracts/forms, rules, access, queries, surfaces, recent, capabilities, actions. |
+| `lib/ai/`            | Providers, runtime (agent + instructions), thread (rules, store, allowance, turn, composer), tools adapter.     |
+| `lib/billing/`       | Plans, entitlements, usage rules (pure), subscriptions, checkout, Stripe adapter.                               |
+| `lib/shared/`        | Routes, form-data reading and date formatting — the only genuinely shared primitives.                           |
+| `components/`        | Shared client UI grouped by area; `components/ui` are shadcn-style primitives.                                  |
+| `lib/db/`            | Drizzle schema, connection, column helpers.                                                                     |
+| `drizzle/`           | Generated migrations — never hand-edit applied files.                                                           |
+| `e2e/`               | Playwright specs.                                                                                               |
+| `docs/architecture/` | Architecture records and decisions.                                                                             |
+| `scripts/`           | Local tooling (SMTP sink, etc.).                                                                                |
+| `.agents/skills/`    | Vendored skill docs for Supabase, Stripe, etc. Read the relevant `SKILL.md` before using that service.          |
 
 ## Commands
 

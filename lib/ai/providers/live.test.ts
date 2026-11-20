@@ -2,7 +2,7 @@ import { generateText, jsonSchema, tool } from "ai";
 import { config as loadEnv } from "dotenv";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { type AiConfig, getAiConfig, getLanguageModel } from "@/lib/ai/providers";
+import { type AiConfig, getLanguageModel, resolveAiConfig } from "@/lib/ai/providers";
 import { createAgent } from "@/lib/ai/runtime/agent";
 
 /**
@@ -19,7 +19,7 @@ describe.skipIf(!live)("live AI provider", () => {
 
   beforeAll(async () => {
     loadEnv({ quiet: true });
-    config = getAiConfig();
+    config = resolveAiConfig();
 
     try {
       await fetch(`${config.baseURL}/models`);

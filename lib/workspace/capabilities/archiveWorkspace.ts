@@ -4,7 +4,6 @@ import { defineCapability } from "@/lib/capabilities/define";
 import { CHANGE_KEYS, workspaceChangeKey } from "@/lib/shared/changes";
 
 import { authorizeWorkspace } from "../access";
-import { presentArchiveWorkspace } from "../presentation";
 import { workspaceIdSchema } from "../rules";
 import { archiveWorkspaceWith } from "../service";
 
@@ -30,5 +29,4 @@ export const archiveWorkspace = defineCapability({
     const result = await archiveWorkspaceWith(access, { signal });
     return linked(result, NOT_FOUND);
   },
-  present: presentArchiveWorkspace,
 });

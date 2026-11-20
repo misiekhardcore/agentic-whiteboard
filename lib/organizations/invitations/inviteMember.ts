@@ -1,9 +1,7 @@
 import { type CapabilityFailure, failure } from "@/lib/capabilities/define";
 import { auth } from "@/lib/identity/better-auth";
 
-import { organizationErrorMessage } from "../errors";
-
-import { isManager } from "./internals";
+import { managedTeamMutation } from "./managedTeamMutation";
 
 export async function inviteMember({
   userId,
@@ -20,18 +18,17 @@ export async function inviteMember({
 }): Promise<CapabilityFailure | null> {
   if (!email.trim()) return failure("Enter an email address.");
 
-  if (!(await isManager(userId, organizationId))) {
-    return failure("Only organization owners and admins can invite people.");
-  }
-
-  try {
-    await auth.api.createInvitation({
-      body: { email: email.trim(), role, organizationId },
-      headers,
-    });
-  } catch (error) {
-    return failure(organizationErrorMessage(error, "Could not send the invitation."));
-  }
-
-  return null;
+  return managedTeamMutation(
+    { userId, organizationId },
+    {
+      refusal: "Only organization owners and admins can invite people.",
+      fallback: "Could not send the invitation.",
+      log: "[organizations] could not invite a member:",
+      run: () =>
+        auth.api.createInvitation({
+          body: { email: email.trim(), role, organizationId },
+          headers,
+        }),
+    },
+  );
 }

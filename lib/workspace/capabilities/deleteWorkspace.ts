@@ -4,7 +4,6 @@ import { defineCapability } from "@/lib/capabilities/define";
 import { CHANGE_KEYS, workspaceChangeKey } from "@/lib/shared/changes";
 
 import { authorizeWorkspace } from "../access";
-import { presentDeleteWorkspace } from "../presentation";
 import { workspaceIdSchema } from "../rules";
 import { deleteWorkspaceWith } from "../service";
 
@@ -30,5 +29,4 @@ export const deleteWorkspace = defineCapability({
     const result = await deleteWorkspaceWith(access, { signal });
     return linked(result, "Archive the workspace first, then delete it permanently.");
   },
-  present: presentDeleteWorkspace,
 });

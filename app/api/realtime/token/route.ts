@@ -1,6 +1,6 @@
 import { getSessionAccount } from "@/lib/identity/account";
 import { mintRealtimeToken } from "@/lib/identity/realtimeToken";
-import { organizationChangesTopic, personChangesTopic } from "@/lib/shared/changes";
+import { changeChannels } from "@/lib/shared/changes";
 
 /**
  * What the browser needs to join this session's change channels: the stack's
@@ -29,17 +29,17 @@ export async function GET(): Promise<Response> {
   }
 
   const userId = account.session.user.id;
-  const organizationId = account.activeOrganizationId;
+  const channels = changeChannels({
+    userId,
+    organizationId: account.activeOrganizationId,
+  });
 
   return Response.json(
     {
       url,
       key,
       token: mintRealtimeToken({ userId, secret }),
-      topics: [
-        personChangesTopic(userId),
-        ...(organizationId ? [organizationChangesTopic(organizationId)] : []),
-      ],
+      topics: [channels.person, ...(channels.organization ? [channels.organization] : [])],
     },
     { headers: { "cache-control": "no-store" } },
   );

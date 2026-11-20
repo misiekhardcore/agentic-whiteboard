@@ -53,13 +53,13 @@ is a defect.
 
 ## Content surfaces
 
-| Term            | Definition                                                                                                                                              | Owner                   |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| content surface | One of a workspace's two content containers, `doc` or `canvas`. At most one of each, and neither has a name, status or description of its own.          | `lib/doc`, `lib/canvas` |
-| document        | The workspace's text surface. Its Yjs state is authoritative and the stored content is that state's projection.                                         | `lib/doc`               |
-| canvas          | The workspace's shapes surface.                                                                                                                         | `lib/canvas`            |
-| snapshot        | A read-only view of a live surface: workspace, surface, revision marker, content. Never raw Yjs bytes.                                                  | `lib/collab`            |
-| mutation        | One semantic intent such as adding a shape, applied in a single Yjs transaction. Never a whole-document replacement, so concurrent human edits survive. | `lib/collab`            |
+| Term            | Definition                                                                                                                                              | Owner           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| content surface | One of a workspace's two content containers, `doc` or `canvas`. At most one of each, and neither has a name, status or description of its own.          | `lib/workspace` |
+| document        | The workspace's text surface. Its Yjs state is authoritative and the stored content is that state's projection.                                         | `lib/collab`    |
+| canvas          | The workspace's shapes surface.                                                                                                                         | `lib/collab`    |
+| snapshot        | A read-only view of a live surface: workspace, surface, revision marker, content. Never raw Yjs bytes.                                                  | `lib/collab`    |
+| mutation        | One semantic intent such as adding a shape, applied in a single Yjs transaction. Never a whole-document replacement, so concurrent human edits survive. | `lib/collab`    |
 
 ## Billing and plans
 

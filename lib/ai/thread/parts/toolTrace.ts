@@ -1,4 +1,4 @@
-import { CLIENT_TOOL_NAMES, toolPresentations } from "@/lib/capabilities/presentations";
+import { toolCatalogue } from "@/lib/capabilities/presentations";
 
 import type { ToolUiPart } from "./internals";
 import { humaniseToolName, refusal, toolNameOf } from "./internals";
@@ -10,9 +10,9 @@ import type { ToolTrace, ToolTraceStatus } from "./types";
  */
 export function toolTrace(part: ToolUiPart): ToolTrace {
   const name = toolNameOf(part);
-  const presentation = toolPresentations[name];
+  const line = toolCatalogue[name];
   const input = "input" in part ? part.input : undefined;
-  const client = CLIENT_TOOL_NAMES.includes(name);
+  const client = line?.client === true;
 
   const output = part.state === "output-available" ? part.output : undefined;
   const refused = refusal(output);
@@ -50,7 +50,7 @@ export function toolTrace(part: ToolUiPart): ToolTrace {
     status = "running";
   }
 
-  const shown = presentation ? presentation(input) : undefined;
+  const shown = line ? line.present(input) : undefined;
 
   return {
     toolCallId: part.toolCallId,

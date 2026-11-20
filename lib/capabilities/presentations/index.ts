@@ -1,1 +1,1 @@
-export { CLIENT_TOOL_NAMES, toolPresentations } from "./constants";
+export { toolCatalogue } from "./toolCatalogue";

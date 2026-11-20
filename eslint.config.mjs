@@ -140,22 +140,6 @@ export default defineConfig([
               message: "lib is the domain and the application layer; it must not import the UI.",
             },
             {
-              // A surface is reached through its workspace, which owns the
-              // account scope and the archive flag. Depending on another
-              // context here would recreate the cycle the split removed.
-              target: ["./lib/doc", "./lib/canvas"],
-              from: [
-                "./lib/workspace",
-                "./lib/identity",
-                "./lib/organizations",
-                "./lib/ai",
-                "./lib/billing",
-                "./lib/collab",
-              ],
-              message:
-                "A content surface is reached through its workspace; it never depends on another context.",
-            },
-            {
               // The kernel's core declares, runs and describes a capability by
               // naming the actor contract and nothing else. `except` resolves
               // against the zone's `from`, so "./actor" allows exactly
@@ -167,8 +151,6 @@ export default defineConfig([
               ],
               from: [
                 "./lib/workspace",
-                "./lib/doc",
-                "./lib/canvas",
                 "./lib/organizations",
                 "./lib/ai",
                 "./lib/billing",

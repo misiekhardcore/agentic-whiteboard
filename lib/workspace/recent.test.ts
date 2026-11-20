@@ -1,16 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
 /**
- * The account's workspaces come from one query; the two surface contexts are
- * mocked so the test asserts *what the read model asks them for* — the account's
- * workspace ids — instead of re-testing their selects.
+ * The account's workspaces come from one query and its surfaces from one read;
+ * the surface read is mocked so the test asserts *what the read model asks it
+ * for* — the account's workspace ids — instead of re-testing its selects.
  */
 const dbState = vi.hoisted(() => ({ rows: [] as unknown[][] }));
 
-const surfaceCalls = vi.hoisted(() => ({
-  docs: [] as string[][],
-  canvases: [] as string[][],
-}));
+const surfaceCalls = vi.hoisted(() => ({ workspaceIds: [] as string[][] }));
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -24,16 +21,9 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-vi.mock("@/lib/doc/queries", () => ({
-  listDocSurfaces: (workspaceIds: string[]) => {
-    surfaceCalls.docs.push(workspaceIds);
-    return Promise.resolve([]);
-  },
-}));
-
-vi.mock("@/lib/canvas/queries", () => ({
-  listCanvasSurfaces: (workspaceIds: string[]) => {
-    surfaceCalls.canvases.push(workspaceIds);
+vi.mock("@/lib/workspace/surfaces", () => ({
+  listContentSurfaces: (workspaceIds: string[]) => {
+    surfaceCalls.workspaceIds.push(workspaceIds);
     return Promise.resolve([]);
   },
 }));
@@ -52,11 +42,19 @@ describe("composing the dashboard's latest items", () => {
   it("presents a surface under the workspace that owns it", () => {
     const items = composeRecentItems({
       workspaceRows: [roadmap],
-      docSurfaces: [
-        { id: "doc_1", workspaceId: "ws_1", updatedAt: new Date("2026-11-03T00:00:00Z") },
-      ],
-      canvasSurfaces: [
-        { id: "canvas_1", workspaceId: "ws_1", updatedAt: new Date("2026-11-02T00:00:00Z") },
+      surfaces: [
+        {
+          id: "doc_1",
+          workspaceId: "ws_1",
+          surface: "doc",
+          updatedAt: new Date("2026-11-03T00:00:00Z"),
+        },
+        {
+          id: "canvas_1",
+          workspaceId: "ws_1",
+          surface: "canvas",
+          updatedAt: new Date("2026-11-02T00:00:00Z"),
+        },
       ],
       limit: 5,
     });
@@ -83,9 +81,8 @@ describe("composing the dashboard's latest items", () => {
     const items = composeRecentItems({
       workspaceRows: [roadmap],
       // Archived while the page was rendering: the workspace list has already
-      // excluded it, so its surfaces must not reappear on their own.
-      docSurfaces: [{ id: "doc_9", workspaceId: "ws_gone", updatedAt: new Date() }],
-      canvasSurfaces: [],
+      // excluded it, so its surface must not reappear on its own.
+      surfaces: [{ id: "doc_9", workspaceId: "ws_gone", surface: "doc", updatedAt: new Date() }],
       limit: 5,
     });
 
@@ -99,12 +96,7 @@ describe("composing the dashboard's latest items", () => {
       updatedAt: new Date(2026, 10, index + 1),
     }));
 
-    const items = composeRecentItems({
-      workspaceRows,
-      docSurfaces: [],
-      canvasSurfaces: [],
-      limit: 5,
-    });
+    const items = composeRecentItems({ workspaceRows, surfaces: [], limit: 5 });
 
     expect(items).toHaveLength(5);
     expect(items[0]?.id).toBe("ws_5");
@@ -112,26 +104,22 @@ describe("composing the dashboard's latest items", () => {
 });
 
 describe("reading the latest items for an account", () => {
-  it("asks the surface contexts for the account's workspace ids", async () => {
+  it("asks for the account's workspace ids", async () => {
     dbState.rows.length = 0;
     dbState.rows.push([roadmap]);
-    surfaceCalls.docs.length = 0;
-    surfaceCalls.canvases.length = 0;
+    surfaceCalls.workspaceIds.length = 0;
 
     await listRecentWorkspaceItems("user_1", null, 5);
 
-    expect(surfaceCalls.docs).toEqual([["ws_1"]]);
-    expect(surfaceCalls.canvases).toEqual([["ws_1"]]);
+    expect(surfaceCalls.workspaceIds).toEqual([["ws_1"]]);
   });
 
   it("does not ask for surfaces when the account has no workspaces", async () => {
     dbState.rows.length = 0;
     dbState.rows.push([]);
-    surfaceCalls.docs.length = 0;
-    surfaceCalls.canvases.length = 0;
+    surfaceCalls.workspaceIds.length = 0;
 
     await expect(listRecentWorkspaceItems("user_1", null, 5)).resolves.toEqual([]);
-    expect(surfaceCalls.docs).toEqual([]);
-    expect(surfaceCalls.canvases).toEqual([]);
+    expect(surfaceCalls.workspaceIds).toEqual([]);
   });
 });

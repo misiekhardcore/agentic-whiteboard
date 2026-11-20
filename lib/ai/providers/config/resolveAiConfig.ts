@@ -1,3 +1,4 @@
+import { readValue } from "../readValue";
 import { resolveEndpoint } from "../resolveEndpoint";
 
 import { AiConfigurationError } from "./AiConfigurationError";
@@ -5,11 +6,6 @@ import type { AiConfig, AiEnvironment } from "./types";
 
 const DEFAULT_MAX_STEPS = 20;
 const DEFAULT_MAX_RETRIES = 2;
-
-function readValue(value: string | undefined): string | undefined {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
-}
 
 function readInteger(
   name: string,

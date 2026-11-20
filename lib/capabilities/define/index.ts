@@ -16,4 +16,3 @@ export { failure } from "./failure";
 export { success } from "./success";
 export { defineCapability } from "./defineCapability";
 export { defineClientCapability } from "./defineClientCapability";
-export type { ToolPresentation } from "@/lib/capabilities/presentation";

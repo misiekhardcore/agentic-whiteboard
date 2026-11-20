@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAgent } from "@/lib/ai/runtime/agent";
 
-import { getAiConfig } from "./config";
+import { resolveAiConfig } from "./config";
 import { getLanguageModel } from "./getLanguageModel";
 
 type ChatMessage = {
@@ -128,7 +128,7 @@ describe("the configured chat-completions endpoint", () => {
     closeServer = close;
     vi.stubEnv("AI_BASE_URL", baseURL);
 
-    const config = getAiConfig();
+    const config = resolveAiConfig();
     expect(config).toMatchObject({
       baseURL,
       model: "test-model",

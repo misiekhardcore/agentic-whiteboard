@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { agentPrompts } from "@/lib/db/schema";
 
 import { isUniqueViolation } from "./internals";
+import { promptStatusColumns } from "./transition";
 import type { ResumePromptResult } from "./types";
 
 /**
@@ -16,7 +17,10 @@ import type { ResumePromptResult } from "./types";
  */
 export async function resumePrompt(promptId: string): Promise<ResumePromptResult> {
   try {
-    await db.update(agentPrompts).set({ status: "RUNNING" }).where(eq(agentPrompts.id, promptId));
+    await db
+      .update(agentPrompts)
+      .set(promptStatusColumns({ transition: "resume" }))
+      .where(eq(agentPrompts.id, promptId));
     return "resumed";
   } catch (error) {
     if (isUniqueViolation(error)) return "busy";

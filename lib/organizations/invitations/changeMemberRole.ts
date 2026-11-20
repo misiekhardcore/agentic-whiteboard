@@ -1,10 +1,9 @@
 import { type CapabilityFailure, failure } from "@/lib/capabilities/define";
 import { auth } from "@/lib/identity/better-auth";
 
-import { organizationErrorMessage } from "../errors";
 import { getMemberOfOrganization } from "../queries";
 
-import { isManager } from "./internals";
+import { managedTeamMutation } from "./managedTeamMutation";
 
 /**
  * Owners and admins move people between member and admin. The owner's own role
@@ -24,21 +23,21 @@ export async function changeMemberRole({
   role: "admin" | "member";
   headers: Headers;
 }): Promise<CapabilityFailure | null> {
-  if (!(await isManager(userId, organizationId))) {
-    return failure("Only organization owners and admins can change roles.");
-  }
-
-  const target = await getMemberOfOrganization(organizationId, memberId);
-  if (!target) return failure("That person is no longer a member.");
-  if (target.role === "owner") {
-    return failure("The organization owner's role cannot be changed.");
-  }
-
-  try {
-    await auth.api.updateMemberRole({ body: { memberId, role, organizationId }, headers });
-  } catch (error) {
-    return failure(organizationErrorMessage(error, "Could not change that role. Try again."));
-  }
-
-  return null;
+  return managedTeamMutation(
+    { userId, organizationId },
+    {
+      refusal: "Only organization owners and admins can change roles.",
+      fallback: "Could not change that role. Try again.",
+      log: "[organizations] could not change member role:",
+      prepare: async () => {
+        const target = await getMemberOfOrganization(organizationId, memberId);
+        if (!target) return failure("That person is no longer a member.");
+        if (target.role === "owner") {
+          return failure("The organization owner's role cannot be changed.");
+        }
+        return null;
+      },
+      run: () => auth.api.updateMemberRole({ body: { memberId, role, organizationId }, headers }),
+    },
+  );
 }

@@ -1,7 +1,5 @@
-import type { CanvasSurface } from "@/lib/canvas/contracts";
-import type { DocSurface } from "@/lib/doc/contracts";
-
-import { type AccountWorkspace } from "../queries";
+import type { AccountWorkspace } from "../queries";
+import type { ContentSurface } from "../surfaces";
 
 import { surfaceItems } from "./internals";
 import { mergeRecentItems } from "./mergeRecentItems";
@@ -10,13 +8,11 @@ import type { RecentWorkspaceItem } from "./types";
 /** Pure composition: the workspace rows and their surfaces, as one list. */
 export function composeRecentItems({
   workspaceRows,
-  docSurfaces,
-  canvasSurfaces,
+  surfaces,
   limit,
 }: {
   workspaceRows: AccountWorkspace[];
-  docSurfaces: DocSurface[];
-  canvasSurfaces: CanvasSurface[];
+  surfaces: ContentSurface[];
   limit: number;
 }): RecentWorkspaceItem[] {
   const workspaceById = new Map(workspaceRows.map((workspace) => [workspace.id, workspace]));
@@ -32,8 +28,7 @@ export function composeRecentItems({
       status: workspace.status,
       updatedAt: workspace.updatedAt,
     })),
-    ...surfaceItems("doc", docSurfaces, workspaceById),
-    ...surfaceItems("canvas", canvasSurfaces, workspaceById),
+    ...surfaceItems(surfaces, workspaceById),
   ];
 
   return mergeRecentItems(items, limit);

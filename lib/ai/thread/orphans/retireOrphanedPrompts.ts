@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { agentPrompts } from "@/lib/db/schema";
 
 import { streamingPromptIds } from "../live";
+import { promptStatusColumns } from "../prompts/transition";
 
 import { deadThreadPrompts } from "./deadThreadPrompts";
 import { ORPHANED_PROMPT_ERROR } from "./internals";
@@ -30,6 +31,6 @@ export async function retireOrphanedPrompts(userId: string): Promise<void> {
 
   await db
     .update(agentPrompts)
-    .set({ status: "FAILED", error: ORPHANED_PROMPT_ERROR, finishedAt: new Date() })
+    .set(promptStatusColumns({ transition: "retire", error: ORPHANED_PROMPT_ERROR }))
     .where(inArray(agentPrompts.id, orphaned));
 }

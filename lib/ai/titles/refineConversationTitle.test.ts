@@ -8,7 +8,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 const mocks = vi.hoisted(() => ({
   conversation: null as { titleGeneratedAt: Date | null } | null,
-  messages: [] as { content: unknown }[],
+  prompts: [{ id: "prompt_1", createdAt: new Date("2026-11-03T10:00:00Z"), status: "COMPLETED" }],
+  messages: [] as { id: string; promptId: string; role: string; content: unknown }[],
   /** The rows the conditional update matched; empty when another send won. */
   written: [{ id: "conversation_1" }] as { id: string }[],
   requested: [] as string[],
@@ -29,15 +30,16 @@ vi.mock("@/lib/db", async () => {
     db: {
       select: () => ({
         from: (table: unknown) => {
-          if (getTableName(table as never) === "agentConversation") {
+          const name = getTableName(table as never);
+
+          if (name === "agentConversation") {
             return {
               where: () => rows(mocks.conversation ? [mocks.conversation] : []),
             };
           }
 
-          return {
-            innerJoin: () => ({ where: () => ({ orderBy: () => rows(mocks.messages) }) }),
-          };
+          // The live-turns read asks the prompt table first, then its messages.
+          return { where: () => rows(name === "agentPrompt" ? mocks.prompts : mocks.messages) };
         },
       }),
       update: (table: unknown) => ({
@@ -65,7 +67,17 @@ import { publishChanges } from "@/lib/capabilities/changes";
 
 import { refineConversationTitle } from "./refineConversationTitle";
 
-const aPrompt = (text: string) => ({ content: { parts: [{ type: "text", text }] } });
+let messageCount = 0;
+const aPrompt = (text: string) => {
+  messageCount += 1;
+
+  return {
+    id: `message_${messageCount}`,
+    promptId: "prompt_1",
+    role: "USER",
+    content: { parts: [{ type: "text", text }] },
+  };
+};
 
 beforeEach(() => {
   mocks.conversation = { titleGeneratedAt: null };
@@ -106,7 +118,12 @@ describe("naming a conversation", () => {
 
   it("spends no model call on a thread with no readable text", async () => {
     mocks.messages = [
-      { content: { parts: [{ type: "tool-call", toolName: "createWorkspace" }] } },
+      {
+        id: "message_tool",
+        promptId: "prompt_1",
+        role: "USER",
+        content: { parts: [{ type: "tool-call", toolName: "createWorkspace" }] },
+      },
       aPrompt("  "),
     ];
 

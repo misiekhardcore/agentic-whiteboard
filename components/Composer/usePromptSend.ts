@@ -3,7 +3,12 @@
 import type { KeyboardEvent, SubmitEvent } from "react";
 import { useState } from "react";
 
-import { composerKeyIntent, submittedPrompt } from "@/lib/ai/thread/composer";
+import {
+  applyComposerIntent,
+  type ComposerField,
+  composerKeyIntent,
+  submittedPrompt,
+} from "@/lib/ai/thread/composer";
 import { threadText } from "@/lib/ai/thread/parts";
 import { lastUserMessage } from "@/lib/ai/thread/rules";
 
@@ -18,15 +23,15 @@ export function usePromptSend({
   session,
   field,
   fieldValue,
-  closeDictation,
+  composerField,
   initialCanRetry,
 }: {
   session: AgentSession;
   field: ReturnType<typeof useDraftField>;
   /** The textarea's current text, which is the live transcript while dictating. */
   fieldValue: string;
-  /** End a live dictation session so it cannot commit over the send. */
-  closeDictation: () => void;
+  /** What an intent does to the field, dictation included. */
+  composerField: ComposerField;
   /** The newest stored prompt failed, so it can be retried for free. */
   initialCanRetry: boolean;
 }) {
@@ -47,9 +52,9 @@ export function usePromptSend({
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    // Sending while dictating keeps the words heard so far and closes the
-    // session; nothing is left listening behind the reply.
-    closeDictation();
+    // The words read so far are kept and the session is closed: nothing is left
+    // listening behind the reply.
+    applyComposerIntent({ intent: "send" }, composerField);
     if (!promptToSend) return;
 
     const editId = field.editing?.messageId ?? null;

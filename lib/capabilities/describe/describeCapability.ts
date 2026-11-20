@@ -6,8 +6,6 @@ import {
 } from "../define";
 import { invoke } from "../invoke";
 
-import { presentation } from "./internals";
-
 export function describeCapability<I, T, R>(capability: Capability<I, T, R>): CapabilityDescriptor {
   return {
     name: capability.name,
@@ -15,7 +13,6 @@ export function describeCapability<I, T, R>(capability: Capability<I, T, R>): Ca
     inputSchema: capability.input,
     callers: capability.callers,
     approval: capability.approval === "always",
-    present: presentation(capability.present),
     invoke: (ctx: CapabilityContext, raw: unknown): Promise<CapabilityOutput<unknown>> =>
       invoke(capability, ctx, raw),
   };

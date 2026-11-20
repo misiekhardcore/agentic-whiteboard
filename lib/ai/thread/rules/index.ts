@@ -1,3 +1,9 @@
+/**
+ * Rules for the dashboard's prompt thread. Pure, so the route, the persistence
+ * adapter and the composer share one definition of a sendable prompt, one
+ * mapping between stored messages and AI SDK messages, and one answer to "is
+ * this a new prompt or the answer to one the agent is waiting on?".
+ */
 export type {
   ConversationHistoryEntry,
   DashboardConversation,
@@ -9,6 +15,7 @@ export type {
   StoredPromptMessage,
 } from "./types";
 export { CONVERSATION_HISTORY_LIMIT, PROMPT_MAX_LENGTH } from "./constants";
+export { messageText } from "./messageText";
 export { storedParts } from "./storedParts";
 export { storedText } from "./storedText";
 export { promptProblem } from "./promptProblem";

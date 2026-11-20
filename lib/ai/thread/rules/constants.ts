@@ -5,12 +5,5 @@
  */
 export const CONVERSATION_HISTORY_LIMIT = 200;
 
-/** How long a conversation's label may be before it is cut. */
-
-/**
- * Rules for the dashboard's prompt thread. Pure, so the route, the persistence
- * adapter and the composer can share one definition of a sendable prompt, one
- * mapping between stored messages and AI SDK messages, and one answer to "is
- * this a new prompt or the answer to one the agent is waiting on?".
- */
+/** How long a prompt may be before it is refused. */
 export const PROMPT_MAX_LENGTH = 4000;

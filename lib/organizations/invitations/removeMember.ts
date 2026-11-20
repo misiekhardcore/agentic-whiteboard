@@ -1,10 +1,8 @@
 import { syncOrganizationSeats } from "@/lib/billing/subscriptions";
-import { type CapabilityFailure, failure } from "@/lib/capabilities/define";
+import { type CapabilityFailure } from "@/lib/capabilities/define";
 import { auth } from "@/lib/identity/better-auth";
 
-import { organizationErrorMessage } from "../errors";
-
-import { isManager } from "./internals";
+import { managedTeamMutation } from "./managedTeamMutation";
 
 export async function removeMember({
   userId,
@@ -17,17 +15,19 @@ export async function removeMember({
   memberId: string;
   headers: Headers;
 }): Promise<CapabilityFailure | null> {
-  if (!(await isManager(userId, organizationId))) {
-    return failure("You cannot remove that member.");
-  }
-
-  try {
-    await auth.api.removeMember({ body: { memberIdOrEmail: memberId, organizationId }, headers });
-    await syncOrganizationSeats(organizationId);
-  } catch (error) {
-    console.error("[organizations] could not remove member:", error);
-    return failure(organizationErrorMessage(error, "Could not remove that member."));
-  }
-
-  return null;
+  return managedTeamMutation(
+    { userId, organizationId },
+    {
+      refusal: "You cannot remove that member.",
+      fallback: "Could not remove that member.",
+      log: "[organizations] could not remove member:",
+      run: async () => {
+        await auth.api.removeMember({
+          body: { memberIdOrEmail: memberId, organizationId },
+          headers,
+        });
+        await syncOrganizationSeats(organizationId);
+      },
+    },
+  );
 }

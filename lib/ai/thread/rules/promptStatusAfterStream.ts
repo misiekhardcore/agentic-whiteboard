@@ -1,4 +1,4 @@
-import type { AgentPromptStatus } from "@/lib/collab/contracts";
+import type { PromptEnding } from "../prompts/transition";
 
 import type { PromptStreamOutcome } from "./types";
 
@@ -12,7 +12,7 @@ export function promptStatusAfterStream({
   isCancelled,
   failed,
   awaitingApproval,
-}: PromptStreamOutcome): AgentPromptStatus {
+}: PromptStreamOutcome): PromptEnding {
   if (failed) return "FAILED";
   if (isAborted || isCancelled) return "CANCELLED";
   if (awaitingApproval) return "AWAITING_APPROVAL";

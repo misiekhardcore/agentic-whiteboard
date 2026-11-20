@@ -1,10 +1,9 @@
 import { type CapabilityFailure, failure } from "@/lib/capabilities/define";
 import { auth } from "@/lib/identity/better-auth";
 
-import { organizationErrorMessage } from "../errors";
 import { getInvitationOrganization } from "../queries";
 
-import { isManager } from "./internals";
+import { managedTeamMutation } from "./managedTeamMutation";
 
 export async function cancelInvitation({
   userId,
@@ -15,19 +14,17 @@ export async function cancelInvitation({
   invitationId: string;
   headers: Headers;
 }): Promise<CapabilityFailure | null> {
+  // The invitation names the organization to gate on, so it is read first.
   const invitation = await getInvitationOrganization(invitationId);
   if (!invitation) return failure("That invitation no longer exists.");
 
-  if (!(await isManager(userId, invitation.organizationId))) {
-    return failure("You cannot cancel that invitation.");
-  }
-
-  try {
-    await auth.api.cancelInvitation({ body: { invitationId }, headers });
-  } catch (error) {
-    console.error("[organizations] could not cancel invitation:", error);
-    return failure(organizationErrorMessage(error, "Could not cancel that invitation."));
-  }
-
-  return null;
+  return managedTeamMutation(
+    { userId, organizationId: invitation.organizationId },
+    {
+      refusal: "You cannot cancel that invitation.",
+      fallback: "Could not cancel that invitation.",
+      log: "[organizations] could not cancel invitation:",
+      run: () => auth.api.cancelInvitation({ body: { invitationId }, headers }),
+    },
+  );
 }

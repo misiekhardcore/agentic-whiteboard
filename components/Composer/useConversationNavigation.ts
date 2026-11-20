@@ -6,10 +6,10 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { branchConversationAction } from "@/lib/ai/actions";
+import { applyComposerIntent, type ComposerField } from "@/lib/ai/thread/composer";
 import { routes } from "@/lib/shared/routes";
 
 import type { AgentSession } from "./useAgentSession";
-import type { useDraftField } from "./useDraftField";
 
 /**
  * Moving between conversations: copying the thread through a reply into a new
@@ -18,17 +18,13 @@ import type { useDraftField } from "./useDraftField";
 export function useConversationNavigation({
   conversationId,
   session,
-  field,
-  closeDictation,
-  speech,
+  composerField,
   resetRetry,
 }: {
   conversationId: string;
   session: AgentSession;
-  field: ReturnType<typeof useDraftField>;
-  /** End a live dictation session so it cannot commit over the navigation. */
-  closeDictation: () => void;
-  speech: { cancel: () => void };
+  /** What an intent does to the field, dictation included. */
+  composerField: ComposerField;
   /** A fresh conversation has nothing stored to retry. */
   resetRetry: () => void;
 }) {
@@ -44,7 +40,7 @@ export function useConversationNavigation({
    */
   function branchFrom(message: UIMessage) {
     if (session.isBusy || branching) return;
-    closeDictation();
+    applyComposerIntent({ intent: "branch" }, composerField);
 
     setBranching(message.id);
     startTransition(async () => {
@@ -69,10 +65,8 @@ export function useConversationNavigation({
    */
   function startNewConversation() {
     if (session.isBusy) return;
-    closeDictation();
-    speech.cancel();
+    applyComposerIntent({ intent: "new-conversation" }, composerField);
 
-    field.clear();
     session.clearFailure();
     resetRetry();
     router.push(routes.dashboardConversation(crypto.randomUUID()));

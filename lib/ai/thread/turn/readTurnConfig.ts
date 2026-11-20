@@ -1,10 +1,9 @@
-import { AiConfigurationError, getAiConfig } from "@/lib/ai/providers/config";
+import { type AiConfig, AiConfigurationError, resolveAiConfig } from "@/lib/ai/providers/config";
 
 import { jsonError } from "./internals/jsonError";
-import { notConfigured } from "./internals/notConfigured";
 import type { TurnFailure } from "./internals/types";
 
-export type TurnConfig = ReturnType<typeof getAiConfig>;
+export type TurnConfig = AiConfig;
 
 /**
  * The provider this turn runs on. A missing or incomplete configuration is a
@@ -13,10 +12,13 @@ export type TurnConfig = ReturnType<typeof getAiConfig>;
 export function readTurnConfig(): TurnConfig | TurnFailure {
   let config: TurnConfig;
   try {
-    config = getAiConfig();
+    config = resolveAiConfig();
   } catch (error) {
     if (!(error instanceof AiConfigurationError)) throw error;
-    return { error: jsonError(notConfigured(error.message), 503) };
+
+    // The message names the setting to fix, so the operator is not sent looking
+    // at AI_MODEL when the real problem is the approval secret.
+    return { error: jsonError(`The agent is not configured yet. ${error.message}`, 503) };
   }
 
   return config;
