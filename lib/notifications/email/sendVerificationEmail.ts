@@ -14,7 +14,7 @@ export async function sendVerificationEmail({
     to: user.email,
     subject: "Confirm your email address",
     heading: `Welcome, ${name}`,
-    intro: "Confirm your email address to finish setting up your Agentic Whiteboard account.",
+    intro: "Confirm your email address to finish setting up your WorkspAIce account.",
     action: "Confirm email",
     url,
     note: "This link expires in one hour. If you did not create an account, you can ignore this email.",

@@ -14,7 +14,7 @@ export async function sendPasswordResetEmail({
     to: user.email,
     subject: "Reset your password",
     heading: `Reset your password, ${name}`,
-    intro: "Use the button below to choose a new password for your Agentic Whiteboard account.",
+    intro: "Use the button below to choose a new password for your WorkspAIce account.",
     action: "Choose a new password",
     url,
     note: "This link expires in one hour and can be used once. If you did not ask for a reset, you can ignore this email.",

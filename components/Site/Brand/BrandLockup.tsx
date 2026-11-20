@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 import { BrandMark } from "./BrandMark";
+import { BrandWordmark } from "./BrandWordmark";
 
 export function BrandLockup({
   href,
@@ -18,11 +19,7 @@ export function BrandLockup({
   const content = (
     <>
       <BrandMark className={markClassName} />
-      <span
-        className={cn("font-display font-semibold tracking-tight text-foreground", textClassName)}
-      >
-        Agentic Whiteboard
-      </span>
+      <BrandWordmark className={textClassName} />
     </>
   );
 

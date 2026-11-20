@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@konopskidev/ui/components/card";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -23,6 +24,12 @@ import {
   restoreWorkspaceAction,
 } from "@/lib/workspace/actions";
 import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace/status";
+
+/** The id is never echoed into a title, and the route stays out of search. */
+export const metadata: Metadata = {
+  title: "Workspace",
+  robots: { index: false, follow: false },
+};
 
 // The id comes from the URL and access depends on the session, so this route
 // renders per request.

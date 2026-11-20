@@ -96,7 +96,7 @@ describe("changing an existing subscription's plan", () => {
     await changeSubscriptionPlan(localSubscription(), plans.enterprise);
 
     expect(mocks.updateProduct).toHaveBeenCalledWith("prod_1", {
-      name: "Agentic Whiteboard Enterprise",
+      name: "WorkspAIce Enterprise",
     });
 
     expect(mocks.update).toHaveBeenCalledWith("sub_1", {

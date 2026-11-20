@@ -15,7 +15,7 @@ describe("checkout line items", () => {
         currency: BILLING_CURRENCY,
         unit_amount: 1200,
         recurring: { interval: "month" },
-        product_data: { name: "Agentic Whiteboard Pro" },
+        product_data: { name: "WorkspAIce Pro" },
       },
     });
   });

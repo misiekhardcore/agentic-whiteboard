@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
 
+import { privateMetadata } from "@/app/metadata/privateMetadata";
+
+export const metadata = privateMetadata;
+
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     // The shell never scrolls the document, so the auth pages scroll here; a

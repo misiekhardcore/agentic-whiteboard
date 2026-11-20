@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@konopskidev/ui/components/card";
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { safeRedirectTo } from "@/lib/identity/redirect";
@@ -13,7 +14,7 @@ import { signInPath } from "@/lib/shared/routes";
 
 import { SignUpForm } from "./sign-up-form";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Create account",
 };
 

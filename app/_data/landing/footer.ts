@@ -23,5 +23,5 @@ export const footer = {
     },
   ],
   note: "Early access",
-  legal: "© 2026 Agentic Whiteboard",
+  legal: "© 2026 WorkspAIce",
 } as const;

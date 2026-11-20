@@ -152,7 +152,9 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       cleanups.push(other.close);
 
       await other.page.goto(`/workspace/${workspaceId}`);
-      await expect(other.page.getByText("This page could not be found.")).toBeVisible();
+      await expect(
+        other.page.getByRole("heading", { name: "This page is off the map" }),
+      ).toBeVisible();
       await expect(other.page.getByText(workspaceName)).toHaveCount(0);
     });
 
@@ -394,9 +396,7 @@ test("a workspace is archived, restored and deleted from its own page", async ({
 
       // The page it was showing no longer exists, and the row is gone from the
       // database rather than merely hidden.
-      await expect(
-        page.getByRole("heading", { name: "This page could not be found." }),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { name: "This page is off the map" })).toBeVisible();
       const { rows } = await db.query<{ id: string }>(
         'select id from workspace where name = $1 and "creatorId" = $2',
         [workspaceName, creatorId],

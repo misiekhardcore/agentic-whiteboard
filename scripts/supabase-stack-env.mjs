@@ -98,7 +98,7 @@ if (wantsAppEnv) {
     ["BETTER_AUTH_URL", "http://localhost:3000"],
     ["SMTP_HOST", "127.0.0.1"],
     ["SMTP_PORT", "2500"],
-    ["SMTP_FROM", "Agentic Whiteboard <no-reply@localhost>"],
+    ["SMTP_FROM", "WorkspAIce <no-reply@localhost>"],
   ];
 
   process.stdout.write(`${appEnv.map(([name, value]) => `${name}=${value}`).join("\n")}\n`);

@@ -26,6 +26,9 @@ const broadcastSinkUrl = `http://127.0.0.1:${broadcastSinkPort}`;
 // change over an actual socket runs, because the sink-backed specs assert on the
 // sink.
 const realtime = Boolean(process.env.REALTIME_E2E);
+// Capturing the manifest screenshots signs in and drives the dashboard, so it is
+// opt-in: `pnpm test:e2e:brand`, never part of the ordinary suite.
+const brandScreenshots = Boolean(process.env.BRAND_SCREENSHOTS);
 
 export default defineConfig({
   testDir: "./e2e",
@@ -47,8 +50,15 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testMatch: realtime ? /realtime\.spec\.ts$/ : undefined,
-      testIgnore: realtime ? undefined : /realtime\.spec\.ts$/,
+      testMatch: realtime
+        ? /realtime\.spec\.ts$/
+        : brandScreenshots
+          ? /brand-screenshots\.spec\.ts$/
+          : undefined,
+      testIgnore: [
+        ...(realtime ? [] : [/realtime\.spec\.ts$/]),
+        ...(brandScreenshots ? [] : [/brand-screenshots\.spec\.ts$/]),
+      ],
     },
   ],
   // CI starts the production server itself (with the Stripe CLI's signing
@@ -95,6 +105,8 @@ export default defineConfig({
           // supplying these values too.
           env: {
             PORT: new URL(baseURL).port || "3000",
+            // Metadata assertions read the canonical URL this server claims.
+            NEXT_PUBLIC_SITE_URL: baseURL,
             AI_BASE_URL: `${scriptedModelUrl}/v1`,
             AI_API_KEY: "scripted",
             AI_MODEL: "scripted-model",

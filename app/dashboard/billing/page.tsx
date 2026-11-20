@@ -1,4 +1,5 @@
 import { Badge } from "@konopskidev/ui/components/badge";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { RefreshOnChanges } from "@/components/Changes";
@@ -9,7 +10,7 @@ import { routes, signInPath } from "@/lib/shared/routes";
 import { PlanSection } from "./_components/PlanSection";
 import { UsageSection } from "./_components/UsageSection";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Billing",
 };
 
