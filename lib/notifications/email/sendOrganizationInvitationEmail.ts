@@ -15,7 +15,7 @@ export async function sendOrganizationInvitationEmail({
 }): Promise<void> {
   await deliver({
     to,
-    subject: `Join ${organizationName} on Agentic Whiteboard`,
+    subject: `Join ${organizationName} on WorkspAIce`,
     heading: `You’re invited to ${organizationName}`,
     intro: `${inviterName} invited you to join ${organizationName} as ${role}. Accept to share the same workspaces, canvas and agent context.`,
     action: "Accept invitation",

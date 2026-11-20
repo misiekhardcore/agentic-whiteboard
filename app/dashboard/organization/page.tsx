@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { RefreshOnChanges } from "@/components/Changes";
@@ -11,7 +12,7 @@ import { routes, signInPath } from "@/lib/shared/routes";
 import { OrganizationTeamView } from "./_components/OrganizationTeamView";
 import { PersonalOrganizationsView } from "./_components/PersonalOrganizationsView";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Organization",
 };
 

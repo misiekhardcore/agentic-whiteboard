@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 
-export const DEFAULT_FROM = "Agentic Whiteboard <no-reply@localhost>";
+export const DEFAULT_FROM = "WorkspAIce <no-reply@localhost>";
 
 export let transporter: Transporter | undefined;
 

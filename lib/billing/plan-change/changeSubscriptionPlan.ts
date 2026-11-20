@@ -33,7 +33,7 @@ export async function changeSubscriptionPlan(
     typeof item.price.product === "string" ? item.price.product : item.price.product.id;
 
   await stripe.products.update(productId, {
-    name: `Agentic Whiteboard ${plan.name}`,
+    name: `WorkspAIce ${plan.name}`,
   });
 
   const updated = await stripe.subscriptions.update(current.id, {

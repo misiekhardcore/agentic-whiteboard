@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@konopskidev/ui/components/card";
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { safeRedirectTo } from "@/lib/identity/redirect";
@@ -38,7 +39,7 @@ const OAUTH_ERRORS: Record<string, string> = {
   state_mismatch: "That sign-in attempt expired. Try again.",
 };
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Sign in",
 };
 

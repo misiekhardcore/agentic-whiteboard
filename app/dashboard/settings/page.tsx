@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { RefreshOnChanges } from "@/components/Changes";
@@ -9,7 +10,7 @@ import { routes, signInPath } from "@/lib/shared/routes";
 import { PreferencesSection } from "./_components/PreferencesSection";
 import { ProfileSection } from "./_components/ProfileSection";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Settings",
 };
 
