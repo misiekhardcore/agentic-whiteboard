@@ -65,14 +65,22 @@ turned into the header and then re-translated, so PostgREST rejects it with
 
 There is one database, `agentic-whiteboard` (`POSTGRES_DB`), shared by the app
 and every Supabase service. The repository's `DATABASE_URL` points at the same
-database.
+database. The image creates it as `supabase_admin`; `volumes/db/app-database-owner.sql`
+hands it to `postgres`, the role the app connects as and the owner of its schema.
+A database created before that script existed needs it once, because `drizzle`
+otherwise fails with `permission denied for database agentic-whiteboard`:
+
+```sh
+docker exec supabase-db psql -U supabase_admin -c \
+  'ALTER DATABASE "agentic-whiteboard" OWNER TO postgres'
+```
 
 | Schema    | Owner                    | Contents                                                        |
 | --------- | ------------------------ | --------------------------------------------------------------- |
 | `public`  | `postgres`               | app tables, including Better Auth's `user`, `account`, `session`, `verification` and the `organization` plugin tables |
 | `storage` | `supabase_storage_admin` | Storage's own tables, created by its migrations                  |
 | `_realtime` | `supabase_admin`       | Realtime's own tables, created by `volumes/db/realtime.sql` and its migrations |
-| `app_private` | `postgres`           | RLS helpers with no public grants, such as `is_org_member`      |
+| `app_private` | `supabase_admin`     | RLS helpers with no public grants, such as `is_org_member`      |
 | `drizzle` | `postgres`               | Drizzle migration journal                                        |
 
 `postgres` is kept only as the maintenance database that the image, health
@@ -97,7 +105,7 @@ docker exec -i supabase-db psql -U supabase_admin -d agentic-whiteboard \
   < utils/app-db-grants.sql
 docker exec -i supabase-db psql -U postgres -d agentic-whiteboard \
   < utils/better-auth-rls.sql
-docker exec -i supabase-db psql -U postgres -d agentic-whiteboard \
+docker exec -i supabase-db psql -U supabase_admin -d agentic-whiteboard \
   < utils/realtime-rls.sql
 ```
 

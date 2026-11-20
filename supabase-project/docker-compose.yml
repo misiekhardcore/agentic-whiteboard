@@ -15,7 +15,7 @@ services:
 
   studio:
     container_name: supabase-studio
-    image: supabase/studio:2026.10.12-sha-3699278
+    image: supabase/studio:2026.11.02-sha-a05e7ec
     restart: unless-stopped
     healthcheck:
       test:
@@ -28,6 +28,7 @@ services:
       retries: 3
       start_period: 20s
     environment:
+      # Listen on all IPv4 interfaces
       HOSTNAME: "0.0.0.0"
 
       STUDIO_PG_META_URL: http://meta:8080
@@ -35,6 +36,8 @@ services:
       POSTGRES_HOST: ${POSTGRES_HOST}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+      # See: https://supabase.com/docs/guides/self-hosting/remove-superuser-access
       POSTGRES_USER_READ_WRITE: postgres
 
       PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
@@ -44,30 +47,36 @@ services:
 
       DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION}
       DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
 
       SUPABASE_URL: http://api-gw:8000
       SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
-      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
-      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
+      AUTH_JWT_SECRET: ${JWT_SECRET}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY}
 
       SNIPPETS_MANAGEMENT_FOLDER: /app/snippets
+      EDGE_FUNCTIONS_MANAGEMENT_FOLDER: /app/edge-functions
     volumes:
       - ./volumes/snippets:/app/snippets:z
+      - ./volumes/functions:/app/edge-functions:ro,z
 
   # Envoy is the API gateway: one URL in front of REST, Storage, Meta and Studio.
   api-gw:
     container_name: supabase-envoy
-    image: envoyproxy/envoy:v1.39.1
+    image: envoyproxy/envoy:v1.39.6
     restart: unless-stopped
     networks:
       default:
+        # Expose `envoy` and `kong` as network aliases, so internal configs
+        # that reference either hostname resolve to whichever gateway is active.
         aliases:
           - envoy
           - kong
     healthcheck:
-      # This image has no curl or wget, so probe the port directly.
+      # Using a TCP port check because this image does not include curl or wget.
       test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/127.0.0.1/8000'"]
       interval: 10s
       timeout: 5s
@@ -100,9 +109,10 @@ services:
     restart: unless-stopped
     depends_on:
       db:
+        # Disable this if you are using an external Postgres database
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "postgrest", "--ready"]
+      test: [ "CMD", "postgrest", "--ready" ]
       interval: 5s
       timeout: 5s
       retries: 3
@@ -117,20 +127,25 @@ services:
       PGRST_ADMIN_SERVER_HOST: localhost
 
       # PostgREST accepts a plain-text symmetric secret, a single JWK, or a JWKS.
+      # For Podman, use either PGRST_JWT_SECRET: ${JWT_SECRET} or
+      # PGRST_JWT_SECRET: ${JWT_JWKS}
       PGRST_JWT_SECRET: ${JWT_JWKS:-${JWT_SECRET}}
 
       PGRST_DB_USE_LEGACY_GUCS: "false"
       PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY}
+    command:
+      [
+        "postgrest"
+      ]
 
-  # Realtime: private broadcast channels for the app's change events. Clients
-  # authenticate with an app-minted JWT and `realtime.messages` RLS decides which
-  # topic each person may read; see utils/realtime-rls.sql.
   realtime:
-    container_name: supabase-realtime
+    # This container name looks inconsistent but is correct because realtime constructs tenant id by parsing the subdomain
+    container_name: realtime-dev.supabase-realtime
     image: supabase/realtime:v2.148.3
     restart: unless-stopped
     depends_on:
       db:
+        # Disable this if you are using an external Postgres database
         condition: service_healthy
     healthcheck:
       test:
@@ -149,19 +164,39 @@ services:
       DB_USER: supabase_admin
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_NAME: ${POSTGRES_DB}
-      DB_AFTER_CONNECT_QUERY: "SET search_path TO _realtime"
-      DB_ENC_KEY: ${REALTIME_DB_ENC_KEY}
-      # The app mints HS256 tokens with this secret, so Realtime must verify
-      # with the same value.
+      DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
+      DB_ENC_KEY: ${REALTIME_DB_ENC_KEY:-supabaserealtime}
+
+      # Legacy symmetric HS256 key
       API_JWT_SECRET: ${JWT_SECRET}
-      METRICS_JWT_SECRET: ${JWT_SECRET}
+
+      # JWKS for token verification (EC public + legacy symmetric).
+      # For Podman, use: API_JWT_JWKS: ${JWT_JWKS}
+      #API_JWT_JWKS: ${JWT_JWKS:-{"keys":[]}}
+
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      METRICS_JWT_SECRET: ${JWT_SECRET}
+      # Erlang distribution cookie. Leave unset for single-node: the entrypoint
+      # generates a random one on start. Set it (same value on every node) only
+      # when running multiple Realtime nodes that must cluster together.
+      RELEASE_COOKIE: ${RELEASE_COOKIE:-}
       ERL_AFLAGS: -proto_dist inet_tcp
-      DNS_NODES: "''"
+      # Bind the internal gen_rpc listener to loopback only. This single-node
+      # deployment has no cluster peers, so nothing else on the Docker network
+      # needs to reach it.
+      GEN_RPC_SOCKET_IP: 127.0.0.1
+      # Disable cluster peer discovery: it only benefits multi-node Realtime and
+      # does nothing on a single node.
+      CLUSTER_STRATEGIES: ""
       RLIMIT_NOFILE: "10000"
       APP_NAME: realtime
       SEED_SELF_HOST: "true"
       RUN_JANITOR: "true"
+    volumes:
+      - ./volumes/realtime/docker-entrypoint.sh:/docker-entrypoint.sh:ro,z
+    # Overriding entrypoint clears the image's default command, so restore it.
+    entrypoint: ["/bin/sh", "/docker-entrypoint.sh"]
+    command: ["/app/bin/server"]
 
   # Storage API. It talks to Postgres through PostgREST.
   storage:
@@ -221,12 +256,17 @@ services:
 
   imgproxy:
     container_name: supabase-imgproxy
-    image: darthsim/imgproxy:v3.31.4
+    image: darthsim/imgproxy:v4.0.21
     restart: unless-stopped
     volumes:
-      - storage-data:/var/lib/storage:z
+      - ./volumes/storage:/var/lib/storage:z
     healthcheck:
-      test: ["CMD", "imgproxy", "health"]
+      test:
+        [
+          "CMD",
+          "imgproxy",
+          "health"
+        ]
       timeout: 5s
       interval: 5s
       retries: 3
@@ -243,6 +283,7 @@ services:
     restart: unless-stopped
     depends_on:
       db:
+        # Disable this if you are using an external Postgres database
         condition: service_healthy
     environment:
       PG_META_PORT: 8080
@@ -255,23 +296,42 @@ services:
 
   db:
     container_name: supabase-db
+    # To upgrade an existing Postgres 15 database in place, see utils/upgrade-pg17.sh.
     image: supabase/postgres:17.6.1.136
     restart: unless-stopped
     # Exposed on 54322 so it does not collide with other local Postgres containers.
     ports:
       - 127.0.0.1:${POSTGRES_EXPOSED_PORT:-54322}:5432/tcp
     volumes:
-      # Role passwords and JWT expiry for the retained services.
+      - ./volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
+      # Must be superuser to create event trigger
+      - ./volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
+      # Must be superuser to alter reserved role
       - ./volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
+      # Must be superuser to transfer the database to the role the app connects as
+      - ./volumes/db/app-database-owner.sql:/docker-entrypoint-initdb.d/init-scripts/99-app-database-owner.sql:Z
+      # Initialize the database settings with JWT_EXP
       - ./volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
-      # Realtime's schema must exist before it connects and migrates.
-      - ./volumes/db/realtime.sql:/docker-entrypoint-initdb.d/init-scripts/98-realtime.sql:Z
       # PGDATA directory is persisted between restarts
       - ./volumes/db/data:/var/lib/postgresql/data:Z
+      # Changes required for internal supabase data such as _analytics
+      - ./volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
+      # Changes required for Analytics support
+      - ./volumes/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:Z
+      # Changes required for Pooler support
+      - ./volumes/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:Z
       # Use named volume to persist pgsodium decryption key between restarts
       - db-config:/etc/postgresql-custom
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
+      test:
+        [
+        "CMD",
+        "pg_isready",
+        "-U",
+        "postgres",
+        "-h",
+        "localhost"
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -290,7 +350,7 @@ services:
         "-c",
         "config_file=/etc/postgresql/postgresql.conf",
         "-c",
-        "log_min_messages=fatal"
+        "log_min_messages=fatal" # prevents Realtime polling queries from appearing in logs
       ]
 
   # Optional local SMTP catcher for app email (Better Auth). Not started by

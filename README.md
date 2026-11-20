@@ -28,7 +28,7 @@ docker exec -i supabase-db psql -U supabase_admin -d agentic-whiteboard \
   < supabase-project/utils/app-db-grants.sql
 docker exec -i supabase-db psql -U postgres -d agentic-whiteboard \
   < supabase-project/utils/better-auth-rls.sql
-docker exec -i supabase-db psql -U postgres -d agentic-whiteboard \
+docker exec -i supabase-db psql -U supabase_admin -d agentic-whiteboard \
   < supabase-project/utils/realtime-rls.sql
 ```
 

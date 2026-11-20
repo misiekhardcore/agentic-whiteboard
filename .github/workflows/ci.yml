@@ -283,7 +283,7 @@ jobs:
       # policy fail here instead of a socket that quietly refuses to join.
       - name: Authorize the change channels
         run: |
-          docker exec -i supabase-db psql -v ON_ERROR_STOP=1 -U postgres -d agentic-whiteboard \
+          docker exec -i supabase-db psql -v ON_ERROR_STOP=1 -U supabase_admin -d agentic-whiteboard \
             < supabase-project/utils/realtime-rls.sql
 
       - name: Start the mail sink

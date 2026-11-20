@@ -13,8 +13,9 @@
 -- Only SELECT is granted: a browser may listen, never publish. The server
 -- broadcasts with the secret key, which bypasses RLS.
 --
--- Apply after the stack is up:
---   docker exec -i supabase-db psql -U postgres -d agentic-whiteboard \
+-- Apply after the stack is up, as supabase_admin: the policy and the row-level
+-- security flag belong to Realtime's own table, which only that role owns.
+--   docker exec -i supabase-db psql -U supabase_admin -d agentic-whiteboard \
 --     < utils/realtime-rls.sql
 
 -- Realtime runs its own migrations here on first boot and cannot create the
