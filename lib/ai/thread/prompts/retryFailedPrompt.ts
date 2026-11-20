@@ -6,6 +6,7 @@ import { agentConversations, agentMessages, agentPrompts } from "@/lib/db/schema
 import { retireOrphanedPrompts } from "../orphans";
 
 import { isUniqueViolation } from "./internals";
+import { promptStatusColumns } from "./transition";
 import type { RetryPromptResult } from "./types";
 
 /**
@@ -42,7 +43,7 @@ export async function retryFailedPrompt({
     return await db.transaction(async (tx) => {
       const [resumed] = await tx
         .update(agentPrompts)
-        .set({ status: "RUNNING", error: null, finishedAt: null, startedAt: now })
+        .set(promptStatusColumns({ transition: "reopen", now }))
         .where(
           and(
             eq(agentPrompts.id, promptId),

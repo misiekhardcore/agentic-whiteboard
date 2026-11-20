@@ -4,11 +4,9 @@ import { type AccountWorkspace } from "../queries";
  * The dashboard's latest-items list: workspaces, their documents and their
  * canvases in one list, newest first.
  *
- * This read model composes the surface contexts instead of joining their tables.
- * Each surface context answers for its own rows, and the workspace context keeps
- * the one decision they both depend on — which workspaces the account may see —
- * so archiving a workspace still drops its doc and canvas from the list without
- * either context knowing what an account is.
+ * This read model composes the workspace's own surface read instead of joining
+ * tables itself: the surfaces answer for their rows, the workspace rows carry
+ * the account scope, and a surface whose workspace is not in the list is gone.
  */
 /** One row of the dashboard's latest-items list. */
 export type RecentWorkspaceItem = {

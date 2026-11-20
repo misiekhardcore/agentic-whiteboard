@@ -4,7 +4,6 @@ import { defineCapability, failure, success } from "@/lib/capabilities/define";
 import { routes } from "@/lib/shared/routes";
 
 import { authorizeWorkspace } from "../access";
-import { presentGetWorkspace } from "../presentation";
 import { readWorkspaceWith } from "../queries";
 import { workspaceIdSchema } from "../rules";
 
@@ -37,5 +36,4 @@ export const getWorkspace = defineCapability({
       },
     });
   },
-  present: presentGetWorkspace,
 });

@@ -3,7 +3,6 @@ import { z } from "zod";
 import { defineCapability, success } from "@/lib/capabilities/define";
 import { routes } from "@/lib/shared/routes";
 
-import { presentListWorkspaces } from "../presentation";
 import { listWorkspacesFor } from "../queries";
 
 import { resultSchema, workspaceDetail } from "./internals";
@@ -27,5 +26,4 @@ export const listWorkspaces = defineCapability({
       })),
     });
   },
-  present: presentListWorkspaces,
 });

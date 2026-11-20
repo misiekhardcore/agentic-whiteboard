@@ -5,11 +5,10 @@ import type { Change } from "@/lib/shared/changes";
 
 export type { Change };
 
-import type { ToolPresentation } from "../presentation";
-
 /**
- * One capability: the single definition an agent tool, a server action and the
- * conversation's tool line all derive from.
+ * One capability: the single definition its agent tool and its server action
+ * both derive from. The conversation's label for the call comes from the tool
+ * catalogue, which is client-safe and per context.
  *
  * Validation, authorization, the result contract and the changed datasets are
  * declared here rather than at each call site, so a caller cannot skip one. A
@@ -96,8 +95,6 @@ export type Capability<I, T, R = undefined> = {
     resource: R,
     options: CapabilityOptions,
   ) => CapabilityOutput<T> | Promise<CapabilityOutput<T>>;
-  /** How the call reads in the conversation. */
-  present?: (input: I) => ToolPresentation;
 };
 
 /**
@@ -111,7 +108,6 @@ export type ClientCapability<I> = {
   input: z.ZodType<I>;
   callers: readonly CapabilityCaller[];
   client: ClientToolHandler;
-  present?: (input: I) => ToolPresentation;
 };
 
 /**
@@ -127,6 +123,5 @@ export type CapabilityDescriptor = {
   callers: readonly CapabilityCaller[];
   approval: boolean;
   client?: ClientToolHandler;
-  present?: (input: unknown) => ToolPresentation;
   invoke?: (ctx: CapabilityContext, raw: unknown) => Promise<CapabilityOutput<unknown>>;
 };

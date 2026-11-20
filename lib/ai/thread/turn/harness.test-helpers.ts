@@ -89,7 +89,7 @@ vi.mock("../conversations", () => ({
 
 vi.mock("@/lib/ai/providers/config", () => ({
   AiConfigurationError: class AiConfigurationError extends Error {},
-  getAiConfig: () => ({
+  resolveAiConfig: () => ({
     model: "scripted-model",
     baseURL: "http://127.0.0.1:3311/v1",
     apiKey: "scripted",

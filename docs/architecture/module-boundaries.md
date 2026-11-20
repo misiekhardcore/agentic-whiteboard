@@ -100,8 +100,7 @@ lib/
   capabilities/     kernel: define, invoke, action, registry, presentations
   identity/         actor, session → account, roles, better-auth adapter, auth actions
   organizations/    membership, slugs, invitations, organization settings
-  workspace/        the reference context: rules, access, queries, service, capabilities
-  doc/ canvas/      content surfaces of a workspace: contracts and scoped reads
+  workspace/        the reference context: rules, access, queries, surfaces, capabilities
   billing/          plans, entitlements, usage rules, subscriptions, checkout
   ai/               providers, runtime, thread (rules, prompts, messages, approvals,
                     allowance, orphans, live, conversations, branches, turn),
@@ -143,10 +142,10 @@ lib/capabilities (kernel)        other contexts' published functions
 
 ## Deferred
 
-- The content surfaces' mutation family. `lib/doc` and `lib/canvas` own their
-  tables and reads ([content-surfaces](content-surfaces.md)); their
-  `create`/`update`/`delete` capabilities land with the editor and the
-  Hocuspocus gateway ([ai-collaboration](ai-collaboration.md)).
+- The content surfaces' mutation family. The workspace context reads their
+  tables ([content-surfaces](content-surfaces.md)); their `create`/`update`/
+  `delete` capabilities land with the editor and the Hocuspocus gateway
+  ([ai-collaboration](ai-collaboration.md)).
 - An event bus or outbox. The first genuine cross-context side effect beyond a
   direct call gets its own record.
 - Per-workspace RBAC. `workspace/access.ts` is the one place it will narrow.

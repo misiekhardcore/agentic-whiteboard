@@ -1,10 +1,11 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { AiConfigurationError } from "@/lib/ai/providers";
+import { liveConversationTurns } from "@/lib/ai/thread/conversations";
 import { storedText } from "@/lib/ai/thread/rules";
 import { publishChanges } from "@/lib/capabilities/changes";
 import { db } from "@/lib/db";
-import { agentConversations, agentMessages, agentPrompts } from "@/lib/db/schema";
+import { agentConversations } from "@/lib/db/schema";
 import { CHANGE_KEYS } from "@/lib/shared/changes";
 
 import { isTitleConfigured } from "./config";
@@ -15,25 +16,14 @@ const TITLE_TIMEOUT_MS = 15_000;
 const TITLE_SOURCE_PROMPTS = 3;
 
 async function sourceText(conversationId: string, userId: string): Promise<string> {
-  const messages = await db
-    .select({ content: agentMessages.content })
-    .from(agentMessages)
-    .innerJoin(agentPrompts, eq(agentMessages.promptId, agentPrompts.id))
-    .where(
-      and(
-        eq(agentPrompts.conversationId, conversationId),
-        eq(agentPrompts.userId, userId),
-        eq(agentMessages.role, "USER"),
-        isNull(agentPrompts.supersededAt),
-        isNull(agentMessages.supersededAt),
-      ),
-    )
-    .orderBy(asc(agentMessages.createdAt), asc(agentMessages.id));
+  const turns = await liveConversationTurns({ userId, conversationId });
 
-  return messages
-    .slice(-TITLE_SOURCE_PROMPTS)
+  return turns
+    .flatMap((turn) => turn.messages)
+    .filter((message) => message.role === "USER")
     .map((message) => storedText(message.content))
     .filter((text) => text.trim().length > 0)
+    .slice(-TITLE_SOURCE_PROMPTS)
     .join("\n");
 }
 

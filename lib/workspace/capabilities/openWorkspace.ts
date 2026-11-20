@@ -2,7 +2,6 @@ import { z } from "zod";
 
 import { defineClientCapability } from "@/lib/capabilities/define";
 
-import { presentOpenWorkspace } from "../presentation";
 import { workspaceIdSchema } from "../rules";
 
 /**
@@ -19,5 +18,4 @@ export const openWorkspace = defineClientCapability({
   }),
   callers: ["agent"] as const,
   client: "openWorkspace",
-  present: presentOpenWorkspace,
 });

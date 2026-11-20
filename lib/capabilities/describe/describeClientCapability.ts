@@ -1,7 +1,5 @@
 import { type CapabilityDescriptor, type ClientCapability } from "../define";
 
-import { presentation } from "./internals";
-
 export function describeClientCapability<I>(capability: ClientCapability<I>): CapabilityDescriptor {
   return {
     name: capability.name,
@@ -10,6 +8,5 @@ export function describeClientCapability<I>(capability: ClientCapability<I>): Ca
     callers: capability.callers,
     approval: false,
     client: capability.client,
-    present: presentation(capability.present),
   };
 }

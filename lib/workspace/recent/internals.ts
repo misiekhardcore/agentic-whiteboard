@@ -1,4 +1,5 @@
-import { type AccountWorkspace } from "../queries";
+import type { AccountWorkspace } from "../queries";
+import type { ContentSurface } from "../surfaces";
 
 import type { RecentWorkspaceItem } from "./types";
 
@@ -9,8 +10,7 @@ export /**
  * or deleted between the two reads).
  */
 function surfaceItems(
-  type: "doc" | "canvas",
-  surfaces: { id: string; workspaceId: string; updatedAt: Date }[],
+  surfaces: ContentSurface[],
   workspaceById: Map<string, AccountWorkspace>,
 ): RecentWorkspaceItem[] {
   return surfaces.flatMap((surface) => {
@@ -19,8 +19,8 @@ function surfaceItems(
 
     return [
       {
-        key: `${type}:${surface.id}`,
-        type,
+        key: `${surface.surface}:${surface.id}`,
+        type: surface.surface,
         id: surface.id,
         workspaceId: workspace.id,
         workspaceName: workspace.name,

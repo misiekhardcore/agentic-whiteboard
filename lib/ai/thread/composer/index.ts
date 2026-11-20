@@ -1,5 +1,7 @@
 export type { ComposerKeyInput, ComposerKeyIntent, ComposerSelection } from "./types";
 export { DICTATION_LANGUAGE, EXAMPLE_PROMPTS } from "./constants";
+export type { ComposerField, ComposerIntent } from "./applyComposerIntent";
+export { applyComposerIntent } from "./applyComposerIntent";
 export { composerKeyIntent } from "./composerKeyIntent";
 export { composerHint } from "./composerHint";
 export type { ComposerHintInput } from "./composerHint";

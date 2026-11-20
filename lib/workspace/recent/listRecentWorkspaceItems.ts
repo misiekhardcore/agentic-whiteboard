@@ -1,7 +1,5 @@
-import { listCanvasSurfaces } from "@/lib/canvas/queries";
-import { listDocSurfaces } from "@/lib/doc/queries";
-
 import { listAccountWorkspaces } from "../queries";
+import { listContentSurfaces } from "../surfaces";
 
 import { composeRecentItems } from "./composeRecentItems";
 import type { RecentWorkspaceItem } from "./types";
@@ -14,14 +12,11 @@ export async function listRecentWorkspaceItems(
 ): Promise<RecentWorkspaceItem[]> {
   const workspaceRows = await listAccountWorkspaces(userId, organizationId);
 
-  // A first visit has nothing to compose, and the surface contexts would only
+  // A first visit has nothing to compose, and the surface read would only
   // short-circuit on the empty id list anyway.
   if (workspaceRows.length === 0) return [];
 
-  const [docSurfaces, canvasSurfaces] = await Promise.all([
-    listDocSurfaces(workspaceRows.map((workspace) => workspace.id)),
-    listCanvasSurfaces(workspaceRows.map((workspace) => workspace.id)),
-  ]);
+  const surfaces = await listContentSurfaces(workspaceRows.map((workspace) => workspace.id));
 
-  return composeRecentItems({ workspaceRows, docSurfaces, canvasSurfaces, limit });
+  return composeRecentItems({ workspaceRows, surfaces, limit });
 }

@@ -1,11 +1,12 @@
 import type { UIMessage } from "ai";
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { promptsThrough, storedParts, threadMessages } from "@/lib/ai/thread/rules";
 import { db } from "@/lib/db";
-import { agentMessages, agentPrompts } from "@/lib/db/schema";
+import { agentPrompts } from "@/lib/db/schema";
 
 import { CONVERSATION_THREAD_LIMIT } from "./constants";
+import { liveConversationTurns } from "./liveConversationTurns";
 
 /**
  * What the model is shown for one turn: the conversation's live turns up to and
@@ -35,39 +36,28 @@ export async function loadPromptHistory({
 
   if (!prompt?.conversationId) return [];
 
-  const live = await db
-    .select({ id: agentPrompts.id, createdAt: agentPrompts.createdAt })
-    .from(agentPrompts)
-    .where(
-      and(
-        eq(agentPrompts.userId, userId),
-        eq(agentPrompts.conversationId, prompt.conversationId),
-        isNull(agentPrompts.workspaceId),
-        isNull(agentPrompts.supersededAt),
-      ),
-    )
-    .orderBy(asc(agentPrompts.createdAt), asc(agentPrompts.id));
+  const turns = await liveConversationTurns({ userId, conversationId: prompt.conversationId });
 
-  const promptIds = promptsThrough(live, prompt).map((turn) => turn.id);
-
-  const rows = await db
-    .select({
-      id: agentMessages.id,
-      role: agentMessages.role,
-      content: agentMessages.content,
-    })
-    .from(agentMessages)
-    .innerJoin(agentPrompts, eq(agentMessages.promptId, agentPrompts.id))
-    .where(and(inArray(agentMessages.promptId, promptIds), isNull(agentMessages.supersededAt)))
-    .orderBy(asc(agentMessages.createdAt), asc(agentMessages.id));
+  // The history is a window over positions, not over this conversation's new
+  // turns: a prompt an edit replaced still reads everything that led to it.
+  const through = new Set(
+    promptsThrough(
+      turns.map((turn) => ({ id: turn.promptId, createdAt: turn.createdAt })),
+      prompt,
+    ).map((turn) => turn.id),
+  );
 
   // The same window the dashboard reloads, so a long conversation costs the
   // model what it cost before this history came from the database.
   return threadMessages(
-    rows.slice(-CONVERSATION_THREAD_LIMIT).map((row) => ({
-      id: row.id,
-      role: row.role,
-      parts: storedParts(row.content),
-    })),
+    turns
+      .filter((turn) => through.has(turn.promptId))
+      .flatMap((turn) => turn.messages)
+      .slice(-CONVERSATION_THREAD_LIMIT)
+      .map((message) => ({
+        id: message.id,
+        role: message.role,
+        parts: storedParts(message.content),
+      })),
   );
 }

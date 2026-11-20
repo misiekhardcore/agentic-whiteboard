@@ -4,7 +4,6 @@ import { defineCapability } from "@/lib/capabilities/define";
 import { CHANGE_KEYS, workspaceChangeKey } from "@/lib/shared/changes";
 
 import { authorizeWorkspace } from "../access";
-import { presentUpdateWorkspace } from "../presentation";
 import { workspaceIdSchema } from "../rules";
 import { updateWorkspaceWith } from "../service";
 import { WORKSPACE_STATUSES } from "../status";
@@ -43,5 +42,4 @@ export const updateWorkspace = defineCapability({
 
     return linked(result, "Send only the fields that should change.");
   },
-  present: presentUpdateWorkspace,
 });

@@ -4,7 +4,7 @@ import type { UIMessage } from "ai";
 import type { RefObject } from "react";
 import { useState } from "react";
 
-import { composerHint } from "@/lib/ai/thread/composer";
+import { applyComposerIntent, type ComposerField, composerHint } from "@/lib/ai/thread/composer";
 import { threadText } from "@/lib/ai/thread/parts";
 
 import { useAgentSession } from "./useAgentSession";
@@ -59,25 +59,25 @@ export function usePromptComposer({
     initialReadAloud,
     initialReadAloudVoice,
   });
-  // Every path that changes the field or leaves the conversation closes a live
-  // dictation session first, so it cannot commit over the change.
-  function closeDictation() {
-    if (voice.dictation.isListening) voice.dictation.discard();
-  }
+  // Every path that changes the field or leaves the conversation goes through
+  // this, which is what ends a live dictation before it can commit over it.
+  const composerField: ComposerField = {
+    dictation: voice.dictation,
+    speech: voice.speech,
+    field,
+  };
 
   const send = usePromptSend({
     session,
     field,
     fieldValue: voice.fieldValue,
-    closeDictation,
+    composerField,
     initialCanRetry,
   });
   const navigation = useConversationNavigation({
     conversationId,
     session,
-    field,
-    closeDictation,
-    speech: voice.speech,
+    composerField,
     resetRetry: send.resetRetry,
   });
 
@@ -94,14 +94,11 @@ export function usePromptComposer({
 
   function editPrompt(message: UIMessage) {
     if (isBusy) return;
-    closeDictation();
-    field.beginEditing(message);
+    applyComposerIntent({ intent: "edit", message }, composerField);
   }
 
   function applyExample(prompt: string) {
-    // An example replaces the draft, so an open session must not commit over it.
-    closeDictation();
-    field.apply(prompt);
+    applyComposerIntent({ intent: "example", prompt }, composerField);
   }
 
   return {

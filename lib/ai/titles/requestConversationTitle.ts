@@ -1,6 +1,6 @@
 import { generateText, type LanguageModel } from "ai";
 
-import { getTitleConfig, type TitleConfig } from "./config";
+import { resolveTitleConfig, type TitleConfig } from "./config";
 import { getTitleModel } from "./getTitleModel";
 import { readGeneratedTitle } from "./readGeneratedTitle";
 import { TITLE_INSTRUCTION, titleSource } from "./titleRequest";
@@ -12,7 +12,7 @@ import { TITLE_INSTRUCTION, titleSource } from "./titleRequest";
  */
 export async function requestConversationTitle({
   source,
-  config = getTitleConfig(),
+  config = resolveTitleConfig(),
   model,
   signal,
 }: {

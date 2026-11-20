@@ -2,7 +2,6 @@ import { refineConversationTitle } from "@/lib/ai/titles";
 import { publishChanges } from "@/lib/capabilities/changes";
 import type { SessionAccountContext } from "@/lib/identity/account";
 
-import { readUiContext } from "./internals/readUiContext";
 import type { TurnActor } from "./internals/types";
 import { readTurnConfig } from "./readTurnConfig";
 import { readTurnRequest } from "./readTurnRequest";
@@ -11,9 +10,21 @@ import { streamAgentTurn } from "./streamAgentTurn";
 import { turnChanges } from "./turnChanges";
 
 /**
- * One dashboard turn: read the send, decide which stored prompt it continues,
- * then stream the agent's answer and persist what it produced. Each step owns
- * its own module; this function only orders them.
+ * One dashboard turn: what the client must not decide — who is asking, which
+ * account pays, whether the allowance has room, and how the prompt is recorded —
+ * plus the stream that answers it.
+ *
+ * A POST is one of three things: a new prompt appended to a conversation, a
+ * rewind that replaces an earlier turn (the person edited the prompt), or a
+ * retry of the newest prompt that failed, which reuses its row so the person is
+ * not charged twice. The fourth, answering a parked approval, is not a prompt at
+ * all: it continues the row that is waiting.
+ *
+ * The body is only a submission: the prompt being sent, or the answer to the
+ * parked approval. What the model is shown comes from the stored turns, so a
+ * body that carries a discarded branch or invented history is answered exactly
+ * like a clean one. Each step owns its own module; this function only orders
+ * them.
  */
 export async function runDashboardTurn({
   payload,
@@ -74,7 +85,7 @@ export async function runDashboardTurn({
     history: resolved.history,
     continuing: resolved.continuing,
     changes,
-    uiContext: readUiContext(payload),
+    uiContext: request.uiContext,
     signal,
   });
 }

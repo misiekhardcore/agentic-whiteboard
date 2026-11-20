@@ -1,6 +1,6 @@
 import { isStepCount, ToolLoopAgent } from "ai";
 
-import { type AiConfig, getAiConfig } from "@/lib/ai/providers/config";
+import { type AiConfig, resolveAiConfig } from "@/lib/ai/providers/config";
 import { getLanguageModel } from "@/lib/ai/providers/getLanguageModel";
 import { DEFAULT_AGENT_INSTRUCTIONS } from "@/lib/ai/runtime/instructions";
 
@@ -18,7 +18,7 @@ export function createAgent(options: CreateAgentOptions = {}) {
   let model = options.model;
 
   if (!model) {
-    config = getAiConfig();
+    config = resolveAiConfig();
     model = getLanguageModel(config);
   }
 

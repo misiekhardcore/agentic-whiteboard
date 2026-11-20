@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 
-import type { AgentPromptStatus } from "@/lib/collab/contracts";
 import { db } from "@/lib/db";
 import { agentPrompts } from "@/lib/db/schema";
+
+import { type PromptEnding, promptStatusColumns } from "./transition";
 
 /** Closes the prompt with the status its stream ended in. */
 export async function closePrompt({
@@ -12,20 +13,14 @@ export async function closePrompt({
   error,
 }: {
   promptId: string;
-  status: AgentPromptStatus;
+  status: PromptEnding;
   usage?: unknown;
   error?: string | null;
 }): Promise<void> {
-  const closed: {
-    status: AgentPromptStatus;
-    error: string | null;
-    finishedAt: Date;
-    usage?: unknown;
-  } = { status, error: error ?? null, finishedAt: new Date() };
-
   // A continuation accrues its tokens onto the prompt's existing usage, so a
-  // close that carries no usage must not erase what is already recorded.
-  if (usage !== undefined) closed.usage = usage;
-
-  await db.update(agentPrompts).set(closed).where(eq(agentPrompts.id, promptId));
+  // close that carries no usage leaves what is already recorded alone.
+  await db
+    .update(agentPrompts)
+    .set(promptStatusColumns({ transition: "finish", status, error: error ?? null, usage }))
+    .where(eq(agentPrompts.id, promptId));
 }

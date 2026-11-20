@@ -1,10 +1,5 @@
 export type { TitleConfig, TitleEnvironment } from "./config";
-export {
-  TITLE_REASONING_EFFORTS,
-  getTitleConfig,
-  isTitleConfigured,
-  resolveTitleConfig,
-} from "./config";
+export { TITLE_REASONING_EFFORTS, isTitleConfigured, resolveTitleConfig } from "./config";
 export {
   CONVERSATION_TITLE_MAX_LENGTH,
   EMPTY_CONVERSATION_TITLE,

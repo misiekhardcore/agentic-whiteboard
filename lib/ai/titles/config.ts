@@ -59,15 +59,10 @@ export function resolveTitleConfig(env: TitleEnvironment = process.env): TitleCo
   return { ...endpoint, reasoningEffort: reasoningEffort || undefined };
 }
 
-/** Reads the live environment so local edits are visible on the next call. */
-export function getTitleConfig(): TitleConfig {
-  return resolveTitleConfig(process.env);
-}
-
 /** Whether a title endpoint is configured, without turning its absence into an error. */
 export function isTitleConfigured(): boolean {
   try {
-    getTitleConfig();
+    resolveTitleConfig();
     return true;
   } catch (error) {
     if (error instanceof AiConfigurationError) return false;

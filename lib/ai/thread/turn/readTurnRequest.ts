@@ -1,10 +1,16 @@
 import type { UIMessage } from "ai";
 
-import { lastUserText, promptProblem, promptRequestKind, type PromptRequestKind } from "../rules";
+import { type UiContext, uiContextSchema } from "@/lib/ai/runtime/instructions";
+
+import {
+  conversationIdProblem,
+  lastUserText,
+  promptProblem,
+  promptRequestKind,
+  type PromptRequestKind,
+} from "../rules";
 
 import { jsonError } from "./internals/jsonError";
-import { readConversationId } from "./internals/readConversationId";
-import { readMessages } from "./internals/readMessages";
 import type { TurnFailure } from "./internals/types";
 
 export type TurnRequest = {
@@ -14,6 +20,8 @@ export type TurnRequest = {
   kind: PromptRequestKind;
   /** The message the browser sent last. */
   newest: UIMessage;
+  /** The view the person is on, when the browser sent a valid one. */
+  uiContext: UiContext | null;
 };
 
 /**
@@ -27,8 +35,8 @@ export function readTurnRequest(payload: unknown): TurnRequest | TurnFailure {
   }
 
   const conversation = readConversationId(payload);
-  if ("error" in conversation) {
-    return { error: jsonError(conversation.error, 400) };
+  if ("problem" in conversation) {
+    return { error: jsonError(conversation.problem, 400) };
   }
 
   const kind = promptRequestKind(messages);
@@ -46,5 +54,53 @@ export function readTurnRequest(payload: unknown): TurnRequest | TurnFailure {
     }
   }
 
-  return { messages, conversationId: conversation.id, kind, newest };
+  return {
+    messages,
+    conversationId: conversation.id,
+    kind,
+    newest,
+    uiContext: readUiContext(payload),
+  };
+}
+
+function isUIMessage(value: unknown): value is UIMessage {
+  if (typeof value !== "object" || value === null) return false;
+
+  const message = value as { id?: unknown; role?: unknown; parts?: unknown };
+  return (
+    typeof message.id === "string" &&
+    (message.role === "user" || message.role === "assistant" || message.role === "system") &&
+    Array.isArray(message.parts)
+  );
+}
+
+function readMessages(payload: unknown): UIMessage[] | null {
+  if (typeof payload !== "object" || payload === null) return null;
+  const messages = (payload as { messages?: unknown }).messages;
+  if (!Array.isArray(messages) || messages.length === 0) return null;
+
+  return messages.every(isUIMessage) ? messages : null;
+}
+
+/**
+ * The conversation the composer is on. Its id is chosen before the first prompt
+ * (a UUID the browser makes for "New conversation"), so the route creates the
+ * row with the first accepted prompt.
+ */
+function readConversationId(payload: unknown): { id: string } | { problem: string } {
+  const raw =
+    typeof payload === "object" && payload !== null
+      ? (payload as { conversationId?: unknown }).conversationId
+      : undefined;
+  const problem = conversationIdProblem(typeof raw === "string" ? raw : "");
+
+  return problem ? { problem } : { id: raw as string };
+}
+
+/** The view the browser says the person is on; an invalid one is ignored. */
+function readUiContext(payload: unknown): UiContext | null {
+  if (typeof payload !== "object" || payload === null) return null;
+  const parsed = uiContextSchema.safeParse((payload as { uiContext?: unknown }).uiContext);
+
+  return parsed.success ? parsed.data : null;
 }

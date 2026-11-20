@@ -1,4 +1,5 @@
 import { AiConfigurationError } from "./config/AiConfigurationError";
+import { readValue } from "./readValue";
 
 /** The three values every OpenAI-compatible endpoint needs, under its own names. */
 export type EndpointLabels = {
@@ -12,11 +13,6 @@ export type EndpointValues = {
   apiKey?: string;
   model?: string;
 };
-
-function readValue(value: string | undefined): string | undefined {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
-}
 
 /**
  * Reads one endpoint from the environment and validates it as a whole. A missing

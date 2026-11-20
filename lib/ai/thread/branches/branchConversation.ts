@@ -4,6 +4,7 @@ import { titleFromPrompt } from "@/lib/ai/titles";
 import { db } from "@/lib/db";
 import { agentConversations, agentMessages, agentPrompts } from "@/lib/db/schema";
 
+import { promptStatusColumns } from "../prompts/transition";
 import { branchableStatus, promptsThrough, storedText } from "../rules";
 
 import type { BranchResult } from "./types";
@@ -125,7 +126,7 @@ export async function branchConversation({
           // History: the copy is finished even when the source turn failed or
           // was stopped, so it can never take the single-flight slot or offer a
           // free retry it was already charged for.
-          status: "COMPLETED",
+          ...promptStatusColumns({ transition: "history" }),
           provider: prompt.provider,
           model: prompt.model,
           branchedFromId: prompt.id,

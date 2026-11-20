@@ -3,7 +3,6 @@ import { z } from "zod";
 import { defineCapability } from "@/lib/capabilities/define";
 import { CHANGE_KEYS } from "@/lib/shared/changes";
 
-import { presentCreateWorkspace } from "../presentation";
 import { createWorkspaceFor } from "../service";
 
 import { linked, resultSchema, workspaceSummary } from "./internals";
@@ -28,5 +27,4 @@ export const createWorkspace = defineCapability({
 
     return linked(result, "Fix the field it names, or check the plan's workspace limit.");
   },
-  present: presentCreateWorkspace,
 });

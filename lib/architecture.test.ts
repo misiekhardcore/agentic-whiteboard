@@ -92,20 +92,26 @@ const KERNEL_ALLOWED = [
 ];
 
 /**
- * The content surfaces are leaves: each answers for its own rows, and the
- * workspace context decides which of them a person may see. They may use the
- * database and the shared primitives, and no other context.
+ * A workspace's content surfaces are read in the workspace context, which is the
+ * only place that knows the account scope and the archive flag. A surface is
+ * reachable exactly when its workspace is, so reading its table anywhere else
+ * would need a second copy of that rule.
  */
-const SURFACE_CONTEXTS = [/^lib[\\/](doc|canvas)[\\/]/];
+const SURFACE_TABLES = ["docs", "canvases"];
+const SCHEMA_IMPORT = /import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*["']@\/lib\/db\/schema["']/g;
+const WORKSPACE_CONTEXT = /^lib[\\/]workspace[\\/]/;
 
-const SURFACE_ALLOWED = [
-  /^@\/lib\/db(\/|$)/,
-  /^@\/lib\/shared(\/|$)/,
-  /^drizzle-orm/,
-  /^\.\//,
-  // A split module lives one folder down but still belongs to its surface.
-  /^\.\.\/(contracts|queries)(\/|$)/,
-];
+/** The surface tables each module names when it imports the schema. */
+function surfaceTablesImportedBy(path: string): string[] {
+  const source = readFileSync(path, "utf8");
+
+  return [...source.matchAll(SCHEMA_IMPORT)].flatMap((match) =>
+    (match[1] ?? "")
+      .split(",")
+      .map((binding) => binding.trim().split(/\s+as\s+/)[0] ?? "")
+      .filter((binding) => SURFACE_TABLES.includes(binding)),
+  );
+}
 
 describe("module boundaries", () => {
   it("keeps lib out of the presentation layer", () => {
@@ -118,19 +124,17 @@ describe("module boundaries", () => {
     ).toEqual([]);
   });
 
-  it("keeps the content surfaces free of other contexts", () => {
-    const files = sourceFiles(LIB).filter((file) =>
-      SURFACE_CONTEXTS.some((pattern) => pattern.test(relative(ROOT, file))),
-    );
+  it("reads the content surfaces only in the workspace context", () => {
+    const readers = sourceFiles(LIB).filter((file) => surfaceTablesImportedBy(file).length > 0);
 
-    // The rule is only worth anything while there are surfaces to apply it to.
-    expect(files.length).toBeGreaterThan(0);
+    // The rule is only worth anything while there is a read to apply it to.
+    expect(readers.length).toBeGreaterThan(0);
 
-    const external = files.flatMap((file) => {
+    const external = readers.flatMap((file) => {
       const label = relative(ROOT, file);
-      return importsOf(file)
-        .filter((specifier) => !SURFACE_ALLOWED.some((pattern) => pattern.test(specifier)))
-        .map((specifier) => `${label} imports ${specifier}`);
+      if (WORKSPACE_CONTEXT.test(label)) return [];
+
+      return surfaceTablesImportedBy(file).map((table) => `${label} reads ${table}`);
     });
 
     expect(external).toEqual([]);
