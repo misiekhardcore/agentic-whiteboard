@@ -17,8 +17,8 @@ export type TurnRequest = {
 };
 
 /**
- * Reads and validates the turn's body before anything is written: the browser
- * may be stale, so the body is checked here and its history is re-read later.
+ * Reads and validates the turn's body before anything is written. A new prompt's
+ * stored turns are what the model later sees; a continuation streams this body.
  */
 export function readTurnRequest(payload: unknown): TurnRequest | TurnFailure {
   const messages = readMessages(payload);

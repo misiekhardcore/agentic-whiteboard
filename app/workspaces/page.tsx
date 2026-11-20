@@ -22,7 +22,7 @@ export const instant = false;
 /**
  * Every active workspace in the selected account. The dashboard only shows the
  * latest handful of workspaces, docs and canvases; this page is the full list,
- * and mutations revalidate both paths.
+ * and it re-reads when `workspaces` or `account` change.
  */
 export default async function WorkspacesPage() {
   const account = await getSessionAccount();

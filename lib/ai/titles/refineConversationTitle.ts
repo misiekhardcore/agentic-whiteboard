@@ -61,10 +61,16 @@ export async function refineConversationTitle({
   if (!conversation || conversation.titleGeneratedAt) return;
   if (!isTitleConfigured()) return;
 
+  // A turn with no readable prompt text has nothing to name, and the slot can
+  // only be written once — spending the model call on it would lock in a name
+  // nobody asked for.
+  const source = await sourceText(conversationId, userId);
+  if (!source.trim()) return;
+
   let title: string | null;
   try {
     title = await requestConversationTitle({
-      source: await sourceText(conversationId, userId),
+      source,
       signal: AbortSignal.timeout(TITLE_TIMEOUT_MS),
     });
   } catch (error) {

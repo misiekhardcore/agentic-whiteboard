@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 
-/** How long a Realtime token is accepted. The browser re-mints one on reconnect. */
+/** How long a Realtime token is accepted. The browser renews it before then. */
 export const REALTIME_TOKEN_TTL_SECONDS = 60 * 60;
 
 function base64url(value: string | Buffer): string {

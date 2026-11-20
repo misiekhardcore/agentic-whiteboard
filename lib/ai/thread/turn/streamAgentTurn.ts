@@ -38,7 +38,7 @@ export async function streamAgentTurn({
   config: TurnConfig;
   actor: TurnActor;
   promptId: string;
-  /** The turn's history, read back from the database rather than from the body. */
+  /** A new prompt's stored turns, or the browser's own thread for a continuation. */
   history: UIMessage[];
   continuing: boolean;
   /** What the send already changed, announced on the response for this tab. */

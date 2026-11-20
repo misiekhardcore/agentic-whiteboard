@@ -14,8 +14,6 @@ export const CHANGE_KEYS = {
   settings: "settings",
 } as const;
 
-export type ChangeKey = (typeof CHANGE_KEYS)[keyof typeof CHANGE_KEYS];
-
 /** The one event a change is broadcast under. */
 export const CHANGE_EVENT = "data.changed";
 

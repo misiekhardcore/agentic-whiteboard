@@ -111,7 +111,6 @@ export default defineConfig({
               : {
                   SUPABASE_URL: broadcastSinkUrl,
                   SUPABASE_SERVICE_ROLE_KEY: "scripted-service-role",
-                  BROADCAST_SINK_URL: broadcastSinkUrl,
                 }),
             // The approval specs need signed requests; a fixed test value is
             // enough because the scripted endpoint never leaves the machine.

@@ -31,7 +31,14 @@ docker compose --profile mail up -d  # Inbucket SMTP catcher
 All configuration is in `.env` in this directory. Existing database files live
 in `volumes/db/data`; storage objects live in the `supabase_storage-data`
 Docker volume (the file backend needs extended attributes, which Docker
-Desktop's bind mounts do not support).
+Desktop's bind mounts do not support), and imgproxy reads that same volume.
+
+The `volumes/db/*.sql` scripts are init scripts: the Postgres image runs them
+only while initialising an empty `volumes/db/data`. A cluster created before a
+change to them keeps the old schema until the data directory is recreated, so
+start from a fresh one when the scripts differ. `REALTIME_DB_ENC_KEY` has no
+default in `docker-compose.yml`, so a stack without it refuses to start rather
+than booting with a known key.
 
 ## Endpoints
 

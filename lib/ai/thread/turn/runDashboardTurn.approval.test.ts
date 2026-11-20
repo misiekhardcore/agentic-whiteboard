@@ -36,7 +36,7 @@ describe("answering a parked approval", () => {
     expect(mocks.streamed[0].uiMessages).toEqual(sent);
   });
 
-  it("hands every answered decision to the model, not just the first", async () => {
+  it("passes every answered decision through to the model", async () => {
     const sent = [
       userMessage("message_user", "Archive all three"),
       assistantMessage("browser_reply", [

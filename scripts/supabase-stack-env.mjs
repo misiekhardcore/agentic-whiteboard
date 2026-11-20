@@ -9,15 +9,26 @@
  *
  *   node scripts/supabase-stack-env.mjs              # write supabase-project/.env
  *   node scripts/supabase-stack-env.mjs --app-env    # also print KEY=value lines
+ *
+ * An existing file is only replaced with `--force`: a developer running this by
+ * hand would otherwise lose the keys their stack was initialised with.
  */
 import { createHmac } from "node:crypto";
-import { writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const stackEnvPath = join(repositoryRoot, "supabase-project", ".env");
 const wantsAppEnv = process.argv.includes("--app-env");
+const force = process.argv.includes("--force");
+
+if (existsSync(stackEnvPath) && !force) {
+  console.error(
+    `${stackEnvPath} already exists. Pass --force to replace a configuration your stack may rely on.`,
+  );
+  process.exit(1);
+}
 
 /** Long enough for HS256, and shared by the app, the gateway and Realtime. */
 const JWT_SECRET = "e2e-realtime-stack-jwt-secret-0123456789abcdef";

@@ -11,7 +11,7 @@ import type { ToolPresentation } from "../presentation";
  * One capability: the single definition an agent tool, a server action and the
  * conversation's tool line all derive from.
  *
- * Validation, authorization, the result contract and the invalidation paths are
+ * Validation, authorization, the result contract and the changed datasets are
  * declared here rather than at each call site, so a caller cannot skip one. A
  * capability module is never marked `"use server"`: handlers are plain server
  * functions, and only the wrappers in a `"use server"` file become endpoints.
