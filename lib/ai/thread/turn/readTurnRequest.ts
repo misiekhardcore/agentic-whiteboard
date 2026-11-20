@@ -1,12 +1,6 @@
 import type { UIMessage } from "ai";
 
-import {
-  approvalReference,
-  lastUserText,
-  promptProblem,
-  promptRequestKind,
-  type PromptRequestKind,
-} from "../rules";
+import { lastUserText, promptProblem, promptRequestKind, type PromptRequestKind } from "../rules";
 
 import { jsonError } from "./internals/jsonError";
 import { readConversationId } from "./internals/readConversationId";
@@ -20,13 +14,11 @@ export type TurnRequest = {
   kind: PromptRequestKind;
   /** The message the browser sent last. */
   newest: UIMessage;
-  /** The approval being answered, for a continuation. */
-  reference: string | null;
 };
 
 /**
- * Reads and validates the turn's body before anything is written: the browser
- * may be stale, so the body is checked here and its history is re-read later.
+ * Reads and validates the turn's body before anything is written. A new prompt's
+ * stored turns are what the model later sees; a continuation streams this body.
  */
 export function readTurnRequest(payload: unknown): TurnRequest | TurnFailure {
   const messages = readMessages(payload);
@@ -54,12 +46,5 @@ export function readTurnRequest(payload: unknown): TurnRequest | TurnFailure {
     }
   }
 
-  const reference = kind === "continuation" ? approvalReference(newest) : null;
-  if (kind === "continuation" && !reference) {
-    return {
-      error: jsonError("Send the approval from the conversation it belongs to.", 400),
-    };
-  }
-
-  return { messages, conversationId: conversation.id, kind, newest, reference };
+  return { messages, conversationId: conversation.id, kind, newest };
 }

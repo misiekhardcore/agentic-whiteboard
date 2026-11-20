@@ -6,6 +6,7 @@ import { routes } from "@/lib/shared/routes";
 import { authorizeWorkspace } from "../access";
 import { presentGetWorkspace } from "../presentation";
 import { readWorkspaceWith } from "../queries";
+import { workspaceIdSchema } from "../rules";
 
 import { NOT_FOUND, resultSchema, workspaceDetail } from "./internals";
 
@@ -14,7 +15,7 @@ export const getWorkspace = defineCapability({
   description:
     "Read one workspace: its name, description, stage, whether it is archived and its `link`. Requires the workspace id from `listWorkspaces`.",
   input: z.object({
-    workspaceId: z.string().min(1, "Choose a workspace."),
+    workspaceId: workspaceIdSchema,
   }),
   output: resultSchema({ workspace: workspaceDetail }),
   callers: ["human", "agent"] as const,

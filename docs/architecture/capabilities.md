@@ -25,23 +25,24 @@ agent may propose removing a workspace, but _who answers for it_.
 
 ## Decisions
 
-| Area                  | Decision                                                                                                                        | Why                                                                                                                                                                                                   |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| One definition        | A capability declares name, description, Zod input/output, callers, authorization, handler, invalidation paths and presentation | The model, the form and the thread read one record; a schema cannot drift between them.                                                                                                               |
-| Single entry          | `invoke(capability, ctx, raw)` is the only way a capability runs                                                                | Validation, authorization and the result contract cannot be skipped by a new caller.                                                                                                                  |
-| Authorization         | `authorize(ctx, input)` loads and returns the row the handler uses; `null` reports it as missing                                | The permission check and the write share one read, so there is no second fetch and no gap between them. Missing, not forbidden, keeps an id from confirming itself.                                   |
-| Results               | Every output is `{ ok: true, … }                                                                                                | { ok: false, error, hint? }`                                                                                                                                                                          | A refusal is a value the model can act on and a person can read, not an exception. Only a handler returning the wrong shape throws. |
-| Exposure vs approval  | `callers` says who may call it; `approval: "always"` says an agent call waits for a person                                      | Removing a capability and asking about one are different decisions, and conflating them is how a "risk" flag ends up gating the wrong thing.                                                          |
-| Approval transport    | `toolApproval: "user-approval"` plus `experimental_toolApprovalSecret`                                                          | Approval answers travel through the browser. The SDK signs each request, so an answer the client was never shown is rejected instead of executing the tool.                                           |
-| Unconfigured approval | Without `AI_TOOL_APPROVAL_SECRET`, gated tools are not offered at all                                                           | The degradation is "the agent cannot archive", never "the agent can be told to archive".                                                                                                              |
-| Prompt accounting     | An approval answer continues the prompt that is waiting; it does not open one                                                   | The allowance counts prompts that ran. Answering a question is not a new request, and billing it as one would punish the safety feature.                                                              |
-| Prompt status         | `AWAITING_APPROVAL` is its own status                                                                                           | A parked prompt is neither running nor finished. It is excluded from the orphan sweep (a decision may wait overnight) and from the single-flight index (the person can ask something else meanwhile). |
-| Human entry point     | Capabilities are never in a `"use server"` module; typed wrappers in `lib/workspace-actions.ts` are                             | A handler must not be an endpoint. Only the wrapper authenticates a session and revalidates, and it keeps React's `void` form-action contract.                                                        |
-| No dispatcher route   | No `/api/cap/[name]`                                                                                                            | A generic HTTP surface would expose every operation through one authorizer with no client that needs it. The registry backs actions, not URLs.                                                        |
-| Invalidation          | `invalidates(output)` returns the route paths a successful call changes                                                         | Revalidation follows the capability instead of being hand-written per action.                                                                                                                         |
-| View context          | The composer sends `{ pathname, workspaceId }`; the route validates it to an in-app path and appends it to the instructions     | "Rename this" should not need a round trip. It is a hint and never an authorization: it comes from the browser.                                                                                       |
-| Client tool           | `openWorkspace` has no `execute`; the composer navigates in `onToolCall`                                                        | Navigation is the one interface action the agent can take, and it should not need a server write or a second model turn.                                                                              |
-| Audit                 | Deferred                                                                                                                        | Tool calls are stored as message parts. A queryable action log is a separate decision.                                                                                                                |
+| Area                  | Decision                                                                                                                    | Why                                                                                                                                                                                                   |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One definition        | A capability declares name, description, Zod input/output, callers, authorization, handler, change keys and presentation    | The model, the form and the thread read one record; a schema cannot drift between them.                                                                                                               |
+| Single entry          | `invoke(capability, ctx, raw)` is the only way a capability runs                                                            | Validation, authorization and the result contract cannot be skipped by a new caller.                                                                                                                  |
+| Authorization         | `authorize(ctx, input)` loads and returns the row the handler uses; `null` reports it as missing                            | The permission check and the write share one read, so there is no second fetch and no gap between them. Missing, not forbidden, keeps an id from confirming itself.                                   |
+| Id shape              | A declared id is validated against the shape the table stores before authorization runs                                     | A mangled argument (a description, a quoted reasoning trace) fails with a field message the caller can act on, instead of a lookup that reads as a missing row.                                       |
+| Results               | Every output is `{ ok: true, … }                                                                                            | { ok: false, error, hint? }`                                                                                                                                                                          | A refusal is a value the model can act on and a person can read, not an exception. Only a handler returning the wrong shape throws. |
+| Exposure vs approval  | `callers` says who may call it; `approval: "always"` says an agent call waits for a person                                  | Removing a capability and asking about one are different decisions, and conflating them is how a "risk" flag ends up gating the wrong thing.                                                          |
+| Approval transport    | `toolApproval: "user-approval"` plus `toolApprovalSecret`                                                                   | Approval answers travel through the browser. The SDK signs each request, so an answer the client was never shown is rejected instead of executing the tool.                                           |
+| Unconfigured approval | Without `AI_TOOL_APPROVAL_SECRET`, gated tools are not offered at all                                                       | The degradation is "the agent cannot archive", never "the agent can be told to archive".                                                                                                              |
+| Prompt accounting     | An approval answer continues the prompt that is waiting; it does not open one                                               | The allowance counts prompts that ran. Answering a question is not a new request, and billing it as one would punish the safety feature.                                                              |
+| Prompt status         | `AWAITING_APPROVAL` is its own status                                                                                       | A parked prompt is neither running nor finished. It is excluded from the orphan sweep (a decision may wait overnight) and from the single-flight index (the person can ask something else meanwhile). |
+| Human entry point     | Capabilities are never in a `"use server"` module; typed wrappers exported by `action()` are                                | A handler must not be an endpoint. Only the wrapper authenticates a session, refreshes this browser's route and keeps React's `void` form-action contract.                                            |
+| No dispatcher route   | No `/api/cap/[name]`                                                                                                        | A generic HTTP surface would expose every operation through one authorizer with no client that needs it. The registry backs actions, not URLs.                                                        |
+| Changes               | `changes(output)` returns the datasets a successful call changed, and the kernel publishes them to every open tab           | A capability names what a person will see change, not which route happened to render it, so the agent, a form and a background job all deliver the same way.                                          |
+| View context          | The composer sends `{ pathname, workspaceId }`; the route validates it to an in-app path and appends it to the instructions | "Rename this" should not need a round trip. It is a hint and never an authorization: it comes from the browser.                                                                                       |
+| Client tool           | `openWorkspace` has no `execute`; the composer navigates in `onToolCall`                                                    | Navigation is the one interface action the agent can take, and it should not need a server write or a second model turn.                                                                              |
+| Audit                 | Deferred                                                                                                                    | Tool calls are stored as message parts. A queryable action log is a separate decision.                                                                                                                |
 
 ### Why `authorize` returns the resource
 
@@ -55,11 +56,11 @@ decision, and it is why `authorizeWorkspace` and the `*With` handlers exist in
 ### Why the approval is signed
 
 In `ai@7`, `toolApproval` pauses the call and emits an approval request whose id
-the browser sends back with the decision. Without
-`experimental_toolApprovalSecret` that id is just data: a client could post
-`approved: true` for a prompt it never saw. The secret signs each request at
-issuance and verifies it on replay, which is the only reason it is safe to let
-the client carry the answer at all.
+the browser sends back with the decision. Without a `toolApprovalSecret` that id
+is just data: a client could post `approved: true` for a prompt it never saw. The
+secret signs each request at issuance and verifies it on replay, which is the
+only reason it is safe to let the client carry the answer at all. The secret is
+handed to the SDK as its stable `toolApprovalSecret` option.
 
 ### Why a continuation, not a new prompt
 
@@ -67,9 +68,22 @@ The answer arrives as a second POST carrying the whole conversation. Treated as
 a new prompt it would open, count and store a second `agentPrompt` — so a person
 who approves carefully pays twice for the privilege. The route classifies the
 request instead: an assistant message that carries an approval part is a
-continuation of the prompt that is waiting, matched through the signed
-reference, and its tokens are accrued onto that prompt's usage rather than
-replacing it.
+continuation of the prompt that is waiting, and its tokens are accrued onto that
+prompt's usage rather than replacing it.
+
+The thread such a continuation streams is the browser's own, not a re-read of
+the stored turn: the answer is the client's history, and every tool call it
+carries is authorized again by `invoke` when it runs, so a replayed answer can
+only ever repeat work the replayer is already allowed to do. What the server
+still decides is whether anything runs — the signature says the request was
+ours, and the conversation's `AWAITING_APPROVAL` row says it is still owed.
+
+Two limits follow from that and are accepted. The signature is checked against
+the secret, not against the conversation: an approval issued for one thread and
+posted to another resumes whichever parked prompt that thread holds, and only
+`invoke`'s re-authorization stands between the choice and the write. And the
+stored turn is not compared with the body at all, so the model sees exactly what
+the browser sent — which is why the tools, not the thread, are the authority.
 
 ## Flow
 
@@ -114,7 +128,5 @@ once.
 ## Deferred
 
 - A queryable per-account action log (tool calls are only message parts today).
-- Expiring an unanswered approval (it is answerable for 24 hours, then treated as
-  gone).
 - Client tools beyond navigation, and returning their result into the run.
 - Per-capability rate limits and cost budgets.

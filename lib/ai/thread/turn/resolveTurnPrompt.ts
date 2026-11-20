@@ -1,5 +1,7 @@
 import type { UIMessage } from "ai";
 
+import { endpointHost } from "@/lib/ai/providers";
+
 import { findUserPromptTarget } from "../messages";
 import { lastUserText, promptIntent } from "../rules";
 
@@ -23,13 +25,21 @@ export async function resolveTurnPrompt({
   request: TurnRequest;
   config: TurnConfig;
   actor: TurnActor;
-}): Promise<{ promptId: string; history: UIMessage[]; continuing: boolean } | TurnFailure> {
-  const { conversationId, messages, kind, newest, reference } = request;
+}): Promise<
+  | {
+      promptId: string;
+      history: UIMessage[];
+      continuing: boolean;
+      conversationId: string;
+    }
+  | TurnFailure
+> {
+  const { conversationId, messages, kind } = request;
   const { userId } = actor;
 
-  if (kind === "continuation" && reference) {
-    const resumed = await resumeParkedTurn({ reference, answer: newest, userId });
-    return "error" in resumed ? resumed : { ...resumed, continuing: true };
+  if (kind === "continuation") {
+    const resumed = await resumeParkedTurn({ messages, conversationId, userId });
+    return "error" in resumed ? resumed : { ...resumed, continuing: true, conversationId };
   }
 
   const submitted = messages[messages.length - 1];
@@ -51,13 +61,13 @@ export async function resolveTurnPrompt({
       promptId: intent.promptId,
       userId,
     });
-    return "error" in retried ? retried : { ...retried, continuing: true };
+    return "error" in retried ? retried : { ...retried, continuing: true, conversationId };
   }
 
   const opened = await openNewTurn({
     conversationId,
     actor,
-    provider: config.provider,
+    provider: endpointHost(config.baseURL),
     model: config.model,
     submitted,
     // A rewind replaces a stored message whose id the browser still holds, so
@@ -68,5 +78,5 @@ export async function resolveTurnPrompt({
         : undefined,
     keepMessageId: intent.kind === "append",
   });
-  return "error" in opened ? opened : { ...opened, continuing: false };
+  return "error" in opened ? opened : { ...opened, continuing: false, conversationId };
 }

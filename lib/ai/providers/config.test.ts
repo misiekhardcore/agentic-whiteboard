@@ -1,97 +1,60 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { AiConfigurationError, isAiConfigured, resolveAiConfig } from "@/lib/ai/providers/config";
+import { AiConfigurationError, resolveAiConfig } from "./index";
 
-afterEach(() => {
-  vi.unstubAllEnvs();
-});
+const complete = {
+  AI_BASE_URL: "https://ai.example.test/openai/v1",
+  AI_API_KEY: "secret-key",
+  AI_MODEL: "some-model",
+};
 
 describe("resolveAiConfig", () => {
-  it("defaults to LM Studio and trims the model id", () => {
-    expect(resolveAiConfig({ AI_MODEL: "  qwen/qwen3-4b  " })).toEqual({
-      provider: "lmstudio",
-      model: "qwen/qwen3-4b",
-      baseURL: "http://127.0.0.1:1234/v1",
-      apiKey: "lm-studio",
+  it("requires the endpoint, key and model with no provider default", () => {
+    expect(resolveAiConfig(complete)).toEqual({
+      baseURL: "https://ai.example.test/openai/v1",
+      apiKey: "secret-key",
+      model: "some-model",
+      toolApprovalSecret: undefined,
       maxSteps: 20,
-      maxRetries: 0,
+      maxRetries: 2,
     });
   });
 
-  it("accepts a generic OpenAI-compatible endpoint without a trailing slash", () => {
-    expect(
-      resolveAiConfig({
-        AI_PROVIDER: "openai-compatible",
-        AI_MODEL: "openai/gpt-oss-20b",
-        AI_BASE_URL: "https://openrouter.ai/api/v1/",
-        AI_API_KEY: "secret",
-        AI_MAX_STEPS: "8",
-        AI_MAX_RETRIES: "3",
-      }),
-    ).toEqual({
-      provider: "openai-compatible",
-      model: "openai/gpt-oss-20b",
-      baseURL: "https://openrouter.ai/api/v1",
-      apiKey: "secret",
-      maxSteps: 8,
-      maxRetries: 3,
-    });
-  });
-
-  it("allows an API key override for LM Studio auth", () => {
-    expect(resolveAiConfig({ AI_MODEL: "local", AI_API_KEY: "token" }).apiKey).toBe("token");
-  });
-
-  it("requires a model id and explains how to find one", () => {
+  it("names every missing variable in one error", () => {
     expect(() => resolveAiConfig({})).toThrow(AiConfigurationError);
-    expect(() => resolveAiConfig({})).toThrow(/\/v1\/models/);
-  });
-
-  it("rejects unknown providers and lists the supported ids", () => {
-    expect(() => resolveAiConfig({ AI_PROVIDER: "anthropic", AI_MODEL: "claude" })).toThrow(
-      /Unknown AI_PROVIDER "anthropic".*lmstudio, openai-compatible/,
+    expect(() => resolveAiConfig({})).toThrow(
+      /AI_BASE_URL, AI_API_KEY, AI_MODEL.*assumes no provider/,
     );
   });
 
-  it("accepts the scripted stub provider used by the e2e suite", () => {
-    expect(resolveAiConfig({ AI_PROVIDER: "stub", AI_MODEL: "stub-model" })).toEqual({
-      provider: "stub",
-      model: "stub-model",
-      baseURL: "stub://local",
-      apiKey: "stub",
-      maxSteps: 20,
+  it("rejects a base URL that is not an absolute http(s) endpoint", () => {
+    expect(() => resolveAiConfig({ ...complete, AI_BASE_URL: "ai.example.test/v1" })).toThrow(
+      /absolute http\(s\) URL/,
+    );
+    expect(() => resolveAiConfig({ ...complete, AI_BASE_URL: "file:///tmp/v1" })).toThrow(
+      /http or https/,
+    );
+  });
+
+  it("trims a trailing slash so request paths stay single-slash", () => {
+    expect(
+      resolveAiConfig({ ...complete, AI_BASE_URL: "https://ai.example.test/v1//" }).baseURL,
+    ).toBe("https://ai.example.test/v1");
+  });
+
+  it("keeps the numeric knobs optional and validated", () => {
+    expect(resolveAiConfig({ ...complete, AI_MAX_STEPS: "3", AI_MAX_RETRIES: "0" })).toMatchObject({
+      maxSteps: 3,
       maxRetries: 0,
     });
+
+    expect(() => resolveAiConfig({ ...complete, AI_MAX_STEPS: "many" })).toThrow(/AI_MAX_STEPS/);
+    expect(() => resolveAiConfig({ ...complete, AI_MAX_RETRIES: "-1" })).toThrow(/AI_MAX_RETRIES/);
   });
 
-  it("requires a base URL for a generic compatible endpoint", () => {
-    expect(() =>
-      resolveAiConfig({
-        AI_PROVIDER: "openai-compatible",
-        AI_MODEL: "some-model",
-      }),
-    ).toThrow(/AI_BASE_URL is required/);
-  });
-
-  it("validates step and retry limits", () => {
-    expect(() => resolveAiConfig({ AI_MODEL: "local", AI_MAX_STEPS: "0" })).toThrow(
-      /AI_MAX_STEPS must be a whole number/,
+  it("refuses a short approval secret", () => {
+    expect(() => resolveAiConfig({ ...complete, AI_TOOL_APPROVAL_SECRET: "too-short" })).toThrow(
+      /at least 32 characters/,
     );
-    expect(() => resolveAiConfig({ AI_MODEL: "local", AI_MAX_STEPS: "2.5" })).toThrow(
-      /AI_MAX_STEPS must be a whole number/,
-    );
-    expect(() => resolveAiConfig({ AI_MODEL: "local", AI_MAX_RETRIES: "-1" })).toThrow(
-      /AI_MAX_RETRIES must be a whole number/,
-    );
-  });
-});
-
-describe("isAiConfigured", () => {
-  it("is false without a model and true with a valid configuration", () => {
-    vi.stubEnv("AI_MODEL", "");
-    expect(isAiConfigured()).toBe(false);
-
-    vi.stubEnv("AI_MODEL", "local-model");
-    expect(isAiConfigured()).toBe(true);
   });
 });

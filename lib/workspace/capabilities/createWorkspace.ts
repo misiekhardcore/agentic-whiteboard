@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { defineCapability } from "@/lib/capabilities/define";
-import { routes } from "@/lib/shared/routes";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 
 import { presentCreateWorkspace } from "../presentation";
 import { createWorkspaceFor } from "../service";
@@ -18,7 +18,7 @@ export const createWorkspace = defineCapability({
   }),
   output: resultSchema({ workspace: workspaceSummary }),
   callers: ["human", "agent"] as const,
-  invalidates: () => [routes.dashboard, routes.workspaces],
+  changes: () => [{ key: CHANGE_KEYS.workspaces, scope: "account" }],
   handler: async (ctx, input, _resource, { signal }) => {
     const result = await createWorkspaceFor(
       ctx.actor,

@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { capabilityFailureSchema, defineCapability, success } from "@/lib/capabilities/define";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 
 import { updatePersonalProfile as updatePersonalProfileFor } from "../authentication";
 
@@ -16,7 +17,7 @@ export const updatePersonalProfile = defineCapability({
   input: z.object({ name: z.string(), image: z.string().optional() }),
   output: z.discriminatedUnion("ok", [z.object({ ok: z.literal(true) }), capabilityFailureSchema]),
   callers: ["human"] as const,
-  invalidates: () => [{ path: "/", layout: true }],
+  changes: () => [{ key: CHANGE_KEYS.account, scope: "person" }],
   handler: async (_ctx, input) => {
     const refusal = await updatePersonalProfileFor({
       name: input.name,

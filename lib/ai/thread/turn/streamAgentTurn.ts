@@ -9,6 +9,7 @@ import {
 } from "@/lib/ai/runtime/instructions";
 import { createWorkspaceTools } from "@/lib/ai/tools";
 import { approvalGatedCapabilityNames } from "@/lib/capabilities/registry";
+import { type Change, CHANGE_KEYS_HEADER, changeKeysHeaderValue } from "@/lib/shared/changes";
 
 import { clearThreadStream } from "../live";
 import { closePrompt } from "../prompts";
@@ -30,15 +31,18 @@ export async function streamAgentTurn({
   promptId,
   history,
   continuing,
+  changes,
   uiContext,
   signal,
 }: {
   config: TurnConfig;
   actor: TurnActor;
   promptId: string;
-  /** The turn's history, read back from the database rather than from the body. */
+  /** A new prompt's stored turns, or the browser's own thread for a continuation. */
   history: UIMessage[];
   continuing: boolean;
+  /** What the send already changed, announced on the response for this tab. */
+  changes: Change[];
   uiContext: UiContext | null;
   signal: AbortSignal;
 }): Promise<Response> {
@@ -48,11 +52,20 @@ export async function streamAgentTurn({
 
   let failed = false;
   let usageFromStream: unknown = null;
+  // What the tools changed while the answer was streaming. The header was sent
+  // before they ran, so the reply itself carries these back to this browser.
+  const changedByTools = new Set<string>();
 
   try {
     return await createAgentUIStreamResponse({
       agent: createAgent({
-        tools: createWorkspaceTools(actor, { promptId, allowApprovalTools }),
+        tools: createWorkspaceTools(actor, {
+          promptId,
+          allowApprovalTools,
+          onChanges: (toolChanges) => {
+            for (const change of toolChanges) changedByTools.add(change.key);
+          },
+        }),
         instructions: buildInstructions(DEFAULT_AGENT_INSTRUCTIONS, uiContext),
         toolsRequiringApproval: allowApprovalTools ? approvalGatedCapabilityNames : undefined,
         toolApprovalSecret: config.toolApprovalSecret,
@@ -61,6 +74,16 @@ export async function streamAgentTurn({
       originalMessages: history,
       generateMessageId: generateId,
       abortSignal: signal,
+      // The tab that sent the prompt re-reads its route from this header, so it
+      // does not wait for a socket that may not be configured. Other tabs only
+      // hear the broadcast.
+      ...(changes.length > 0
+        ? { headers: { [CHANGE_KEYS_HEADER]: changeKeysHeaderValue(changes) } }
+        : {}),
+      messageMetadata: ({ part }) =>
+        part.type === "finish" && changedByTools.size > 0
+          ? { changeKeys: [...changedByTools] }
+          : undefined,
       onStepEnd: ({ usage: stepUsage }) => {
         usageFromStream = stepUsage;
       },

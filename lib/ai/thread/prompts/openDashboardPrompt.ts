@@ -25,6 +25,7 @@ export async function openDashboardPrompt({
   userId,
   provider,
   model,
+  title,
   discardFrom,
 }: {
   conversationId: string;
@@ -32,6 +33,8 @@ export async function openDashboardPrompt({
   userId: string;
   provider: string;
   model: string;
+  /** The conversation's derived title, used only when this prompt creates it. */
+  title: string;
   /** The prompt an edit branched from, if this send replaces a turn. */
   discardFrom?: PromptPosition;
 }): Promise<OpenPromptResult> {
@@ -40,11 +43,13 @@ export async function openDashboardPrompt({
   try {
     return await db.transaction(async (tx) => {
       // The first prompt of a conversation creates it. A conflict means the id
-      // already exists, so it is only usable when it is this person's.
-      await tx
+      // already exists, so it is only usable when it is this person's, and the
+      // title is left alone: a conversation keeps the name it was given.
+      const [createdConversation] = await tx
         .insert(agentConversations)
-        .values({ id: conversationId, userId })
-        .onConflictDoNothing();
+        .values({ id: conversationId, userId, title })
+        .onConflictDoNothing()
+        .returning({ id: agentConversations.id });
 
       const [conversation] = await tx
         .select({ userId: agentConversations.userId })
@@ -100,7 +105,11 @@ export async function openDashboardPrompt({
         .set({ updatedAt: now })
         .where(eq(agentConversations.id, conversationId));
 
-      return { kind: "opened", promptId: created.id };
+      return {
+        kind: "opened",
+        promptId: created.id,
+        conversationCreated: createdConversation !== undefined,
+      };
     });
   } catch (error) {
     if (isUniqueViolation(error)) return { kind: "busy" };

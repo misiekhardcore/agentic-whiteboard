@@ -63,17 +63,34 @@ vi.mock("@/lib/db", async () => {
         const name = getTableName(table as never);
         mocks.ops.push({ op: "insert", table: name, values });
 
+        // Whether this insert was the one that created the conversation.
+        const createdConversation =
+          name === "agentConversation" && mocks.conversationOwner === null;
         if (name === "agentConversation" && mocks.conversationOwner === null) {
           mocks.conversationOwner = String(values.userId);
         }
 
+        const rowsAfterConflict = () => {
+          if (mocks.insertError) return Promise.reject(mocks.insertError);
+          return Promise.resolve(
+            name === "agentConversation"
+              ? createdConversation
+                ? [{ id: String(values.id) }]
+                : []
+              : mocks.promptIds,
+          );
+        };
+
         return {
-          onConflictDoNothing: () =>
-            mocks.insertError ? Promise.reject(mocks.insertError) : Promise.resolve(),
-          returning: () =>
-            mocks.insertError
-              ? Promise.reject(mocks.insertError)
-              : Promise.resolve(mocks.promptIds),
+          onConflictDoNothing: () => ({
+            returning: rowsAfterConflict,
+            then: (resolve: (value: unknown[]) => unknown, reject?: (error: unknown) => unknown) =>
+              (mocks.insertError
+                ? Promise.reject(mocks.insertError)
+                : Promise.resolve([] as unknown[])
+              ).then(resolve, reject),
+          }),
+          returning: rowsAfterConflict,
         };
       },
     }),
@@ -112,6 +129,7 @@ const open = (options: { discardFrom?: { id: string; createdAt: Date } } = {}) =
     userId: "user_1",
     provider: "lmstudio",
     model: "qwen",
+    title: "Plan the schema",
     ...options,
   });
 
@@ -144,7 +162,11 @@ describe("opening a dashboard prompt", () => {
   it("opens the prompt on a free thread without a sweep", async () => {
     mocks.conversationOwner = "user_1";
 
-    await expect(open()).resolves.toEqual({ kind: "opened", promptId: "prompt_new" });
+    await expect(open()).resolves.toEqual({
+      kind: "opened",
+      promptId: "prompt_new",
+      conversationCreated: false,
+    });
     expect(updatesTo("agentPrompt", "status")).toHaveLength(0);
   });
 
@@ -159,12 +181,20 @@ describe("opening a dashboard prompt", () => {
   });
 
   it("creates the conversation with its first prompt", async () => {
-    await expect(open()).resolves.toEqual({ kind: "opened", promptId: "prompt_new" });
+    await expect(open()).resolves.toEqual({
+      kind: "opened",
+      promptId: "prompt_new",
+      conversationCreated: true,
+    });
 
     const conversation = mocks.ops.find(
       (op) => op.op === "insert" && op.table === "agentConversation",
     );
-    expect(conversation?.values).toMatchObject({ id: "conversation_1", userId: "user_1" });
+    expect(conversation?.values).toMatchObject({
+      id: "conversation_1",
+      userId: "user_1",
+      title: "Plan the schema",
+    });
   });
 
   it("refuses to write into a conversation that belongs to somebody else", async () => {
@@ -177,7 +207,11 @@ describe("opening a dashboard prompt", () => {
   it("retires a prompt no process is streaming before opening a new one", async () => {
     mocks.activePrompts = [{ id: "prompt_orphaned" }];
 
-    await expect(open()).resolves.toEqual({ kind: "opened", promptId: "prompt_new" });
+    await expect(open()).resolves.toEqual({
+      kind: "opened",
+      promptId: "prompt_new",
+      conversationCreated: true,
+    });
 
     expect(updatesTo("agentPrompt", "status")[0]?.values).toMatchObject({ status: "FAILED" });
   });
@@ -191,7 +225,11 @@ describe("opening a dashboard prompt", () => {
 
     await expect(
       open({ discardFrom: { id: "prompt_1", createdAt: new Date("2026-11-16T10:00:00Z") } }),
-    ).resolves.toEqual({ kind: "opened", promptId: "prompt_new" });
+    ).resolves.toEqual({
+      kind: "opened",
+      promptId: "prompt_new",
+      conversationCreated: false,
+    });
 
     const superseded = updatesTo("agentPrompt", "supersededAt");
     expect(superseded).toHaveLength(1);

@@ -5,9 +5,9 @@ import { Client } from "pg";
 /**
  * The dashboard opens with a prompt composer for the agent: Enter sends,
  * Shift+Enter keeps a line break, and sending runs a real request through
- * `/api/agent/prompts`. Playwright starts the app with `AI_PROVIDER=stub`, so
- * the scripted provider answers deterministically and can call the
- * createWorkspace tool.
+ * `/api/agent/prompts`. Playwright starts a scripted OpenAI-compatible endpoint
+ * and points `AI_BASE_URL` at it, so the replies are deterministic and the same
+ * HTTP contract production uses is what the suite exercises.
  */
 
 async function signUp(page: Page, email: string, password: string) {

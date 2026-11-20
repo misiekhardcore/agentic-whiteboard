@@ -10,8 +10,10 @@ import {
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { RefreshOnChanges } from "@/components/Changes";
 import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
 import { getSessionAccount } from "@/lib/identity/account";
+import { CHANGE_KEYS, workspaceChangeKey } from "@/lib/shared/changes";
 import { formatDay } from "@/lib/shared/format-date";
 import { routes, signInPath } from "@/lib/shared/routes";
 import { getWorkspaceForUser } from "@/lib/workspace/access";
@@ -47,6 +49,7 @@ export default async function WorkspacePage({ params }: PageProps<"/workspace/[i
 
   return (
     <main className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-6">
+      <RefreshOnChanges keys={[workspaceChangeKey(workspace.id), CHANGE_KEYS.workspaces]} />
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
         <div className="flex flex-col gap-2">
           <Link

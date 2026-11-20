@@ -31,6 +31,20 @@ export const agentConversations = pgTable(
 
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).defaultNow().notNull(),
 
+    /**
+     * What the switcher calls this conversation. Written from the first prompt
+     * when the row is created, then replaced once by a generated title; rows
+     * from before titles existed fall back to the first live prompt.
+     */
+    title: text("title"),
+
+    /**
+     * When the generated title replaced the derived one. Null means the label is
+     * still the prompt's own words, which is also what makes the refinement a
+     * one-time conditional write rather than a race.
+     */
+    titleGeneratedAt: timestamp("titleGeneratedAt", { precision: 3, mode: "date" }),
+
     // Bumped when a prompt is accepted, so "the latest conversation" is the one
     // the person last used rather than the one they last created.
     updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" })

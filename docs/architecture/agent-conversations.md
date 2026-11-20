@@ -44,13 +44,15 @@ column.
 | Message ids      | An append keeps the browser's message id; a rewind mints one                  | The composer names an edit by the message the person sees. Keeping the id on an append is what makes the prompt just sent editable; a rewind replaces a stored row, so it needs a fresh id.                                                                                     |
 | Allowance        | Checked only where a new prompt is opened                                     | A retry reuses its row, and an approval answer continues one; both are already counted, so neither can be refused for being out of allowance halfway through work the person paid for.                                                                                          |
 | Switching        | The open conversation is `?conversation=<id>`, and the section is keyed by it | `useChat` takes its messages once. A remount with the chosen thread's messages is the honest way to switch, and it keeps the URL shareable and reload-safe. The key uses the URL's id, not the resolved one, so a first visit does not remount and abort the prompt being sent. |
-| Switcher         | The five most recently updated conversations, labelled by their first prompt  | Enough to go back to what was just left without becoming a sidebar. A conversation with no live prompt is not listed, because there is nothing in it to open.                                                                                                                   |
+| Switcher         | The five most recently updated conversations, labelled by their stored title  | Enough to go back to what was just left without becoming a sidebar. A conversation with no live prompt is not listed, because there is nothing in it to open.                                                                                                                   |
+| Title            | Derived from the first prompt, then replaced once by a generated one          | The pill exists the moment a prompt is accepted, so the switcher never waits for a model. Naming is cheap work on a cheap endpoint, done in the background and published as a change; a failure leaves the derived title in place.                                              |
+| Title ownership  | `agentConversation.title` and `titleGeneratedAt`, written once                | Reading the label used to mean reading the first live prompt on every list call. The column is what the switcher reads, and `titleGeneratedAt` is what makes "generated once" a condition on the write rather than a convention.                                                |
 | History          | Every conversation, listed in a dialog beside the pills, read when it opens   | The pills can only name the last few; the rest need a way in that is not a sidebar. Reading on open keeps a dashboard visit from fetching a whole history, and a bounded limit keeps the query from growing without end.                                                        |
 | Scroll           | The thread is its own scroll box with a maximum height, pinned to the newest  | The composer must stay in place while a reply arrives. Following is a property of the position, not of the render: content growing does not move the scroll position, so only an upward scroll stops it, and the observer resumes as soon as the reader returns to the bottom.  |
 | Retry control    | Offered by the composer and by the thread when the stored tip failed          | The browser knows a send failed before it reached the route (the outage never wrote a row); the page knows the stored prompt failed. Both offer the same one-click retry, and both send the same message again.                                                                 |
 | Branch           | A new conversation holding a copy of the live turns through a reply           | "Carry on from here, without the rest" is a second thread, and a prompt belongs to one conversation — so the turns are copied rather than shared. Editing a copied turn rewinds the branch and leaves the original alone.                                                       |
 | Branch origin    | `agentPrompt.branchedFromId` marks a copy, and the count skips it             | The copy is history: the turn ran, and was paid for, where it came from. Counting it again would charge a person for branching, which does no work. Marking it says so in the row rather than in a query's shape.                                                               |
-| Branch point     | Only a turn that finished can be copied                                       | A queued, running or parked turn is not history yet, and a copy of a parked approval could never be answered: the answer is matched to the stored request, which lives in the original conversation.                                                                            |
+| Branch point     | Only a turn that finished can be copied                                       | A queued, running or parked turn is not history yet, and a copy of a parked approval could never be answered: the parked row, and the single-flight slot it reopens, belong to the original conversation.                                                                       |
 | Message actions  | Per message, revealed on hover; always visible where nothing can hover        | A long thread should read as a conversation, not as a wall of buttons. Copy and edit belong to the prompt; copy, read aloud, re-run (newest only) and branch belong to the reply. Re-running an older reply is not offered — that is what editing its prompt is for.            |
 | Icon buttons     | One label per button, used as its accessible name and its tooltip             | An icon is the whole control, so its meaning has to be on screen somewhere. One string cannot disagree with itself the way an `aria-label` and a tooltip written separately can, and it keeps the icon legible to a screen reader and a pointer alike.                          |
 
@@ -109,6 +111,23 @@ prompts are recorded as `COMPLETED` whatever the source ended as: history cannot
 take the single-flight slot, and it must not offer a free retry for a turn the
 person already paid for in the conversation it came from.
 
+### Why a title is generated rather than only derived
+
+A label cut from the prompt is honest and immediate, but it is the person's
+wording, not a name: "plan the schema for the invoicing tables and also" is what
+the pill shows after a long paste. A model asked for one short line does that
+work better, and the answer arrives while the person is reading the reply they
+asked for.
+
+So the order is derived first, generated second, and never blocking. The
+conversation row is created with the derived title in the same transaction as
+its first prompt; `refineConversationTitle` then runs unawaited, reads the newest
+prompts, asks the title endpoint (its own `TITLE_AI_*` configuration, which may
+be a different server from the agent's), cleans the answer and writes it only
+while `titleGeneratedAt` is still null. It publishes `conversations` as a change,
+which is how an open page shows the new name without a reload. A fork starts
+with no prompts, so its first prompt is the new turn that triggers the same job.
+
 ### Why the composer names messages instead of prompts
 
 `useChat.setMessages` truncates the browser's list at a message and
@@ -124,7 +143,9 @@ Persisting a thread is one concern per file, so a change to a retry, a rewind or
 an approval lands in exactly one of them:
 
 - `rules.ts` — the pure rules: append/retry/rewind intent, the branch and
-  history windows, the stored-message mapping, the switcher preview.
+  history windows, the stored-message mapping.
+- `lib/ai/titles` — the derived title, the generated one, the request and its
+  cleaning, and the background write that names a conversation once.
 - `conversations.ts` — reads: which conversation is open, its live thread, one
   turn's history, and one list read that serves both the pills and the history
   dialog.
@@ -137,7 +158,6 @@ an approval lands in exactly one of them:
   knows a branch's replay is not an execution.
 - `messages.ts` — the message rows: the person's text before the stream, the
   agent's reply after it, and which stored prompt a repeated message names.
-- `approvals.ts` — the parked approval a browser answer may resume.
 - `orphans.ts` — which active prompts nothing is streaming, and retiring them
   before the next send takes the slot.
 - `live.ts` — the in-process registry of streams that answers "is anything
@@ -169,9 +189,10 @@ writer, and `turn.ts` is the only module that composes the others.
    The posted thread is a mirror, not the model's input: the turn reads the
    conversation's live turns back from the database (up to and including the prompt
    it just recorded), so a body that carries a discarded branch or an invented
-   reply is answered exactly like a clean one. The only things a body
-   contributes are the prompt being sent and, for a parked approval, the
-   answer — which is matched to the stored request before the turn resumes.
+   reply is answered exactly like a clean one. An approval answer is the
+   exception: it streams the posted thread, because the decision and the turn it
+   belongs to already exist in the browser, and each tool call in it is
+   authorized again by `invoke` when it runs.
 6. `promptIntent` decides append, retry or rewind. A retry reuses its row; an
    append checks the allowance and opens a counted prompt; a rewind checks the
    allowance, supersedes every live prompt from the branch point and opens a new
@@ -202,8 +223,9 @@ writer, and `turn.ts` is the only module that composes the others.
 
 ## Deferred
 
-- Renaming, deleting or searching conversations: the history dialog lists them,
-  it does not manage them.
+- Renaming a conversation by hand, deleting or searching conversations: the
+  history dialog lists them, it does not manage them, and a title is only ever
+  what the prompt and the model said.
 - Sharing a conversation with the account's other members.
 - Restoring a superseded branch.
 - Streaming the same conversation to several tabs.

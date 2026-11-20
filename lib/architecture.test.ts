@@ -84,9 +84,11 @@ const KERNEL = [/^lib[\\/]capabilities[\\/](define|invoke|describe)[\\/]/];
 const KERNEL_ALLOWED = [
   /^zod$/,
   /^\.\//,
-  /^\.\.\/(define|invoke|presentation)(\/|$)/,
-  /^@\/lib\/capabilities\/(define|invoke|presentation)(\/|$)/,
+  /^\.\.\/(define|invoke|presentation|changes)(\/|$)/,
+  /^@\/lib\/capabilities\/(define|invoke|presentation|changes)(\/|$)/,
   /^@\/lib\/identity\/actor$/,
+  // The change contract is vocabulary, not a domain: the kernel publishes it.
+  /^@\/lib\/shared\/changes(\/|$)/,
 ];
 
 /**
@@ -149,5 +151,29 @@ describe("module boundaries", () => {
     });
 
     expect(external).toEqual([]);
+  });
+
+  it("keeps capabilities free of routes and cache tags", () => {
+    // `refresh()` is the one `next/cache` call a capability may make: it re-reads
+    // the route the caller is on, so the kernel never names a path. Naming one,
+    // or invalidating a tag, is the route knowledge this rule exists to keep out.
+    const ALLOWED = ["refresh"];
+    const offenders = sourceFiles(LIB)
+      .filter((file) => /^lib[\\/]capabilities[\\/]/.test(relative(ROOT, file)))
+      .flatMap((file) => {
+        const source = readFileSync(file, "utf8");
+        const label = relative(ROOT, file);
+
+        return [...source.matchAll(/import\s*\{([^}]*)\}\s*from\s*["']next\/cache["']/g)].flatMap(
+          (match) =>
+            match[1]
+              .split(",")
+              .map((name) => name.trim())
+              .filter((name) => name.length > 0 && !ALLOWED.includes(name))
+              .map((name) => `${label} imports ${name}`),
+        );
+      });
+
+    expect(offenders).toEqual([]);
   });
 });

@@ -1,10 +1,11 @@
 import { z } from "zod";
 
 import { defineCapability } from "@/lib/capabilities/define";
-import { routes } from "@/lib/shared/routes";
+import { CHANGE_KEYS, workspaceChangeKey } from "@/lib/shared/changes";
 
 import { authorizeWorkspace } from "../access";
 import { presentRestoreWorkspace } from "../presentation";
+import { workspaceIdSchema } from "../rules";
 import { restoreWorkspaceWith } from "../service";
 
 import { linked, NOT_FOUND, summaryOutput } from "./internals";
@@ -14,15 +15,13 @@ export const restoreWorkspace = defineCapability({
   description:
     "Bring an archived workspace back to the dashboard and into the plan meter. Requires the id of an archived workspace from `listWorkspaces` with `includeArchived: true`. Returns the restored workspace with its `link`.",
   input: z.object({
-    workspaceId: z.string().min(1, "Choose a workspace."),
+    workspaceId: workspaceIdSchema,
   }),
   output: summaryOutput,
   callers: ["human", "agent"] as const,
-  invalidates: (output) => [
-    routes.dashboard,
-    routes.dashboardArchive,
-    routes.workspaces,
-    output.workspace.link,
+  changes: (output) => [
+    { key: CHANGE_KEYS.workspaces, scope: "account" },
+    { key: workspaceChangeKey(output.workspace.id), scope: "account" },
   ],
   notFound: NOT_FOUND,
   authorize: async (ctx, input) => authorizeWorkspace(ctx.actor, input.workspaceId, "edit"),

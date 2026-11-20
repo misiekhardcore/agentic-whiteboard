@@ -6,7 +6,7 @@ import {
   failure,
   success,
 } from "@/lib/capabilities/define";
-import { routes } from "@/lib/shared/routes";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 
 import { MAX_READ_ALOUD_VOICE_NAME, saveReadAloudVoice } from "../settings";
 
@@ -21,7 +21,7 @@ export const setReadAloudVoice = defineCapability({
   input: z.object({ voice: z.string().trim().max(MAX_READ_ALOUD_VOICE_NAME) }),
   output: z.discriminatedUnion("ok", [z.object({ ok: z.literal(true) }), capabilityFailureSchema]),
   callers: ["human"] as const,
-  invalidates: () => [routes.dashboard],
+  changes: () => [{ key: CHANGE_KEYS.settings, scope: "person" }],
   handler: async (ctx, input) => {
     try {
       await saveReadAloudVoice(ctx.actor.userId, input.voice);

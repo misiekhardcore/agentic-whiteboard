@@ -10,9 +10,11 @@ import { Archive } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { RefreshOnChanges } from "@/components/Changes";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { ArchivedWorkspaceList } from "@/components/Workspaces/ArchivedWorkspaceList";
 import { getSessionAccount } from "@/lib/identity/account";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 import { routes, signInPath } from "@/lib/shared/routes";
 import { listArchivedWorkspaces } from "@/lib/workspace/queries";
 
@@ -27,7 +29,7 @@ export const instant = false;
  * Every archived workspace in the selected account. Archiving is a soft delete:
  * the workspace is out of the dashboard and the plan meter, and this is the one
  * place that shows it while it waits to be restored or deleted for good. The
- * restore and delete actions revalidate this path as well as the dashboard.
+ * restore and delete actions publish the workspace lists this page reads.
  */
 export default async function ArchivePage() {
   const account = await getSessionAccount();
@@ -39,6 +41,7 @@ export default async function ArchivePage() {
 
   return (
     <div className="stack">
+      <RefreshOnChanges keys={[CHANGE_KEYS.workspaces]} />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Archived workspaces</h1>

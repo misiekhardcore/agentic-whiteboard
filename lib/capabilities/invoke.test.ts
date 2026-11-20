@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+const publisher = vi.hoisted(() => ({ publishChanges: vi.fn(() => Promise.resolve()) }));
+
+vi.mock("./changes", () => publisher);
+
 import {
   type Capability,
   type CapabilityContext,
@@ -136,6 +140,53 @@ describe("invoke", () => {
       error: "That operation is not available here.",
     });
     expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("publishes the datasets a successful call declares, once, for either caller", async () => {
+    const { capability } = renameCapability({
+      changes: () => [{ key: "workspaces", scope: "account" }],
+    });
+
+    await invoke(capability, humanContext, { id: "thing_1", value: "Launch" });
+    await invoke(capability, agentContext, { id: "thing_1", value: "Launch" });
+
+    expect(publisher.publishChanges).toHaveBeenCalledTimes(2);
+    expect(publisher.publishChanges).toHaveBeenCalledWith({
+      changes: [{ key: "workspaces", scope: "account" }],
+      actor,
+    });
+  });
+
+  it("tells the caller's own stream what changed, so a tool's write reaches its tab", async () => {
+    const { capability } = renameCapability({
+      changes: () => [{ key: "workspaces", scope: "account" }],
+    });
+    const onChanges = vi.fn();
+
+    await invoke(capability, { ...agentContext, onChanges }, { id: "thing_1", value: "Launch" });
+    expect(onChanges).toHaveBeenCalledWith([{ key: "workspaces", scope: "account" }]);
+
+    onChanges.mockClear();
+    await invoke(
+      renameCapability({
+        changes: () => [{ key: "workspaces", scope: "account" }],
+        handler: () => ({ ok: false, error: "That name is taken." }),
+      }).capability,
+      { ...agentContext, onChanges },
+      { id: "thing_1", value: "Launch" },
+    );
+    expect(onChanges).not.toHaveBeenCalled();
+  });
+
+  it("publishes nothing when the call changed nothing", async () => {
+    const { capability } = renameCapability({
+      changes: () => [{ key: "workspaces", scope: "account" }],
+      handler: () => ({ ok: false, error: "That name is taken." }),
+    });
+
+    await invoke(capability, humanContext, { id: "thing_1", value: "Launch" });
+
+    expect(publisher.publishChanges).not.toHaveBeenCalled();
   });
 
   it("throws when a handler returns a shape its own schema rejects", async () => {

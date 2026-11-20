@@ -4,7 +4,7 @@ import { invoke } from "../invoke";
 import { humanContext } from "./humanContext";
 import { readInput } from "./internals";
 
-/** Runs a capability for the signed-in person; nothing is revalidated here. */
+/** Runs a capability for the signed-in person; nothing is revalidated here; a success publishes its declared changes. */
 export async function runCapability<I, T, R>(
   capability: Capability<I, T, R>,
   raw: unknown,

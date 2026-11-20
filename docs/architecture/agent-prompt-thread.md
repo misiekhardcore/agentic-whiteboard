@@ -49,7 +49,7 @@ Wiring it up needed answers to four questions the schema did not settle:
 | Concurrency           | One `QUEUED`/`RUNNING` prompt per person's dashboard thread                                          | Two streams over one conversation would interleave replies. A partial unique index enforces it; a second send gets 409 instead of a second run.                                                                                                                                        |
 | Prompt while busy     | Queued in the composer, sent when the turn ends                                                      | A prompt typed while the agent answers waits its turn, in the order it was written, rather than being dropped or refused. The server's 409 stays as the guard for anything that is not this composer.                                                                                  |
 | Orphaned prompts      | A `QUEUED`/`RUNNING` prompt this process is not streaming is retired on the next send                | A restarted server must not block the thread, and no timestamp can tell a live stream from a dead one — a slow model holds its first token for minutes. The process that started a stream is the only thing that knows, so it keeps that fact in memory.                               |
-| Test provider         | `AI_PROVIDER=stub` scripted model                                                                    | E2E needs a deterministic model that can also call a tool, without a GPU or a hosted key. Every reply is prefixed so a demo is not mistaken for a real answer.                                                                                                                         |
+| Test endpoint         | A scripted OpenAI-compatible server under `scripts/`, started by the e2e suite                       | The app has one provider path, HTTP chat completions. Tests point `AI_BASE_URL` at the fixture instead of shipping a fake provider in `lib/`, so the suite exercises the same contract production uses.                                                                                |
 
 ### Why merge the run and the ledger
 
@@ -114,9 +114,9 @@ conversation into a workspace later is an update, not a second model.
    a provider error means `FAILED`; an outstanding approval means
    `AWAITING_APPROVAL`.
 7. Answering the approval posts the conversation again. The route recognises the
-   assistant message carrying the approval part as a continuation, matches the
-   signed reference to the parked prompt, resumes that row and accrues the new
-   tokens onto it. No second prompt is opened or counted.
+   assistant message carrying the approval part as a continuation, resumes the
+   conversation's `AWAITING_APPROVAL` row, streams the posted thread and accrues
+   the new tokens onto that row. No second prompt is opened or counted.
 8. The page reloads the thread from the database, so a refresh replays it; an
    answered request is dropped from the replay while the text around it stays.
 
@@ -156,12 +156,13 @@ follow-up the day this app needs a second instance.
   it ([capabilities](capabilities.md)). It cannot yet edit docs or canvases;
   those mutations still belong to the collaboration gateway described in
   [ai-collaboration](ai-collaboration.md).
-- A parked approval is answerable for 24 hours and survives a reload, because the
+- A parked approval survives a reload, because the
   request is stored with the message rather than held in the stream.
 - Restarting the server mid-reply costs the reply, not the thread: the orphaned
   row is retired on the next send and the person is told to send it again.
-- `AI_PROVIDER=stub` is a deployment-visible provider. Production must not set
-  it; the scripted replies are deliberately obvious.
+- The scripted model is a fixture the e2e suite starts, never a provider the app
+  can select; its replies are deliberately obvious so a demo is not mistaken for
+  a real answer.
 - The dashboard thread is not shared with collaborators. Shared workspace chat
   is future work.
 

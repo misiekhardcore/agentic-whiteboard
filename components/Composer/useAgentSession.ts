@@ -10,9 +10,13 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { useChangesContext } from "@/components/Changes";
 import { composerView } from "@/lib/ai/thread/composer";
 import { promptFailure } from "@/lib/ai/thread/transport/promptFailure";
+import { CHANGE_KEYS_HEADER, readChangeKeys } from "@/lib/shared/changes";
 import { routes } from "@/lib/shared/routes";
+
+const ignoreChanges = () => {};
 
 type PromptFailure = ReturnType<typeof promptFailure>;
 
@@ -31,12 +35,22 @@ export function useAgentSession({
   initialMessages: UIMessage[];
 }) {
   const router = useRouter();
+  const applyChanges = useChangesContext()?.applyChanges ?? ignoreChanges;
   const [failure, setFailure] = useState<PromptFailure | null>(null);
-
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: routes.agentPromptsApi,
+        // The prompt row exists by the time the response starts, so the datasets
+        // it announced are re-read at once: the pill and the usage meter are
+        // right while the answer is still streaming, without waiting for a
+        // socket that may not be configured in this deployment.
+        fetch: async (request, init) => {
+          const response = await globalThis.fetch(request, init);
+          applyChanges(readChangeKeys(response.headers.get(CHANGE_KEYS_HEADER)));
+
+          return response;
+        },
         // Read at send time, so "this workspace" keeps working after a
         // navigation; the server treats it as a hint and validates it.
         prepareSendMessagesRequest: ({ messages }) => ({
@@ -47,7 +61,7 @@ export function useAgentSession({
           },
         }),
       }),
-    [conversationId],
+    [applyChanges, conversationId],
   );
 
   const {
@@ -79,14 +93,15 @@ export function useAgentSession({
         router.push(routes.workspace(input.workspaceId));
       }
     },
+    // The datasets the turn's tools changed arrive with the reply, after they
+    // ran: the header named what the send itself changed, before the stream.
+    onFinish: ({ message }) => {
+      applyChanges((message.metadata as { changeKeys?: string[] } | undefined)?.changeKeys ?? []);
+    },
     onError: (error) => {
       const next = promptFailure(error);
       setFailure(next);
       toast.error(next.message);
-    },
-    onFinish: () => {
-      // A tool may have created a workspace; the latest list is server-rendered.
-      router.refresh();
     },
   });
 

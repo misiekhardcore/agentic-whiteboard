@@ -31,7 +31,7 @@ const access = {
   kind: "personal" as const,
   permission: "edit" as const,
   workspace: {
-    id: "ws_1",
+    id: "wsone9k2m4p7q1r3s5t8u0vx",
     name: "Launch",
     description: null,
     status: "PLANNING" as const,
@@ -79,7 +79,7 @@ describe("createWorkspace tool", () => {
   it("returns the new workspace with the link the agent can share", async () => {
     service.createWorkspaceFor.mockResolvedValue({
       ok: true,
-      workspace: { id: "ws_1", name: "Food delivery", status: "PLANNING" },
+      workspace: { id: "wsone9k2m4p7q1r3s5t8u0vx", name: "Food delivery", status: "PLANNING" },
     });
 
     const output: unknown = await createWorkspaceTools(actor).createWorkspace.execute?.(
@@ -90,10 +90,10 @@ describe("createWorkspace tool", () => {
     expect(output).toEqual({
       ok: true,
       workspace: {
-        id: "ws_1",
+        id: "wsone9k2m4p7q1r3s5t8u0vx",
         name: "Food delivery",
         status: "PLANNING",
-        link: "/workspace/ws_1",
+        link: "/workspace/wsone9k2m4p7q1r3s5t8u0vx",
       },
     });
   });
@@ -123,7 +123,7 @@ describe("read tools", () => {
   it("links every workspace so the agent can point at one", async () => {
     queries.listWorkspacesFor.mockResolvedValue([
       {
-        id: "ws_1",
+        id: "wsone9k2m4p7q1r3s5t8u0vx",
         name: "Food delivery",
         description: null,
         status: "PLANNING",
@@ -143,12 +143,12 @@ describe("read tools", () => {
       ok: true,
       workspaces: [
         {
-          id: "ws_1",
+          id: "wsone9k2m4p7q1r3s5t8u0vx",
           name: "Food delivery",
           description: null,
           status: "PLANNING",
           archived: false,
-          link: "/workspace/ws_1",
+          link: "/workspace/wsone9k2m4p7q1r3s5t8u0vx",
         },
       ],
     });
@@ -158,7 +158,7 @@ describe("read tools", () => {
     accessMock.authorizeWorkspace.mockResolvedValue(null);
 
     const output: unknown = await createWorkspaceTools(actor).getWorkspace.execute?.(
-      { workspaceId: "ws_other" },
+      { workspaceId: "wsother9k2m4p7q1r3s5t8u0" },
       callOptions,
     );
 
@@ -174,18 +174,18 @@ describe("updateWorkspace tool", () => {
     accessMock.authorizeWorkspace.mockResolvedValue(access);
     service.updateWorkspaceWith.mockResolvedValue({
       ok: true,
-      workspace: { id: "ws_1", name: "Launch", status: "PLANNING" },
+      workspace: { id: "wsone9k2m4p7q1r3s5t8u0vx", name: "Launch", status: "PLANNING" },
     });
 
     const output: unknown = await createWorkspaceTools(actor).updateWorkspace.execute?.(
-      { workspaceId: "ws_1", name: "Launch" },
+      { workspaceId: "wsone9k2m4p7q1r3s5t8u0vx", name: "Launch" },
       { ...callOptions, abortSignal },
     );
 
     expect(service.updateWorkspaceWith).toHaveBeenCalledWith(
       access,
       {
-        id: "ws_1",
+        id: "wsone9k2m4p7q1r3s5t8u0vx",
         name: "Launch",
         description: undefined,
         status: undefined,
@@ -195,10 +195,10 @@ describe("updateWorkspace tool", () => {
     expect(output).toEqual({
       ok: true,
       workspace: {
-        id: "ws_1",
+        id: "wsone9k2m4p7q1r3s5t8u0vx",
         name: "Launch",
         status: "PLANNING",
-        link: "/workspace/ws_1",
+        link: "/workspace/wsone9k2m4p7q1r3s5t8u0vx",
       },
     });
   });

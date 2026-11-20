@@ -5,11 +5,13 @@ import { TooltipProvider } from "@konopskidev/ui/components/tooltip";
 import type { ReactNode } from "react";
 import { Toaster } from "sonner";
 
+import { ChangesProvider } from "@/components/Changes";
+
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
       <TooltipProvider>
-        {children}
+        <ChangesProvider>{children}</ChangesProvider>
         <ThemedToaster />
       </TooltipProvider>
     </ThemeProvider>

@@ -2,10 +2,11 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { defineCapability, failure, success } from "@/lib/capabilities/define";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 
 import { acceptInvitation as acceptInvitationFor } from "../invitations";
 
-import { MENU, outcome } from "./internals";
+import { outcome } from "./internals";
 
 export const acceptInvitation = defineCapability({
   name: "acceptInvitation",
@@ -13,7 +14,7 @@ export const acceptInvitation = defineCapability({
   input: z.object({ invitationId: z.string() }),
   output: outcome,
   callers: ["human"] as const,
-  invalidates: () => [MENU],
+  changes: () => [{ key: CHANGE_KEYS.account, scope: "account" }],
   handler: async (_ctx, input) => {
     if (!input.invitationId) return failure("That invitation link is incomplete.");
 

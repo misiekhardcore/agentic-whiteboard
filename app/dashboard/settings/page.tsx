@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 
+import { RefreshOnChanges } from "@/components/Changes";
 import { getSessionAccount } from "@/lib/identity/account";
 import { readPersonalSettings } from "@/lib/identity/settings";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 import { routes, signInPath } from "@/lib/shared/routes";
 
 import { PreferencesSection } from "./_components/PreferencesSection";
@@ -32,6 +34,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+      <RefreshOnChanges keys={[CHANGE_KEYS.account, CHANGE_KEYS.settings]} />
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-h2 font-semibold">Settings</h1>
         <p className="text-sm text-muted-foreground">

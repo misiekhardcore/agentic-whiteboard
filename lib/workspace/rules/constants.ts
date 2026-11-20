@@ -12,3 +12,6 @@ export const WORKSPACE_FORBIDDEN_MESSAGE = "You cannot edit that workspace.";
 export const WORKSPACE_NOT_ARCHIVED_MESSAGE = "Archive a workspace before deleting it permanently.";
 
 export const WORKSPACE_NOT_FOUND_MESSAGE = "That workspace could not be found.";
+
+export const WORKSPACE_ID_INVALID_MESSAGE =
+  "That is not a workspace id. Pass the id listWorkspaces returned, exactly as it did.";

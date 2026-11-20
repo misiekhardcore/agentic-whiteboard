@@ -2,10 +2,11 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { defineCapability, success } from "@/lib/capabilities/define";
+import { CHANGE_KEYS } from "@/lib/shared/changes";
 
 import { updateOrganizationProfile as updateOrganizationProfileFor } from "../settings";
 
-import { MENU, outcome } from "./internals";
+import { outcome } from "./internals";
 
 export const updateOrganizationProfile = defineCapability({
   name: "updateOrganizationProfile",
@@ -18,7 +19,7 @@ export const updateOrganizationProfile = defineCapability({
   }),
   output: outcome,
   callers: ["human"] as const,
-  invalidates: () => [MENU],
+  changes: () => [{ key: CHANGE_KEYS.account, scope: "account" }],
   handler: async (ctx, input) => {
     const refusal = await updateOrganizationProfileFor({
       userId: ctx.actor.userId,
