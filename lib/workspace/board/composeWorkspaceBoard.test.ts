@@ -44,4 +44,20 @@ describe("composing the workspace board", () => {
       ["Done thing"],
     ]);
   });
+
+  it("orders a column by position, then by id when positions are equal", () => {
+    const board = composeWorkspaceBoard([
+      row({ id: "ws_c", name: "Third", status: "IN_PROGRESS", position: 20 }),
+      row({ id: "ws_d", name: "Tie d", status: "IN_PROGRESS", position: 10 }),
+      row({ id: "ws_b", name: "Second", status: "IN_PROGRESS", position: 10 }),
+      row({ id: "ws_a", name: "First", status: "IN_PROGRESS", position: 5 }),
+    ]);
+
+    expect(board[1]?.workspaces.map((workspace) => workspace.name)).toEqual([
+      "First",
+      "Second",
+      "Tie d",
+      "Third",
+    ]);
+  });
 });
