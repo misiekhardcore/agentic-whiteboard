@@ -11,6 +11,8 @@ import {
   useRef,
 } from "react";
 
+import { followsLiveChanges } from "@/lib/shared/routes";
+
 import { useChangeChannels } from "./useChangeChannels";
 
 type ChangeHandler = () => void;
@@ -53,7 +55,12 @@ export function ChangesProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(() => router.refresh(), [router]);
 
-  useChangeChannels({ onKeys: applyChanges, onReconnect: refresh, rejoinOn: pathname });
+  useChangeChannels({
+    onKeys: applyChanges,
+    onReconnect: refresh,
+    rejoinOn: pathname,
+    enabled: followsLiveChanges(pathname),
+  });
 
   useEffect(() => {
     const onFocus = () => router.refresh();
