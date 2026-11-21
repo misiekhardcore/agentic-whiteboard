@@ -4,11 +4,11 @@ import { routes, signInPath, signUpPath } from "./routes";
 
 describe("routes", () => {
   it("builds a workspace path from its id", () => {
-    expect(routes.workspace("ws_abc123")).toBe("/workspace/ws_abc123");
+    expect(routes.workspace("ws_abc123")).toBe("/workspaces/ws_abc123");
   });
 
   it("escapes an id so it cannot leave its path segment", () => {
-    expect(routes.workspace("a/b?c")).toBe("/workspace/a%2Fb%3Fc");
+    expect(routes.workspace("a/b?c")).toBe("/workspaces/a%2Fb%3Fc");
   });
 
   it("builds an invite path from its id", () => {

@@ -2,8 +2,10 @@ import { type Browser, expect, type Locator, type Page, test } from "@playwright
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 
+import { routes } from "@/lib/shared/routes";
+
 /**
- * Workspaces are managed from the dashboard and reached through /workspace/:id.
+ * Workspaces are managed from the dashboard and reached through /workspaces/:id.
  * Access is decided by the workspace's own account, not by whichever account the
  * dashboard is showing, so a second person must get a 404 for a personal workspace
  * even though both are signed in. Archiving is a soft delete: it frees a plan
@@ -139,11 +141,15 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
     });
 
     await test.step("the workspace route opens only for someone with access", async () => {
+      if (!workspaceId) throw new Error("The workspace id is missing");
+
       await page.getByRole("link", { name: workspaceName }).click();
-      await page.waitForURL(`**/workspace/${workspaceId}`);
+      await page.waitForURL(`**${routes.workspace(workspaceId)}`);
 
       await expect(page.getByRole("heading", { name: workspaceName })).toBeVisible();
       await expect(page.getByText("The workspace editor is on its way")).toBeVisible();
+      // The detail page is a surface of the workspaces section, not a standalone page.
+      await expect(page.getByRole("link", { name: "All workspaces" })).toBeVisible();
 
       const other = await signUpInNewContext(browser, {
         email: otherEmail,
@@ -151,7 +157,7 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       });
       cleanups.push(other.close);
 
-      await other.page.goto(`/workspace/${workspaceId}`);
+      await other.page.goto(routes.workspace(workspaceId));
       await expect(
         other.page.getByRole("heading", { name: "This page is off the map" }),
       ).toBeVisible();
@@ -337,7 +343,7 @@ test("a workspace is archived, restored and deleted from its own page", async ({
     await createWorkspace(page, { name: workspaceName });
 
     await page.getByRole("link", { name: workspaceName }).click();
-    await page.waitForURL("**/workspace/**");
+    await page.waitForURL("**/workspaces/**");
 
     await test.step("archiving from the workspace page shows the archived state", async () => {
       await openDialog(
@@ -371,7 +377,7 @@ test("a workspace is archived, restored and deleted from its own page", async ({
 
     await test.step("deleting the archived workspace removes it for good", async () => {
       await page.getByRole("link", { name: workspaceName }).click();
-      await page.waitForURL("**/workspace/**");
+      await page.waitForURL("**/workspaces/**");
 
       await openDialog(
         page,

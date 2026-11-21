@@ -45,11 +45,18 @@ is a defect.
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
 | workspace        | The unit of work in an account: a name, a description, a status, at most one document, at most one canvas, and its agent history.                     | `lib/workspace` |
 | workspace status | Where the work stands: `PLANNING`, `IN_PROGRESS`, `IN_REVIEW`, `DONE`. Archiving is not a status; an archived workspace keeps the one it had.         | `lib/workspace` |
+| board            | The stage columns on `/workspaces`: every non-archived workspace of the active account, placed by status and ordered inside its column.               | `lib/workspace` |
+| column           | One status on the board. Fixed and always shown, so an empty stage is information rather than absence.                                                | `lib/workspace` |
+| position         | A workspace's place inside its column, ascending. Only a move writes it, and a value means something only relative to its neighbours.                 | `lib/workspace` |
 | workspace access | A workspace and the person's relationship to it: personal or organization, the organization, and their role there.                                    | `lib/workspace` |
 | archive          | The reversible removal: hides a workspace from the dashboard, frees its plan slot, and keeps its content and history for a restore.                   | `lib/workspace` |
 | restore          | Clearing the archive, undoing the person's own archive. The agent may restore.                                                                        | `lib/workspace` |
 | delete           | Permanent removal of an archived workspace and everything under it. Only an archived workspace can be deleted, so one request cannot erase live work. | `lib/workspace` |
 | workspace limit  | The number of non-archived workspaces an account may hold on a plan, checked under a lock so two creates cannot take the last slot.                   | `lib/workspace` |
+| activity         | One recorded state change of a workspace on one of its surfaces: the kind, the actor, the time and what changed. Append-only.                         | `lib/workspace` |
+| activity kind    | The named change: created, renamed, described, stage moved, archived, restored, doc saved, canvas saved.                                              | `lib/workspace` |
+| actor            | Who performed an activity: a person, or the agent acting on a person's behalf, which records that person as the requester.                            | `lib/workspace` |
+| last activity    | A workspace's newest activity, counting the rows for its document and canvas. What a card shows.                                                      | `lib/workspace` |
 
 ## Content surfaces
 
@@ -82,7 +89,8 @@ is a defect.
 | agent              | The model participant. It acts as its own actor on behalf of the requester and never chooses the person, account or workspace it writes to.                                                                                                                                                                   | `lib/ai` |
 | prompt             | One accepted request to the agent: the billing unit and the execution unit in one row, from queued through running and awaiting approval to completed, failed or cancelled. A refused request records nothing. The architecture records still call this execution a run; it is this row, not a second record. | `lib/ai` |
 | turn               | A prompt together with the messages it produced, as the thread reads it. The tip is a conversation's newest live prompt, and only a failed tip can be retried.                                                                                                                                                | `lib/ai` |
-| conversation       | The stored container a person's prompts belong to, chosen before the first prompt and kept in the URL. A conversation with no workspace is a dashboard conversation.                                                                                                                                          | `lib/ai` |
+| conversation       | The stored container a person's prompts belong to, in one account: personal or organization, and never shared with a teammate. Chosen before the first prompt and kept in the URL.                                                                                                                            | `lib/ai` |
+| agent panel        | The resizable right column holding the conversation on every page of the workspaces section. Same conversation as the dashboard composer, not a second one.                                                                                                                                                   | `lib/ai` |
 | conversation title | The name a conversation carries: derived from its first prompt when the row is created, then replaced once by a generated one. Never empty, never a route or an id.                                                                                                                                           | `lib/ai` |
 | thread             | The live messages of one conversation, with superseded prompts filtered out. A view over stored rows, never a table of its own.                                                                                                                                                                               | `lib/ai` |
 | message            | One stored chat row: system, user or assistant. Tool calls and results are parts of an assistant message, so there is no tool role.                                                                                                                                                                           | `lib/ai` |
@@ -119,7 +127,13 @@ is a defect.
   subscription is mirrored Stripe state, and the entitlements are what the
   account may do once both resolve.
 - **Status, stage.** One value: coded and stored as `status`, labelled "stage"
-  where people see it as a column.
+  in the interface, where each value is a board column.
+- **Stage move, workspace edit, activity.** A stage move is one kind of activity,
+  which also records renames, descriptions, the archive lifecycle and surface
+  saves; an activity is the history row, never a live field of the workspace.
+- **Board, latest list, archive.** The board shows non-archived workspaces by
+  stage and position. The latest list shows the newest workspaces and surfaces.
+  The archive shows what was removed from both.
 - **Change, broadcast, refresh.** A change is the declared fact that a dataset
   differs. A broadcast is its delivery, which may be missed. A refresh is the
   page reading the data again, which is what makes the change visible.

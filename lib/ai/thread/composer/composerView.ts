@@ -8,7 +8,7 @@ export function composerView(pathname: string): {
   pathname: string;
   workspaceId?: string;
 } {
-  const onWorkspace = /^\/workspace\/([A-Za-z0-9_-]+)/.exec(pathname);
+  const onWorkspace = /^\/workspaces\/([A-Za-z0-9_-]+)/.exec(pathname);
 
   return onWorkspace ? { pathname, workspaceId: onWorkspace[1] } : { pathname };
 }

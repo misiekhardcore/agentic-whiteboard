@@ -3,7 +3,7 @@
  * Everything else — the marketing page, the auth utilities, an invitation —
  * either has no session or no data worth a socket.
  */
-const LIVE_CHANGE_ROOTS = ["/dashboard", "/workspaces", "/workspace"] as const;
+const LIVE_CHANGE_ROOTS = ["/dashboard", "/workspaces"] as const;
 
 /**
  * Whether the page at `pathname` follows the change channels. Asking for a

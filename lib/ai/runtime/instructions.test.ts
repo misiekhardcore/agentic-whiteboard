@@ -13,11 +13,11 @@ describe("buildInstructions", () => {
 
   it("names the workspace the person is looking at", () => {
     const instructions = buildInstructions(DEFAULT_AGENT_INSTRUCTIONS, {
-      pathname: "/workspace/ws_1",
+      pathname: "/workspaces/ws_1",
       workspaceId: "ws_1",
     });
 
-    expect(instructions).toContain("/workspace/ws_1");
+    expect(instructions).toContain("/workspaces/ws_1");
     expect(instructions).toContain("ws_1");
   });
 

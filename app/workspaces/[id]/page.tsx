@@ -43,7 +43,7 @@ export const instant = false;
  * The editor is not built yet; this page is the gate the editor will render
  * behind, not a workspace surface of its own.
  */
-export default async function WorkspacePage({ params }: PageProps<"/workspace/[id]">) {
+export default async function WorkspacePage({ params }: PageProps<"/workspaces/[id]">) {
   const { id } = await params;
 
   const account = await getSessionAccount();
@@ -55,7 +55,7 @@ export default async function WorkspacePage({ params }: PageProps<"/workspace/[i
   const { workspace } = access;
 
   return (
-    <main className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-6">
+    <main className="flex w-full justify-center">
       <RefreshOnChanges keys={[workspaceChangeKey(workspace.id), CHANGE_KEYS.workspaces]} />
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
         <div className="flex flex-col gap-2">
