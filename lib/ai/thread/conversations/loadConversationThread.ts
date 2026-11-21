@@ -1,6 +1,11 @@
 import type { UIMessage } from "ai";
 
-import { promptCanRetry, storedParts, threadMessages } from "@/lib/ai/thread/rules";
+import {
+  type ConversationOwner,
+  promptCanRetry,
+  storedParts,
+  threadMessages,
+} from "@/lib/ai/thread/rules";
 
 import { CONVERSATION_THREAD_LIMIT } from "./constants";
 import { liveConversationTurns } from "./liveConversationTurns";
@@ -12,15 +17,15 @@ import { liveConversationTurns } from "./liveConversationTurns";
  * neither is replayed.
  */
 export async function loadConversationThread({
-  userId,
+  owner,
   conversationId,
   limit = CONVERSATION_THREAD_LIMIT,
 }: {
-  userId: string;
+  owner: ConversationOwner;
   conversationId: string;
   limit?: number;
 }): Promise<{ messages: UIMessage[]; canRetry: boolean }> {
-  const turns = await liveConversationTurns({ userId, conversationId });
+  const turns = await liveConversationTurns({ owner, conversationId });
 
   const rows = turns
     .flatMap((turn) => turn.messages)

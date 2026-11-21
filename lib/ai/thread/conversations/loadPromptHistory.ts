@@ -1,11 +1,17 @@
 import type { UIMessage } from "ai";
 import { and, eq } from "drizzle-orm";
 
-import { promptsThrough, storedParts, threadMessages } from "@/lib/ai/thread/rules";
+import {
+  type ConversationOwner,
+  promptsThrough,
+  storedParts,
+  threadMessages,
+} from "@/lib/ai/thread/rules";
 import { db } from "@/lib/db";
-import { agentPrompts } from "@/lib/db/schema";
+import { agentConversations, agentPrompts } from "@/lib/db/schema";
 
 import { CONVERSATION_THREAD_LIMIT } from "./constants";
+import { conversationOwnerConditions } from "./conversationOwnerConditions";
 import { liveConversationTurns } from "./liveConversationTurns";
 
 /**
@@ -19,10 +25,10 @@ import { liveConversationTurns } from "./liveConversationTurns";
  */
 export async function loadPromptHistory({
   promptId,
-  userId,
+  owner,
 }: {
   promptId: string;
-  userId: string;
+  owner: ConversationOwner;
 }): Promise<UIMessage[]> {
   const [prompt] = await db
     .select({
@@ -31,12 +37,16 @@ export async function loadPromptHistory({
       createdAt: agentPrompts.createdAt,
     })
     .from(agentPrompts)
-    .where(and(eq(agentPrompts.id, promptId), eq(agentPrompts.userId, userId)))
+    .innerJoin(agentConversations, eq(agentPrompts.conversationId, agentConversations.id))
+    .where(and(eq(agentPrompts.id, promptId), ...conversationOwnerConditions(owner)))
     .limit(1);
 
   if (!prompt?.conversationId) return [];
 
-  const turns = await liveConversationTurns({ userId, conversationId: prompt.conversationId });
+  const turns = await liveConversationTurns({
+    owner,
+    conversationId: prompt.conversationId,
+  });
 
   // The history is a window over positions, not over this conversation's new
   // turns: a prompt an edit replaced still reads everything that led to it.

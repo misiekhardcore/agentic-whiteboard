@@ -17,11 +17,11 @@ import { agentPrompts } from "@/lib/db/schema";
  */
 /** How many prompts this member used in the paying account since `since`. */
 export async function countPromptsForMember({
-  ownerId,
+  organizationId,
   userId,
   since,
 }: {
-  ownerId: string;
+  organizationId: string | null;
   userId: string;
   since: Date;
 }): Promise<number> {
@@ -30,7 +30,9 @@ export async function countPromptsForMember({
     .from(agentPrompts)
     .where(
       and(
-        eq(agentPrompts.ownerId, ownerId),
+        organizationId === null
+          ? isNull(agentPrompts.organizationId)
+          : eq(agentPrompts.organizationId, organizationId),
         eq(agentPrompts.userId, userId),
         gte(agentPrompts.createdAt, since),
         isNull(agentPrompts.branchedFromId),

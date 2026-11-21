@@ -12,6 +12,18 @@ export type StoredPromptMessage = {
 export type PromptRequestKind = "new" | "continuation";
 
 /**
+ * The person a conversation belongs to, in the one account it is filed under.
+ * Reads and writes take this instead of a bare user id, so a query cannot be
+ * scoped to the person and leave the account behind. A null organization is the
+ * person's own account, and both fields are required, so no caller can omit the
+ * account by passing a smaller object.
+ */
+export type ConversationOwner = {
+  userId: string;
+  organizationId: string | null;
+};
+
+/**
  * A stored user message that the newest send may continue: its prompt, the
  * status that prompt ended in, whether it is the conversation's newest live
  * prompt, and the text the person originally sent.

@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   activePrompts: [] as { id: string }[],
   livePrompts: [] as { id: string; createdAt: Date }[],
   conversationOwner: null as string | null,
+  conversationOrganizationId: null as string | null,
   promptIds: [{ id: "prompt_new" }] as { id: string }[],
   insertError: null as Error | null,
   /** The rows a compare-and-swap returns; empty when another send won the row. */
@@ -31,7 +32,14 @@ vi.mock("@/lib/db", async () => {
   });
 
   const conversationRows = () =>
-    mocks.conversationOwner === null ? [] : [{ userId: mocks.conversationOwner }];
+    mocks.conversationOwner === null
+      ? []
+      : [
+          {
+            userId: mocks.conversationOwner,
+            organizationId: mocks.conversationOrganizationId,
+          },
+        ];
 
   type FakeDb = {
     transaction: <T>(work: (tx: FakeDb) => Promise<T>) => Promise<T>;
@@ -122,11 +130,12 @@ vi.mock("@/lib/db", async () => {
 
 import { openDashboardPrompt, resumePrompt, retryFailedPrompt } from "./prompts";
 
+const personalOwner = { userId: "user_1", organizationId: null } as const;
+
 const open = (options: { discardFrom?: { id: string; createdAt: Date } } = {}) =>
   openDashboardPrompt({
     conversationId: "conversation_1",
-    ownerId: "user_1",
-    userId: "user_1",
+    owner: personalOwner,
     provider: "lmstudio",
     model: "qwen",
     title: "Plan the schema",
@@ -150,6 +159,7 @@ beforeEach(() => {
   mocks.activePrompts = [];
   mocks.livePrompts = [];
   mocks.conversationOwner = null;
+  mocks.conversationOrganizationId = null;
   mocks.promptIds = [{ id: "prompt_new" }];
   mocks.insertError = null;
   mocks.retryRows = [{ id: "prompt_failed" }];
@@ -176,7 +186,10 @@ describe("opening a dashboard prompt", () => {
     await open();
 
     const prompt = mocks.ops.find((op) => op.op === "insert" && op.table === "agentPrompt");
-    expect(prompt?.values).toMatchObject({ conversationId: "conversation_1", ownerId: "user_1" });
+    expect(prompt?.values).toMatchObject({
+      conversationId: "conversation_1",
+      organizationId: null,
+    });
     expect(updatesTo("agentConversation", "updatedAt")).toHaveLength(1);
   });
 
@@ -193,12 +206,21 @@ describe("opening a dashboard prompt", () => {
     expect(conversation?.values).toMatchObject({
       id: "conversation_1",
       userId: "user_1",
+      organizationId: null,
       title: "Plan the schema",
     });
   });
 
   it("refuses to write into a conversation that belongs to somebody else", async () => {
     mocks.conversationOwner = "user_other";
+
+    await expect(open()).resolves.toEqual({ kind: "missing" });
+    expect(mocks.ops.some((op) => op.op === "insert" && op.table === "agentPrompt")).toBe(false);
+  });
+
+  it("refuses to write the personal account into an organization's conversation", async () => {
+    mocks.conversationOwner = "user_1";
+    mocks.conversationOrganizationId = "org_1";
 
     await expect(open()).resolves.toEqual({ kind: "missing" });
     expect(mocks.ops.some((op) => op.op === "insert" && op.table === "agentPrompt")).toBe(false);
@@ -267,11 +289,15 @@ describe("opening a dashboard prompt", () => {
 });
 
 describe("retrying a prompt that failed", () => {
+  beforeEach(() => {
+    mocks.conversationOwner = "user_1";
+  });
+
   const retry = () =>
     retryFailedPrompt({
       conversationId: "conversation_1",
       promptId: "prompt_failed",
-      userId: "user_1",
+      owner: personalOwner,
     });
 
   it("reuses the row and hides the failed replies instead of opening a new prompt", async () => {

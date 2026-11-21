@@ -3,7 +3,7 @@ import type { UIMessage } from "ai";
 import { endpointHost } from "@/lib/ai/providers";
 
 import { findUserPromptTarget } from "../messages";
-import { lastUserText, promptIntent } from "../rules";
+import { type ConversationOwner, lastUserText, promptIntent } from "../rules";
 
 import type { TurnActor, TurnFailure } from "./internals/types";
 import { openNewTurn } from "./openNewTurn";
@@ -21,10 +21,12 @@ export async function resolveTurnPrompt({
   request,
   config,
   actor,
+  owner,
 }: {
   request: TurnRequest;
   config: TurnConfig;
   actor: TurnActor;
+  owner: ConversationOwner;
 }): Promise<
   | {
       promptId: string;
@@ -35,10 +37,9 @@ export async function resolveTurnPrompt({
   | TurnFailure
 > {
   const { conversationId, messages, kind } = request;
-  const { userId } = actor;
 
   if (kind === "continuation") {
-    const resumed = await resumeParkedTurn({ messages, conversationId, userId });
+    const resumed = await resumeParkedTurn({ messages, conversationId, owner });
     return "error" in resumed ? resumed : { ...resumed, continuing: true, conversationId };
   }
 
@@ -51,7 +52,7 @@ export async function resolveTurnPrompt({
   const target = await findUserPromptTarget({
     conversationId,
     messageId: submitted.id,
-    userId,
+    owner,
   });
   const intent = promptIntent({ text: prompt, target });
 
@@ -59,7 +60,7 @@ export async function resolveTurnPrompt({
     const retried = await retryStoredTurn({
       conversationId,
       promptId: intent.promptId,
-      userId,
+      owner,
     });
     return "error" in retried ? retried : { ...retried, continuing: true, conversationId };
   }

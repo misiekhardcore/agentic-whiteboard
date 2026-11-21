@@ -92,7 +92,7 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
       for (let index = 0; index < 20; index += 1) {
         await db.query(
           `insert into "agentPrompt"
-             (id, "ownerId", "userId", "workspaceId", status, provider, model)
+             (id, "organizationId", "userId", "workspaceId", status, provider, model)
            values ($1, $2, $3, $4, 'COMPLETED', 'stub', 'stub-model')`,
           [randomUUID(), organizationId, ownerId, workspaceIds[index % workspaceIds.length]],
         );
@@ -100,7 +100,7 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
       for (let index = 0; index < 5; index += 1) {
         await db.query(
           `insert into "agentPrompt"
-             (id, "ownerId", "userId", "workspaceId", status, provider, model)
+             (id, "organizationId", "userId", "workspaceId", status, provider, model)
            values ($1, $2, $3, $4, 'COMPLETED', 'stub', 'stub-model')`,
           [randomUUID(), organizationId, secondUserId, workspaceIds[0]],
         );
@@ -179,7 +179,7 @@ test("usage meters reflect the active account and the upgrade dialog offers plan
     });
   } finally {
     if (organizationId) {
-      await db.query('delete from "agentPrompt" where "ownerId" = $1', [organizationId]);
+      await db.query('delete from "agentPrompt" where "organizationId" = $1', [organizationId]);
       await db.query('delete from workspace where "orgId" = $1', [organizationId]);
       await db.query("delete from organization where id = $1", [organizationId]);
     }

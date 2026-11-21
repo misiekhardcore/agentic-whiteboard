@@ -55,13 +55,16 @@ async function ComposerSectionInner({
   }
 
   const userId = account.session.user.id;
+  // The composer shows this person's threads in the account they are acting as;
+  // switching accounts is a different owner and therefore a different set.
+  const owner = { userId, organizationId: account.activeOrganizationId };
   const conversationId = await resolveActiveConversation({
-    userId,
+    owner,
     requested: requestedConversation,
   });
   const [thread, conversations, settings] = await Promise.all([
-    loadConversationThread({ userId, conversationId }),
-    listConversations(userId, RECENT_CONVERSATION_LIMIT),
+    loadConversationThread({ owner, conversationId }),
+    listConversations(owner, RECENT_CONVERSATION_LIMIT),
     readPersonalSettings(userId),
   ]);
 

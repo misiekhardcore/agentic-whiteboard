@@ -1,7 +1,9 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 
+import { conversationOwnerConditions } from "@/lib/ai/thread/conversations/conversationOwnerConditions";
+import type { ConversationOwner } from "@/lib/ai/thread/rules";
 import { db } from "@/lib/db";
-import { agentPrompts } from "@/lib/db/schema";
+import { agentConversations, agentPrompts } from "@/lib/db/schema";
 
 /**
  * The conversation's prompt that a person's decision is still waiting on. The
@@ -9,18 +11,19 @@ import { agentPrompts } from "@/lib/db/schema";
  * not answerable, whatever card a stale tab still shows.
  */
 export async function findParkedPrompt({
-  userId,
+  owner,
   conversationId,
 }: {
-  userId: string;
+  owner: ConversationOwner;
   conversationId: string;
 }): Promise<{ promptId: string } | null> {
   const [row] = await db
     .select({ id: agentPrompts.id })
     .from(agentPrompts)
+    .innerJoin(agentConversations, eq(agentPrompts.conversationId, agentConversations.id))
     .where(
       and(
-        eq(agentPrompts.userId, userId),
+        ...conversationOwnerConditions(owner),
         eq(agentPrompts.conversationId, conversationId),
         isNull(agentPrompts.workspaceId),
         isNull(agentPrompts.supersededAt),

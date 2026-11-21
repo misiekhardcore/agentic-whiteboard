@@ -1,6 +1,10 @@
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 
-import { type PromptPosition, promptsFromBranch } from "@/lib/ai/thread/rules";
+import {
+  type ConversationOwner,
+  type PromptPosition,
+  promptsFromBranch,
+} from "@/lib/ai/thread/rules";
 import { db } from "@/lib/db";
 import { agentConversations, agentPrompts } from "@/lib/db/schema";
 
@@ -21,16 +25,15 @@ import type { OpenPromptResult } from "./types";
  */
 export async function openDashboardPrompt({
   conversationId,
-  ownerId,
-  userId,
+  owner,
   provider,
   model,
   title,
   discardFrom,
 }: {
   conversationId: string;
-  ownerId: string;
-  userId: string;
+  /** The person and account the conversation is filed under, and who pays. */
+  owner: ConversationOwner;
   provider: string;
   model: string;
   /** The conversation's derived title, used only when this prompt creates it. */
@@ -38,26 +41,36 @@ export async function openDashboardPrompt({
   /** The prompt an edit branched from, if this send replaces a turn. */
   discardFrom?: PromptPosition;
 }): Promise<OpenPromptResult> {
-  await retireOrphanedPrompts(userId);
+  await retireOrphanedPrompts(owner.userId);
 
   try {
     return await db.transaction(async (tx) => {
       // The first prompt of a conversation creates it. A conflict means the id
-      // already exists, so it is only usable when it is this person's, and the
-      // title is left alone: a conversation keeps the name it was given.
+      // already exists, so it is only usable when it is this person's in this
+      // account, and the title is left alone: a conversation keeps its name.
       const [createdConversation] = await tx
         .insert(agentConversations)
-        .values({ id: conversationId, userId, title })
+        .values({ id: conversationId, ...owner, title })
         .onConflictDoNothing()
         .returning({ id: agentConversations.id });
 
       const [conversation] = await tx
-        .select({ userId: agentConversations.userId })
+        .select({
+          userId: agentConversations.userId,
+          organizationId: agentConversations.organizationId,
+        })
         .from(agentConversations)
         .where(eq(agentConversations.id, conversationId))
         .limit(1);
 
-      if (!conversation || conversation.userId !== userId) {
+      // A conversation in another account is not this send's to continue: the
+      // prompt would be paid by the active account and land in a thread that
+      // account cannot read.
+      if (
+        !conversation ||
+        conversation.userId !== owner.userId ||
+        conversation.organizationId !== owner.organizationId
+      ) {
         return { kind: "missing" };
       }
 
@@ -81,7 +94,13 @@ export async function openDashboardPrompt({
 
       const [created] = await tx
         .insert(agentPrompts)
-        .values({ ownerId, userId, conversationId, provider, model })
+        .values({
+          organizationId: owner.organizationId,
+          userId: owner.userId,
+          conversationId,
+          provider,
+          model,
+        })
         .returning({ id: agentPrompts.id });
 
       if (!created) throw new Error("The prompt row was not created.");

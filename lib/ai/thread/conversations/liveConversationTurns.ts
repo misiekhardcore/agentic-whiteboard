@@ -1,8 +1,10 @@
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 
+import type { ConversationOwner } from "@/lib/ai/thread/rules";
 import { db } from "@/lib/db";
-import { agentMessages, agentPrompts } from "@/lib/db/schema";
+import { agentConversations, agentMessages, agentPrompts } from "@/lib/db/schema";
 
+import { conversationOwnerConditions } from "./conversationOwnerConditions";
 import type { LiveTurn } from "./types";
 
 /**
@@ -18,10 +20,10 @@ import type { LiveTurn } from "./types";
  * already have superseded, so that one read is deliberately wider.
  */
 export async function liveConversationTurns({
-  userId,
+  owner,
   conversationId,
 }: {
-  userId: string;
+  owner: ConversationOwner;
   conversationId: string;
 }): Promise<LiveTurn[]> {
   const prompts = await db
@@ -31,9 +33,10 @@ export async function liveConversationTurns({
       status: agentPrompts.status,
     })
     .from(agentPrompts)
+    .innerJoin(agentConversations, eq(agentPrompts.conversationId, agentConversations.id))
     .where(
       and(
-        eq(agentPrompts.userId, userId),
+        ...conversationOwnerConditions(owner),
         eq(agentPrompts.conversationId, conversationId),
         isNull(agentPrompts.workspaceId),
         isNull(agentPrompts.supersededAt),

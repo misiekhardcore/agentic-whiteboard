@@ -2,6 +2,7 @@ import type { UIMessage } from "ai";
 
 import { markThreadStream } from "../live";
 import { findParkedPrompt, resumePrompt } from "../prompts";
+import type { ConversationOwner } from "../rules";
 
 import { APPROVAL_EXPIRED, BUSY } from "./internals/constants";
 import { jsonError } from "./internals/jsonError";
@@ -16,13 +17,13 @@ import type { TurnFailure } from "./internals/types";
 export async function resumeParkedTurn({
   messages,
   conversationId,
-  userId,
+  owner,
 }: {
   messages: UIMessage[];
   conversationId: string;
-  userId: string;
+  owner: ConversationOwner;
 }): Promise<{ promptId: string; history: UIMessage[] } | TurnFailure> {
-  const parked = await findParkedPrompt({ userId, conversationId });
+  const parked = await findParkedPrompt({ owner, conversationId });
   if (!parked) {
     return { error: jsonError(APPROVAL_EXPIRED, 409) };
   }
@@ -32,7 +33,7 @@ export async function resumeParkedTurn({
     return { error: jsonError(BUSY, 409) };
   }
 
-  markThreadStream(userId, parked.promptId);
+  markThreadStream(owner.userId, parked.promptId);
 
   return { promptId: parked.promptId, history: messages };
 }

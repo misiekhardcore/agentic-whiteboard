@@ -6,6 +6,7 @@
  */
 export type {
   ConversationHistoryEntry,
+  ConversationOwner,
   DashboardConversation,
   PromptIntent,
   PromptPosition,

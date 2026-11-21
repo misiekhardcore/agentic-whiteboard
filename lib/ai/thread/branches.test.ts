@@ -106,7 +106,7 @@ function threeTurns() {
   const prompts = [1, 2, 3].map((minute) => ({
     id: `prompt_${minute}`,
     createdAt: at(minute),
-    ownerId: "user_1",
+    organizationId: null,
     provider: "lmstudio",
     model: "qwen",
   }));
@@ -132,7 +132,11 @@ function threeTurns() {
 }
 
 const branch = (messageId = "message_2") =>
-  branchConversation({ userId: "user_1", conversationId: "conversation_1", messageId });
+  branchConversation({
+    owner: { userId: "user_1", organizationId: null },
+    conversationId: "conversation_1",
+    messageId,
+  });
 
 const inserts = (table: string) => mocks.ops.filter((op) => op.table === table);
 
@@ -165,7 +169,7 @@ describe("branching a conversation", () => {
       expect(copy.values).toMatchObject({
         conversationId: result.conversationId,
         userId: "user_1",
-        ownerId: "user_1",
+        organizationId: null,
         // History: a copy never holds the single-flight slot and never looks
         // like work the person still owes a retry on.
         status: "COMPLETED",

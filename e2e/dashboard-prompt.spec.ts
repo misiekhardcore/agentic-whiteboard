@@ -219,8 +219,8 @@ test("a prompt left RUNNING by a restarted server does not block the thread", as
     const orphanId = `orphan_${id}`;
     const seeded = await withDb(async (db) => {
       const { rowCount } = await db.query(
-        `insert into "agentPrompt" (id, "ownerId", "userId", status, provider, model, "startedAt")
-         select $1, u.id, u.id, 'RUNNING', 'stub', 'stub-model', now()
+        `insert into "agentPrompt" (id, "userId", status, provider, model, "startedAt")
+         select $1, u.id, 'RUNNING', 'stub', 'stub-model', now()
            from "user" u where u.email = $2`,
         [orphanId, email],
       );
@@ -446,8 +446,8 @@ async function seedFailedPrompt(
       [conversationId, email],
     );
     await db.query(
-      `insert into "agentPrompt" (id, "ownerId", "userId", "conversationId", status, provider, model)
-        select $1, u.id, u.id, $2, 'FAILED', 'stub', 'stub-model'
+      `insert into "agentPrompt" (id, "userId", "conversationId", status, provider, model)
+        select $1, u.id, $2, 'FAILED', 'stub', 'stub-model'
           from "user" u where u.email = $3`,
       [`${conversationId}-prompt`, conversationId, email],
     );
@@ -499,8 +499,8 @@ async function seedConversation({
       [conversationId, email, at],
     );
     await db.query(
-      `insert into "agentPrompt" (id, "ownerId", "userId", "conversationId", status, provider, model, "createdAt")
-        select $1 || '-prompt', u.id, u.id, $1, 'COMPLETED', 'stub', 'stub-model', now() - $3::interval
+      `insert into "agentPrompt" (id, "userId", "conversationId", status, provider, model, "createdAt")
+        select $1 || '-prompt', u.id, $1, 'COMPLETED', 'stub', 'stub-model', now() - $3::interval
           from "user" u where u.email = $2`,
       [conversationId, email, at],
     );
@@ -532,8 +532,8 @@ async function seedScrollThread(email: string, conversationId: string): Promise<
       [conversationId, email],
     );
     await db.query(
-      `insert into "agentPrompt" (id, "ownerId", "userId", "conversationId", status, provider, model, "createdAt")
-        select $1 || '-p' || g, u.id, u.id, $1, 'COMPLETED', 'stub', 'stub-model',
+      `insert into "agentPrompt" (id, "userId", "conversationId", status, provider, model, "createdAt")
+        select $1 || '-p' || g, u.id, $1, 'COMPLETED', 'stub', 'stub-model',
                now() + (g || ' seconds')::interval
           from "user" u, generate_series(1, 15) g
           where u.email = $2`,

@@ -7,6 +7,7 @@
  * select nothing.
  */
 export { CONVERSATION_THREAD_LIMIT, RECENT_CONVERSATION_LIMIT } from "./constants";
+export { conversationOwnerConditions } from "./conversationOwnerConditions";
 export type { LiveTurn, LiveTurnMessage } from "./types";
 export { liveConversationTurns } from "./liveConversationTurns";
 export { resolveActiveConversation } from "./resolveActiveConversation";
