@@ -19,6 +19,18 @@
    */
   :root {
     --app-header-height: 3.625rem;
+
+    /*
+     * The AI gradient is the brand's one synthetic accent: amber into magenta,
+     * used by the wordmark and the agent cursor in the mark.
+     */
+    --brand-ai-from: #e07d1d;
+    --brand-ai-to: #c02a8b;
+  }
+
+  .dark {
+    --brand-ai-from: #ffab4d;
+    --brand-ai-to: #ff6cc0;
   }
 
   html {
@@ -67,7 +79,7 @@
   }
 }
 
-/* Topographic contours (public/textures/topo.svg): Outpost's background identity, a nod to
+/* Topographic contours (public/textures/topo.svg): WorkspAIce's background identity, a nod to
    mapping unknown territory. Opt-in per section, never over the doc or canvas editors.
    The SVG is used as a mask over a color gradient, so lines glow amber at the center and cool to grey
    at the edges; a second mask layer fades the whole map out softly. */

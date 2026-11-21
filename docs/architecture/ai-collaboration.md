@@ -5,7 +5,7 @@ Date: 2026-11-11
 
 ## Context
 
-Agentic Whiteboard is a Next.js app with Better Auth, Drizzle/Postgres on a
+WorkspAIce is a Next.js app with Better Auth, Drizzle/Postgres on a
 self-hosted Supabase stack, and a planned whiteboard + docs workspace. Multiple
 members of an organization will edit the same workspace at the same time, and
 the agent will edit alongside them. The current schema already reserves

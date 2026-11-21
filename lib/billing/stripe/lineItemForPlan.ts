@@ -28,7 +28,7 @@ export function lineItemForPlan(
       currency: BILLING_CURRENCY,
       unit_amount: plan.priceUsd * 100,
       recurring: { interval: "month" },
-      product_data: { name: `Agentic Whiteboard ${plan.name}` },
+      product_data: { name: `WorkspAIce ${plan.name}` },
     },
   };
 }

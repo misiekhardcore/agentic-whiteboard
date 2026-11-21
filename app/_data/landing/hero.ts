@@ -5,7 +5,7 @@ export const hero = {
   eyebrow: "Early access",
   title: {
     lead: "An ",
-    accent: "Agentic Whiteboard",
+    accent: "agentic workspace",
     trail: " for whatever you’re building",
   },
   lead: "An infinite canvas where you and your agents sketch, map and refine ideas together — from messy first thought to something you can ship.",

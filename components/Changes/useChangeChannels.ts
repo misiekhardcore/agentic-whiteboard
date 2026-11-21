@@ -45,18 +45,23 @@ async function readSession(): Promise<SessionChannels | null> {
  * The broadcast is only a hint, so every failure here is a log and a fallback —
  * the route still re-reads on focus. `rejoinOn` is what asks again after a
  * navigation, because the page a person lands on after signing in is the first
- * that has a session to join with.
+ * that has a session to join with. `enabled` keeps the token request off the
+ * pages that have no session yet, where it could only answer 401.
  */
 export function useChangeChannels({
   onKeys,
   onReconnect,
   rejoinOn,
+  enabled,
 }: {
   onKeys: (keys: string[]) => void;
   onReconnect: () => void;
   rejoinOn: string;
+  enabled: boolean;
 }): void {
   useEffect(() => {
+    if (!enabled) return;
+
     let cancelled = false;
     let client: SupabaseClient | null = null;
     let renewTimer: ReturnType<typeof setInterval> | undefined;
@@ -137,5 +142,5 @@ export function useChangeChannels({
         void active.realtime.disconnect();
       }
     };
-  }, [onKeys, onReconnect, rejoinOn]);
+  }, [onKeys, onReconnect, rejoinOn, enabled]);
 }

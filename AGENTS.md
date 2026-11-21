@@ -8,7 +8,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Agentic Whiteboard — agent guide
+# WorkspAIce — agent guide
 
 Multi-tenant whiteboard + docs workspace with an LLM agent that edits alongside
 people. Next.js App Router, Better Auth (organizations), Drizzle/Postgres on a
@@ -165,6 +165,8 @@ pnpm db:migrate         # Apply migrations
 pnpm test:e2e           # Playwright on :3100 with the scripted provider; needs a DB, and `pnpm dev` stopped
 pnpm test:e2e:realtime  # The socket spec only; needs `pnpm db:up` and `realtime-rls.sql` applied
 pnpm test:e2e:smtp      # Local SMTP sink used by the invitation flows
+pnpm test:e2e:brand     # Capture the dashboard screenshots the manifest lists
+pnpm brand:assets       # Regenerate favicon, apple icon and manifest icons from the mark
 ```
 
 ## Conventions

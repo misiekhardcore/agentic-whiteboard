@@ -8,13 +8,18 @@ import { ClosingCta } from "./_components/landing/closing-cta";
 import { FeatureShowcase } from "./_components/landing/feature-showcase";
 import { HowItWorks } from "./_components/landing/how-it-works";
 import { Pricing } from "./_components/landing/pricing";
+import { StructuredData } from "./_components/landing/StructuredData";
 import { landing } from "./_data/landing";
+import { homeMetadata } from "./metadata/homeMetadata";
+
+export const metadata = homeMetadata;
 
 export default function Home({ searchParams }: PageProps<"/">) {
   const { hero } = landing;
 
   return (
     <main className="flex flex-1 flex-col overflow-y-auto">
+      <StructuredData />
       <section className="topo-bg flex flex-1 items-center">
         <div className="container-page flex w-full flex-col items-center gap-6 py-24 text-center">
           <p className="flex items-center gap-2.5 font-mono text-xs font-medium tracking-[0.2em] text-muted-foreground uppercase">

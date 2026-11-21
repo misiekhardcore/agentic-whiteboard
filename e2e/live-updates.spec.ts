@@ -130,13 +130,35 @@ test("a conversation's pill appears with its first prompt and carries the genera
   }
 });
 
+test("a page without a session asks for no change channels", async ({ page }) => {
+  const asked: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/realtime/token")) asked.push(request.url());
+  });
+
+  // These pages render for a visitor with no session, so a token request here
+  // could only answer 401 - and the browser reports that as a console error.
+  for (const path of ["/", "/sign-in", "/sign-up"]) {
+    await page.goto(path);
+    // The theme switcher renders only once hydrated, and picking a theme is a
+    // full client commit; the mount effects that could ask for a token have then
+    // already run.
+    const theme = page.getByRole("radiogroup", { name: "Color theme" });
+    await theme.getByRole("radio", { name: "Light" }).click();
+    await expect(theme.getByRole("radio", { name: "Light" })).toBeChecked();
+  }
+
+  expect(asked).toEqual([]);
+});
+
 test("a person who signs up asks for the change channels without a reload", async ({ page }) => {
   const id = randomUUID().slice(0, 8);
   const email = `e2e-join-${id}@example.com`;
   const askedFrom: string[] = [];
 
-  // The page a person lands on after signing up rendered while they were signed
-  // out, so its join was refused; the dashboard is the first page that can join.
+  // The sign-up page does not ask, because a visitor there may have no session
+  // yet; the dashboard is the first page that can join, and joining it needs no
+  // reload.
   page.on("request", (request) => {
     if (request.url().includes("/api/realtime/token")) askedFrom.push(page.url());
   });

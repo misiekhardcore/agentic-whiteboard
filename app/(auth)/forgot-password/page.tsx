@@ -6,13 +6,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@konopskidev/ui/components/card";
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { routes } from "@/lib/shared/routes";
 
 import { ForgotPasswordForm } from "./forgot-password-form";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Reset your password",
 };
 

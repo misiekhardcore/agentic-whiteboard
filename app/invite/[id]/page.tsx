@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@konopskidev/ui/components/card";
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -17,8 +18,9 @@ import { routes, signInPath, signUpPath } from "@/lib/shared/routes";
 
 import { AcceptInvitationForm } from "./accept-form";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Team invitation",
+  robots: { index: false, follow: false },
 };
 
 // The invitation is per request and must never be statically cached.

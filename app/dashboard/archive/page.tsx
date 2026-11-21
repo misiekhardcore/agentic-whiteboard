@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@konopskidev/ui/components/card";
 import { Archive } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -18,7 +19,7 @@ import { CHANGE_KEYS } from "@/lib/shared/changes";
 import { routes, signInPath } from "@/lib/shared/routes";
 import { listArchivedWorkspaces } from "@/lib/workspace/queries";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Archived workspaces",
 };
 

@@ -1,4 +1,7 @@
-# Agentic Whiteboard
+# WorkspAIce
+
+Formerly Agentic Whiteboard. The product name changed; the npm package, the
+Postgres database and the Docker services keep their original identifiers.
 
 A multi-tenant whiteboard and docs workspace with an LLM agent that edits beside
 people. Next.js App Router, Better Auth, Drizzle on a self-hosted Supabase stack,
@@ -18,6 +21,11 @@ pnpm db:up                # Postgres, REST, Storage, Realtime and Studio
 pnpm db:migrate
 pnpm dev
 ```
+
+Set `NEXT_PUBLIC_SITE_URL` to the origin the deployment answers on. It drives
+`metadataBase`, canonical URLs, `robots.txt` and the sitemap; without it those
+fall back to `http://localhost:3000`. The branding and metadata decisions are in
+[docs/architecture/metadata-and-branding.md](docs/architecture/metadata-and-branding.md).
 
 `pnpm db:up` starts [supabase-project](supabase-project/README.md) on
 <http://localhost:8000>. Copy its keys into `.env` (its README says which), then

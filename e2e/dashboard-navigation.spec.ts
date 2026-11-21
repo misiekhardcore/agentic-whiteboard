@@ -33,6 +33,10 @@ test("the sidebar links the dashboard from the other signed-in surfaces", async 
     await test.step("the dashboard is the current surface on /dashboard", async () => {
       await expect(dashboardLink).toBeVisible();
       await expect(dashboardLink).toHaveAttribute("data-active", "true");
+      // The shell owns the page's main landmark, so a page inside it must not
+      // render a second one. A role query sees the accessibility tree, where the
+      // previous route's hidden layout does not count.
+      await expect(page.getByRole("main")).toHaveCount(1);
     });
 
     await test.step("another dashboard page does not claim the dashboard entry", async () => {
@@ -53,6 +57,7 @@ test("the sidebar links the dashboard from the other signed-in surfaces", async 
 
     await test.step("the entry is there from the workspace surfaces too", async () => {
       await page.goto("/workspaces");
+      await expect(page.getByRole("main")).toHaveCount(1);
       await dashboardLink.click();
       await page.waitForURL("**/dashboard");
     });

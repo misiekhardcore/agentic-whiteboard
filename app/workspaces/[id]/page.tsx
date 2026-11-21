@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@konopskidev/ui/components/card";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -23,6 +24,12 @@ import {
   restoreWorkspaceAction,
 } from "@/lib/workspace/actions";
 import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace/status";
+
+/** The id is never echoed into a title, and the route stays out of search. */
+export const metadata: Metadata = {
+  title: "Workspace",
+  robots: { index: false, follow: false },
+};
 
 // The id comes from the URL and access depends on the session, so this route
 // renders per request.
@@ -48,7 +55,7 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
   const { workspace } = access;
 
   return (
-    <main className="flex w-full justify-center">
+    <div className="flex w-full justify-center">
       <RefreshOnChanges keys={[workspaceChangeKey(workspace.id), CHANGE_KEYS.workspaces]} />
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
         <div className="flex flex-col gap-2">
@@ -131,6 +138,6 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
           </CardContent>
         </Card>
       </div>
-    </main>
+    </div>
   );
 }
