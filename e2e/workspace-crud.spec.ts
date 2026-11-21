@@ -138,6 +138,13 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
 
       userId = await findUserId(db, email);
       workspaceId = await findWorkspaceId(db, { name: workspaceName, creatorId: userId });
+
+      // Create is not stage-aware: a new workspace lands in the first stage.
+      await page.goto(routes.workspaces);
+      await expect(
+        page.getByRole("region", { name: "Planning" }).getByRole("link", { name: workspaceName }),
+      ).toBeVisible();
+      await page.goto(routes.dashboard);
     });
 
     await test.step("the workspace route opens only for someone with access", async () => {
@@ -183,6 +190,28 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await expect(dialog).toHaveCount(0);
       await expect(page.getByText(renamedWorkspace).first()).toBeVisible();
       await expect(page.getByText("In progress").first()).toBeVisible();
+    });
+
+    await test.step("the board shows one column per stage, in stage order", async () => {
+      await page.goto(routes.workspaces);
+
+      for (const stage of ["Planning", "In progress", "In review", "Done"]) {
+        await expect(page.getByRole("heading", { name: stage, exact: true })).toBeVisible();
+      }
+
+      // The workspace sits in the column its stage names, and an empty stage
+      // still renders its column.
+      await expect(
+        page
+          .getByRole("region", { name: "In progress" })
+          .getByRole("listitem")
+          .filter({ hasText: renamedWorkspace }),
+      ).toHaveCount(1);
+      await expect(
+        page.getByRole("region", { name: "Done" }).getByText("Nothing in this stage yet."),
+      ).toBeVisible();
+
+      await page.goto(routes.dashboard);
     });
 
     await test.step("archiving hides the workspace and frees its plan slot", async () => {
