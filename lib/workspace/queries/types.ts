@@ -20,3 +20,15 @@ export type ArchivedWorkspace = {
   status: (typeof workspaces.$inferSelect)["status"];
   archivedAt: Date;
 };
+
+/** Who created a workspace, as a card shows them. Missing when the row is gone. */
+export type WorkspaceCreator = {
+  name: string;
+  image: string | null;
+};
+
+/** A workspace as the board reads it: the list row, its position and its creator. */
+export type BoardWorkspace = AccountWorkspace & {
+  position: number;
+  creator: WorkspaceCreator | null;
+};

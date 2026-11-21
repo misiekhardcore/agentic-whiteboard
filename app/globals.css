@@ -161,3 +161,7 @@
     }
   }
 }
+
+@utility brand-gradient {
+  @apply bg-linear-to-r from-(--brand-ai-from) to-(--brand-ai-to) bg-clip-text text-transparent;
+}

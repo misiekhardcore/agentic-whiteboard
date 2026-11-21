@@ -11,10 +11,7 @@ export function BrandWordmark({ className }: { className?: string }) {
     <span className={cn("font-display font-semibold tracking-tight text-foreground", className)}>
       <span className="sr-only">{BRAND_NAME}</span>
       <span aria-hidden="true">Worksp</span>
-      <span
-        aria-hidden="true"
-        className="bg-linear-to-r from-[var(--brand-ai-from)] to-[var(--brand-ai-to)] bg-clip-text text-transparent"
-      >
+      <span aria-hidden="true" className="brand-gradient">
         AI
       </span>
       <span aria-hidden="true">ce</span>

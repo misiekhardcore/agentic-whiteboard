@@ -42,6 +42,9 @@ export function ConfirmAction({
   triggerClassName,
   triggerIcon,
   confirmVariant = "destructive",
+  open: controlledOpen,
+  onOpenChange,
+  showTrigger = true,
 }: {
   /** A server action; called with the hidden fields as form data. */
   action: (formData: FormData) => Promise<void>;
@@ -58,17 +61,25 @@ export function ConfirmAction({
   triggerClassName?: string;
   triggerIcon?: ReactNode;
   confirmVariant?: ButtonVariant;
+  /** Controlled when a menu, not the button, decides when the question opens. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = onOpenChange ?? setUncontrolledOpen;
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        <Button variant={triggerVariant} size={triggerSize} className={triggerClassName}>
-          {triggerIcon}
-          {triggerLabel}
-        </Button>
-      </AlertDialogTrigger>
+      {showTrigger && (
+        <AlertDialogTrigger asChild>
+          <Button variant={triggerVariant} size={triggerSize} className={triggerClassName}>
+            {triggerIcon}
+            {triggerLabel}
+          </Button>
+        </AlertDialogTrigger>
+      )}
 
       <AlertDialogContent>
         <AlertDialogHeader>

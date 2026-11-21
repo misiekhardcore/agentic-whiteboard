@@ -70,6 +70,22 @@ async function openDialog(page: Page, trigger: Locator, role: "dialog" | "alertd
   }).toPass({ timeout: 30_000 });
 }
 
+/**
+ * A card's actions live in its overflow menu, so opening one means opening the
+ * menu first. Hydration makes the trigger ignore a click for a moment, hence
+ * the retry.
+ */
+async function chooseCardAction(page: Page, card: Locator, action: "Edit" | "Archive") {
+  await expect(async () => {
+    await card.getByRole("button", { name: /^Actions for / }).click();
+    await expect(page.getByRole("menuitem", { name: action, exact: true })).toBeVisible({
+      timeout: 2_000,
+    });
+  }).toPass({ timeout: 30_000 });
+
+  await page.getByRole("menuitem", { name: action, exact: true }).click();
+}
+
 async function createWorkspace(
   page: Page,
   { name, description, verify = true }: { name: string; description?: string; verify?: boolean },
@@ -127,6 +143,15 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await expect(page.getByText("No workspaces in Personal account")).toBeVisible();
       await expect(page.getByText("0 / 3")).toBeVisible();
 
+      // The board is the four-column frame even while the account is empty; the
+      // empty state sits inside it rather than replacing it.
+      await page.goto(routes.workspaces);
+      for (const stage of ["Planning", "In progress", "In review", "Done"]) {
+        await expect(page.getByRole("heading", { name: stage, exact: true })).toBeVisible();
+      }
+      await expect(page.getByText("No workspaces in Personal account")).toBeVisible();
+      await page.goto(routes.dashboard);
+
       await createWorkspace(page, {
         name: workspaceName,
         description: "Where the quarter goes",
@@ -138,6 +163,13 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
 
       userId = await findUserId(db, email);
       workspaceId = await findWorkspaceId(db, { name: workspaceName, creatorId: userId });
+
+      // Create is not stage-aware: a new workspace lands in the first stage.
+      await page.goto(routes.workspaces);
+      await expect(
+        page.getByRole("region", { name: "Planning" }).getByRole("link", { name: workspaceName }),
+      ).toBeVisible();
+      await page.goto(routes.dashboard);
     });
 
     await test.step("the workspace route opens only for someone with access", async () => {
@@ -171,7 +203,7 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await page.goto("/dashboard");
 
       const card = page.getByRole("listitem").filter({ hasText: workspaceName }).first();
-      await openDialog(page, card.getByRole("button", { name: "Edit" }));
+      await chooseCardAction(page, card, "Edit");
 
       const dialog = page.getByRole("dialog");
       await expect(dialog.getByText("Edit workspace")).toBeVisible();
@@ -185,13 +217,74 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await expect(page.getByText("In progress").first()).toBeVisible();
     });
 
+    await test.step("the board shows one column per stage, in stage order", async () => {
+      if (!userId) throw new Error("The test user is missing");
+      const archivedWorkspace = `Archived ${id}`;
+      const foreignWorkspace = `Elsewhere ${id}`;
+      const otherUserId = await findUserId(db, otherEmail);
+
+      // Both rows are reachable by the same select if the board's predicate is
+      // wrong: one belongs to the account but is archived, the other belongs to
+      // a different personal account.
+      await db.query(
+        'insert into workspace (id, name, "creatorId", status, position, "archivedAt") values ($1, $2, $3, $4, $5, $6)',
+        [randomUUID(), archivedWorkspace, userId, "PLANNING", 0, new Date()],
+      );
+      await db.query(
+        'insert into workspace (id, name, "creatorId", status, position) values ($1, $2, $3, $4, $5)',
+        [randomUUID(), foreignWorkspace, otherUserId, "DONE", 0],
+      );
+
+      await page.goto(routes.workspaces);
+
+      for (const stage of ["Planning", "In progress", "In review", "Done"]) {
+        await expect(page.getByRole("heading", { name: stage, exact: true })).toBeVisible();
+      }
+
+      // The workspace sits in the column its stage names, and an empty stage
+      // still renders its column.
+      await expect(
+        page
+          .getByRole("region", { name: "In progress" })
+          .getByRole("listitem")
+          .filter({ hasText: renamedWorkspace }),
+      ).toHaveCount(1);
+      await expect(
+        page.getByRole("region", { name: "Done" }).getByText("Nothing in this stage yet."),
+      ).toBeVisible();
+
+      // Each column states how many cards it holds.
+      await expect(
+        page.getByRole("region", { name: "In progress" }).getByText("1", { exact: true }),
+      ).toBeVisible();
+
+      // The card carries its creator, read with the board's single query.
+      await expect(
+        page
+          .getByRole("region", { name: "In progress" })
+          .getByText("Workspace Tester", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("region", { name: "Done" }).getByText("0", { exact: true }),
+      ).toBeVisible();
+
+      // An archived workspace and another account's workspace are in the same
+      // table but not in this board.
+      await expect(page.getByText(archivedWorkspace)).toHaveCount(0);
+      await expect(page.getByText(foreignWorkspace)).toHaveCount(0);
+
+      // The fixtures exist only for this assertion; the archive page later in
+      // this test expects to be otherwise empty.
+      await db.query("delete from workspace where name = any($1)", [
+        [archivedWorkspace, foreignWorkspace],
+      ]);
+
+      await page.goto(routes.dashboard);
+    });
+
     await test.step("archiving hides the workspace and frees its plan slot", async () => {
       const card = page.getByRole("listitem").filter({ hasText: renamedWorkspace }).first();
-      await openDialog(
-        page,
-        card.getByRole("button", { name: "Archive", exact: true }),
-        "alertdialog",
-      );
+      await chooseCardAction(page, card, "Archive");
 
       const dialog = page.getByRole("alertdialog");
       await expect(dialog.getByText(`Archive ${renamedWorkspace}?`)).toBeVisible();
@@ -266,11 +359,7 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       // doc and canvas, so the workspace card is managed from /workspaces.
       await page.goto("/workspaces");
       const card = page.getByRole("listitem").filter({ hasText: renamedWorkspace }).first();
-      await openDialog(
-        page,
-        card.getByRole("button", { name: "Archive", exact: true }),
-        "alertdialog",
-      );
+      await chooseCardAction(page, card, "Archive");
       await page
         .getByRole("alertdialog")
         .getByRole("button", { name: "Archive workspace" })
@@ -316,11 +405,12 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await cleanup().catch(() => undefined);
     }
 
-    if (userId) {
-      await db
-        .query('delete from workspace where "creatorId" = $1', [userId])
-        .catch(() => undefined);
-    }
+    await db
+      .query(
+        'delete from workspace where "creatorId" in (select id from "user" where email = any($1))',
+        [[email, otherEmail]],
+      )
+      .catch(() => undefined);
     await db
       .query('delete from "user" where email = any($1)', [[email, otherEmail]])
       .catch(() => undefined);
