@@ -7,11 +7,12 @@ import { redirect } from "next/navigation";
 import { RefreshOnChanges } from "@/components/Changes";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
 import { CreateWorkspaceDialog } from "@/components/Workspaces/CreateWorkspaceDialog";
-import { WorkspaceCard } from "@/components/Workspaces/WorkspaceCard";
 import { getSessionAccount } from "@/lib/identity/account";
 import { CHANGE_KEYS } from "@/lib/shared/changes";
 import { routes, signInPath } from "@/lib/shared/routes";
-import { listAccountWorkspaces } from "@/lib/workspace/queries";
+import { listWorkspaceBoard } from "@/lib/workspace/board";
+
+import { WorkspaceBoard } from "./_components/WorkspaceBoard";
 
 export const metadata: Metadata = {
   title: "All workspaces",
@@ -21,9 +22,10 @@ export const metadata: Metadata = {
 export const instant = false;
 
 /**
- * Every active workspace in the selected account. The dashboard only shows the
- * latest handful of workspaces, docs and canvases; this page is the full list,
- * and it re-reads when `workspaces` or `account` change.
+ * The board: every non-archived workspace of the selected account, placed in
+ * its stage column by manual position. The dashboard only shows the latest
+ * handful of workspaces, docs and canvases; this page is the full account, and
+ * it re-reads when `workspaces` or `account` change.
  */
 export default async function WorkspacesPage() {
   const account = await getSessionAccount();
@@ -31,7 +33,8 @@ export default async function WorkspacesPage() {
 
   const { activeTeam, session } = account;
   const accountName = activeTeam?.name ?? "Personal account";
-  const workspaces = await listAccountWorkspaces(session.user.id, activeTeam?.id ?? null);
+  const board = await listWorkspaceBoard(session.user.id, activeTeam?.id ?? null);
+  const workspaceCount = board.reduce((total, column) => total + column.workspaces.length, 0);
 
   return (
     <div className="stack">
@@ -47,7 +50,7 @@ export default async function WorkspacesPage() {
         <CreateWorkspaceDialog size="sm" variant="outline" />
       </div>
 
-      {workspaces.length === 0 ? (
+      {workspaceCount === 0 ? (
         <EmptyState
           icon={<Folder height={64} width={64} className="text-primary" />}
           title={`No workspaces in ${accountName}`}
@@ -56,19 +59,13 @@ export default async function WorkspacesPage() {
               ? `Workspaces shared with ${activeTeam.name} will appear here.`
               : "You haven't created any personal workspaces yet."
           }
-          action={<CreateWorkspaceDialog size="sm" variant="outline" />}
         />
       ) : (
         <div className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">
-            {workspaces.length} {workspaces.length === 1 ? "workspace" : "workspaces"} in this
-            account.
+            {workspaceCount} {workspaceCount === 1 ? "workspace" : "workspaces"} in this account.
           </p>
-          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {workspaces.map((workspace) => (
-              <WorkspaceCard key={workspace.id} workspace={workspace} />
-            ))}
-          </ul>
+          <WorkspaceBoard board={board} />
         </div>
       )}
 

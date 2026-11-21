@@ -1,0 +1,41 @@
+import { WorkspaceCard } from "@/components/Workspaces/WorkspaceCard";
+import type { WorkspaceBoard as WorkspaceBoardColumns } from "@/lib/workspace/board";
+import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace/status";
+
+/**
+ * The board: one column per stage, in stage order. Every column renders even
+ * when it holds nothing, because an empty stage is information, but no column
+ * offers a create button of its own.
+ */
+export function WorkspaceBoard({ board }: { board: WorkspaceBoardColumns }) {
+  return (
+    <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-4">
+      {board.map((column) => {
+        const headingId = `stage-${column.status}`;
+
+        return (
+          <section key={column.status} aria-labelledby={headingId} className="flex flex-col gap-2">
+            <h2
+              id={headingId}
+              className="font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase"
+            >
+              {WORKSPACE_STATUS_LABELS[column.status]}
+            </h2>
+
+            {column.workspaces.length === 0 ? (
+              <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                Nothing in this stage yet.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {column.workspaces.map((workspace) => (
+                  <WorkspaceCard key={workspace.id} workspace={workspace} />
+                ))}
+              </ul>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
