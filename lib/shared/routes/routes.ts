@@ -26,8 +26,8 @@ export const routes = {
   dashboardAiHelper: "/dashboard/ai-helper",
 
   workspaces: "/workspaces",
-  /** The workspace a person opens: `/workspace/:id`. */
-  workspace: (id: string) => `/workspace/${encodeURIComponent(id)}`,
+  /** The workspace a person opens: `/workspaces/:id`. */
+  workspace: (id: string) => `/workspaces/${encodeURIComponent(id)}`,
   /** An organization invitation: `/invite/:id`. */
   invite: (id: string) => `/invite/${encodeURIComponent(id)}`,
 

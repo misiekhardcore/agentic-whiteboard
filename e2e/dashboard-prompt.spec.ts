@@ -284,7 +284,7 @@ test("the agent can create a workspace from a dashboard prompt", async ({ page }
     await expect(thread).toContainText(`"name": "${workspaceName}"`);
     await expect(thread).toContainText('"ok": true');
     // The tool hands the agent the workspace's path, so a reply can link to it.
-    await expect(thread).toContainText('"link": "/workspace/');
+    await expect(thread).toContainText('"link": "/workspaces/');
 
     // `onFinish` refreshes the server components, so the new workspace joins
     // the account's latest list without a reload.

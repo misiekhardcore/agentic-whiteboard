@@ -51,8 +51,8 @@ describe("composerView", () => {
   });
 
   it("adds the workspace the person is looking at", () => {
-    expect(composerView("/workspace/ws_1")).toEqual({
-      pathname: "/workspace/ws_1",
+    expect(composerView("/workspaces/ws_1")).toEqual({
+      pathname: "/workspaces/ws_1",
       workspaceId: "ws_1",
     });
   });
