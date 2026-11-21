@@ -8,6 +8,7 @@ import {
 import { db } from "@/lib/db";
 import { agentConversations, agentPrompts } from "@/lib/db/schema";
 
+import { conversationOwnerConditions } from "../conversations";
 import { retireOrphanedPrompts } from "../orphans";
 
 import { isUniqueViolation } from "./internals";
@@ -54,25 +55,18 @@ export async function openDashboardPrompt({
         .onConflictDoNothing()
         .returning({ id: agentConversations.id });
 
-      const [conversation] = await tx
-        .select({
-          userId: agentConversations.userId,
-          organizationId: agentConversations.organizationId,
-        })
-        .from(agentConversations)
-        .where(eq(agentConversations.id, conversationId))
-        .limit(1);
-
       // A conversation in another account is not this send's to continue: the
       // prompt would be paid by the active account and land in a thread that
       // account cannot read.
-      if (
-        !conversation ||
-        conversation.userId !== owner.userId ||
-        conversation.organizationId !== owner.organizationId
-      ) {
-        return { kind: "missing" };
-      }
+      const [conversation] = await tx
+        .select({ id: agentConversations.id })
+        .from(agentConversations)
+        .where(
+          and(eq(agentConversations.id, conversationId), ...conversationOwnerConditions(owner)),
+        )
+        .limit(1);
+
+      if (!conversation) return { kind: "missing" };
 
       // Read before inserting: the new prompt must not be part of its own
       // discard set, and the old branch is still live at this point.

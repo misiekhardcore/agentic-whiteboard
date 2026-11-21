@@ -36,9 +36,7 @@ export const agentConversations = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
 
-    // The account the conversation belongs to: the organization's id, or null
-    // for the person's own account. Not a foreign key, matching `workspace.orgId`:
-    // a removed organization leaves its rows behind rather than cascading.
+    // The account the conversation belongs to; null is the person's own.
     organizationId: text("organizationId"),
 
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).defaultNow().notNull(),

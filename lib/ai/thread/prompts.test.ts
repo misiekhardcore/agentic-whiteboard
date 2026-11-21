@@ -31,15 +31,13 @@ vi.mock("@/lib/db", async () => {
       Promise.resolve(value).then(resolve, reject),
   });
 
+  // The suite always acts as user_1 in their personal account, so the fake can
+  // answer the account-scoped read the way the database would: a row owned by
+  // somebody else, or filed under another account, comes back empty.
   const conversationRows = () =>
-    mocks.conversationOwner === null
-      ? []
-      : [
-          {
-            userId: mocks.conversationOwner,
-            organizationId: mocks.conversationOrganizationId,
-          },
-        ];
+    mocks.conversationOwner === "user_1" && mocks.conversationOrganizationId === null
+      ? [{ id: "conversation_1" }]
+      : [];
 
   type FakeDb = {
     transaction: <T>(work: (tx: FakeDb) => Promise<T>) => Promise<T>;
@@ -76,6 +74,7 @@ vi.mock("@/lib/db", async () => {
           name === "agentConversation" && mocks.conversationOwner === null;
         if (name === "agentConversation" && mocks.conversationOwner === null) {
           mocks.conversationOwner = String(values.userId);
+          mocks.conversationOrganizationId = (values.organizationId as string | null) ?? null;
         }
 
         const rowsAfterConflict = () => {

@@ -1,5 +1,5 @@
 {
-  "id": "89b957ec-6049-4530-b35e-bc812ccbe475",
+  "id": "01695d6d-add9-44b4-ab74-6efbf73d29c2",
   "prevId": "2853cc9c-eb04-4061-9291-7b22247470a0",
   "version": "7",
   "dialect": "postgresql",
@@ -142,18 +142,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "accountType": {
-          "name": "accountType",
-          "type": "ConversationAccountType",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "accountId": {
-          "name": "accountId",
+        "organizationId": {
+          "name": "organizationId",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "createdAt": {
           "name": "createdAt",
@@ -183,8 +176,8 @@
         }
       },
       "indexes": {
-        "AgentConversation_userId_account_updatedAt_idx": {
-          "name": "AgentConversation_userId_account_updatedAt_idx",
+        "AgentConversation_userId_organization_updatedAt_idx": {
+          "name": "AgentConversation_userId_organization_updatedAt_idx",
           "columns": [
             {
               "expression": "userId",
@@ -193,13 +186,7 @@
               "nulls": "last"
             },
             {
-              "expression": "accountType",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "accountId",
+              "expression": "organizationId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -395,11 +382,11 @@
           "primaryKey": true,
           "notNull": true
         },
-        "ownerId": {
-          "name": "ownerId",
+        "organizationId": {
+          "name": "organizationId",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "userId": {
           "name": "userId",
@@ -491,11 +478,11 @@
         }
       },
       "indexes": {
-        "AgentPrompt_ownerId_userId_createdAt_idx": {
-          "name": "AgentPrompt_ownerId_userId_createdAt_idx",
+        "AgentPrompt_organizationId_userId_createdAt_idx": {
+          "name": "AgentPrompt_organizationId_userId_createdAt_idx",
           "columns": [
             {
-              "expression": "ownerId",
+              "expression": "organizationId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1777,14 +1764,6 @@
       "schema": "public",
       "values": [
         "USER",
-        "ORGANIZATION"
-      ]
-    },
-    "public.ConversationAccountType": {
-      "name": "ConversationAccountType",
-      "schema": "public",
-      "values": [
-        "PERSONAL",
         "ORGANIZATION"
       ]
     },

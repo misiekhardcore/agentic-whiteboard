@@ -110,22 +110,8 @@
     {
       "idx": 15,
       "version": "7",
-      "when": 1795286790594,
-      "tag": "0015_talented_genesis",
-      "breakpoints": true
-    },
-    {
-      "idx": 16,
-      "version": "7",
-      "when": 1795295153318,
-      "tag": "0016_conversation_organization",
-      "breakpoints": true
-    },
-    {
-      "idx": 17,
-      "version": "7",
-      "when": 1795295209944,
-      "tag": "0017_drop_conversation_account_tuple",
+      "when": 1795297680234,
+      "tag": "0015_conversation_account",
       "breakpoints": true
     }
   ]
