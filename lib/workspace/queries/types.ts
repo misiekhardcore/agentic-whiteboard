@@ -20,3 +20,8 @@ export type ArchivedWorkspace = {
   status: (typeof workspaces.$inferSelect)["status"];
   archivedAt: Date;
 };
+
+/** A workspace as the board reads it: the list row plus its manual position. */
+export type BoardWorkspace = AccountWorkspace & {
+  position: number;
+};
