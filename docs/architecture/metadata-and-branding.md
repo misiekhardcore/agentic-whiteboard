@@ -33,7 +33,11 @@ letters because the image renderer does not reliably paint gradient text.
   `SoftwareApplication` JSON-LD.
 - Signed-in pages (`/dashboard`, `/workspaces`, `/workspace/:id`), the auth
   pages and `/invite/:id` export `robots: { index: false, follow: false }`.
-  Layouts carry it so a new page inherits the directive.
+  Layouts carry it so a new page inherits the directive. They also set
+  `alternates.canonical` to `null`: inheriting the homepage canonical would tell
+  a crawler the private page is a duplicate of the marketing page.
+- Only `/dashboard` names itself in the layout because it has no page metadata of
+  its own; every other route titles its page.
 - `robots.txt` disallows the app and `/api/`, but deliberately allows the auth
   and invitation routes: a blocked URL cannot be read, so its `noindex` would
   never take effect and it could still be listed without a snippet.

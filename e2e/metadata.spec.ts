@@ -83,6 +83,8 @@ test("pre-auth pages and the dashboard stay out of search", async ({ page }) => 
   await page.goto("/sign-in");
   await expect(page).toHaveTitle(/Sign in · WorkspAIce/);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  // A noindex page that canonically defers to the marketing page contradicts itself.
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
 
   const id = randomUUID().slice(0, 8);
   await page.goto("/sign-up");
@@ -92,6 +94,7 @@ test("pre-auth pages and the dashboard stay out of search", async ({ page }) => 
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL("**/dashboard");
 
-  await expect(page).toHaveTitle(/WorkspAIce/);
+  await expect(page).toHaveTitle(/Dashboard · WorkspAIce/);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
 });
