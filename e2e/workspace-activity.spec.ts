@@ -52,6 +52,22 @@ async function openDialog(page: Page, trigger: Locator, role: "dialog" | "alertd
   }).toPass({ timeout: 30_000 });
 }
 
+/**
+ * A card's actions live in its overflow menu, so editing one means opening that
+ * menu first. Hydration makes the trigger ignore a click for a moment, hence
+ * the retry.
+ */
+async function chooseCardAction(page: Page, card: Locator, action: "Edit" | "Archive") {
+  await expect(async () => {
+    await card.getByRole("button", { name: /^Actions for / }).click();
+    await expect(page.getByRole("menuitem", { name: action, exact: true })).toBeVisible({
+      timeout: 2_000,
+    });
+  }).toPass({ timeout: 30_000 });
+
+  await page.getByRole("menuitem", { name: action, exact: true }).click();
+}
+
 test("a workspace's history records who changed what and pages back through it", async ({
   page,
   browser,
@@ -85,9 +101,10 @@ test("a workspace's history records who changed what and pages back through it",
       workspaceId = await findWorkspaceId(db, userId as string);
 
       const card = page.getByRole("listitem").filter({ hasText: workspaceName }).first();
-      await openDialog(page, card.getByRole("button", { name: "Edit" }));
+      await chooseCardAction(page, card, "Edit");
 
       const editDialog = page.getByRole("dialog");
+      await expect(editDialog.getByText("Edit workspace")).toBeVisible();
       await editDialog.getByLabel("Workspace name").fill(renamedWorkspace);
       await editDialog.getByLabel("Stage").click();
       await page.getByRole("option", { name: "In progress" }).click();
