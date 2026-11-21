@@ -127,6 +127,15 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await expect(page.getByText("No workspaces in Personal account")).toBeVisible();
       await expect(page.getByText("0 / 3")).toBeVisible();
 
+      // The board is the four-column frame even while the account is empty; the
+      // empty state sits inside it rather than replacing it.
+      await page.goto(routes.workspaces);
+      for (const stage of ["Planning", "In progress", "In review", "Done"]) {
+        await expect(page.getByRole("heading", { name: stage, exact: true })).toBeVisible();
+      }
+      await expect(page.getByText("No workspaces in Personal account")).toBeVisible();
+      await page.goto(routes.dashboard);
+
       await createWorkspace(page, {
         name: workspaceName,
         description: "Where the quarter goes",
@@ -193,6 +202,23 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
     });
 
     await test.step("the board shows one column per stage, in stage order", async () => {
+      if (!userId) throw new Error("The test user is missing");
+      const archivedWorkspace = `Archived ${id}`;
+      const foreignWorkspace = `Elsewhere ${id}`;
+      const otherUserId = await findUserId(db, otherEmail);
+
+      // Both rows are reachable by the same select if the board's predicate is
+      // wrong: one belongs to the account but is archived, the other belongs to
+      // a different personal account.
+      await db.query(
+        'insert into workspace (id, name, "creatorId", status, position, "archivedAt") values ($1, $2, $3, $4, $5, $6)',
+        [randomUUID(), archivedWorkspace, userId, "PLANNING", 0, new Date()],
+      );
+      await db.query(
+        'insert into workspace (id, name, "creatorId", status, position) values ($1, $2, $3, $4, $5)',
+        [randomUUID(), foreignWorkspace, otherUserId, "DONE", 0],
+      );
+
       await page.goto(routes.workspaces);
 
       for (const stage of ["Planning", "In progress", "In review", "Done"]) {
@@ -210,6 +236,17 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await expect(
         page.getByRole("region", { name: "Done" }).getByText("Nothing in this stage yet."),
       ).toBeVisible();
+
+      // An archived workspace and another account's workspace are in the same
+      // table but not in this board.
+      await expect(page.getByText(archivedWorkspace)).toHaveCount(0);
+      await expect(page.getByText(foreignWorkspace)).toHaveCount(0);
+
+      // The fixtures exist only for this assertion; the archive page later in
+      // this test expects to be otherwise empty.
+      await db.query("delete from workspace where name = any($1)", [
+        [archivedWorkspace, foreignWorkspace],
+      ]);
 
       await page.goto(routes.dashboard);
     });
@@ -345,11 +382,12 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await cleanup().catch(() => undefined);
     }
 
-    if (userId) {
-      await db
-        .query('delete from workspace where "creatorId" = $1', [userId])
-        .catch(() => undefined);
-    }
+    await db
+      .query(
+        'delete from workspace where "creatorId" in (select id from "user" where email = any($1))',
+        [[email, otherEmail]],
+      )
+      .catch(() => undefined);
     await db
       .query('delete from "user" where email = any($1)', [[email, otherEmail]])
       .catch(() => undefined);

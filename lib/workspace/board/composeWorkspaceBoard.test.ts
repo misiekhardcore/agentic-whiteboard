@@ -24,6 +24,18 @@ function row(overrides: {
 }
 
 describe("composing the workspace board", () => {
+  it("renders all four columns even when the account has no workspaces", () => {
+    const board = composeWorkspaceBoard([]);
+
+    expect(board.map((column) => column.status)).toEqual([
+      "PLANNING",
+      "IN_PROGRESS",
+      "IN_REVIEW",
+      "DONE",
+    ]);
+    expect(board.every((column) => column.workspaces.length === 0)).toBe(true);
+  });
+
   it("renders one column per stage, in stage order, and places each workspace under its stage", () => {
     const board = composeWorkspaceBoard([
       row({ id: "ws_ship", name: "Ship", status: "IN_PROGRESS" }),

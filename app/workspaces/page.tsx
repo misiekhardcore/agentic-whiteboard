@@ -36,6 +36,19 @@ export default async function WorkspacesPage() {
   const board = await listWorkspaceBoard(session.user.id, activeTeam?.id ?? null);
   const workspaceCount = board.reduce((total, column) => total + column.workspaces.length, 0);
 
+  const emptyState =
+    workspaceCount === 0 ? (
+      <EmptyState
+        icon={<Folder height={64} width={64} className="text-primary" />}
+        title={`No workspaces in ${accountName}`}
+        description={
+          activeTeam
+            ? `Workspaces shared with ${activeTeam.name} will appear here.`
+            : "You haven't created any personal workspaces yet."
+        }
+      />
+    ) : undefined;
+
   return (
     <div className="stack">
       <RefreshOnChanges keys={[CHANGE_KEYS.workspaces, CHANGE_KEYS.account]} />
@@ -50,24 +63,14 @@ export default async function WorkspacesPage() {
         <CreateWorkspaceDialog size="sm" variant="outline" />
       </div>
 
-      {workspaceCount === 0 ? (
-        <EmptyState
-          icon={<Folder height={64} width={64} className="text-primary" />}
-          title={`No workspaces in ${accountName}`}
-          description={
-            activeTeam
-              ? `Workspaces shared with ${activeTeam.name} will appear here.`
-              : "You haven't created any personal workspaces yet."
-          }
-        />
-      ) : (
-        <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3">
+        {workspaceCount > 0 && (
           <p className="text-sm text-muted-foreground">
             {workspaceCount} {workspaceCount === 1 ? "workspace" : "workspaces"} in this account.
           </p>
-          <WorkspaceBoard board={board} />
-        </div>
-      )}
+        )}
+        <WorkspaceBoard board={board} emptyState={emptyState} />
+      </div>
 
       <Button asChild variant="ghost" size="sm" className="self-start">
         <Link href={routes.dashboard}>← Back to dashboard</Link>
