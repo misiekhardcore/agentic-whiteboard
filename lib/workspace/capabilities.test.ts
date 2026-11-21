@@ -83,7 +83,7 @@ describe("createWorkspace capability", () => {
         id: "wsone9k2m4p7q1r3s5t8u0vx",
         name: "Food delivery",
         status: "PLANNING",
-        link: "/workspace/wsone9k2m4p7q1r3s5t8u0vx",
+        link: "/workspaces/wsone9k2m4p7q1r3s5t8u0vx",
       },
     });
   });
@@ -129,7 +129,7 @@ describe("read capabilities", () => {
           description: null,
           status: "PLANNING",
           archived: false,
-          link: "/workspace/wsone9k2m4p7q1r3s5t8u0vx",
+          link: "/workspaces/wsone9k2m4p7q1r3s5t8u0vx",
         },
       ],
     });
@@ -163,7 +163,7 @@ describe("read capabilities", () => {
         description: "Order takeaway",
         status: "PLANNING",
         archived: false,
-        link: "/workspace/wsone9k2m4p7q1r3s5t8u0vx",
+        link: "/workspaces/wsone9k2m4p7q1r3s5t8u0vx",
       },
     });
   });
@@ -221,7 +221,7 @@ describe("updateWorkspace capability", () => {
         id: "wsone9k2m4p7q1r3s5t8u0vx",
         name: "Launch",
         status: "PLANNING",
-        link: "/workspace/wsone9k2m4p7q1r3s5t8u0vx",
+        link: "/workspaces/wsone9k2m4p7q1r3s5t8u0vx",
       },
     });
   });
@@ -234,7 +234,7 @@ describe("archive surfaces", () => {
       id: "wsone9k2m4p7q1r3s5t8u0vx",
       name: "Food delivery",
       status: "PLANNING" as const,
-      link: "/workspace/wsone9k2m4p7q1r3s5t8u0vx",
+      link: "/workspaces/wsone9k2m4p7q1r3s5t8u0vx",
     },
   };
 
