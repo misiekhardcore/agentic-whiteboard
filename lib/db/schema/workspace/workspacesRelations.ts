@@ -5,6 +5,7 @@ import { agentPrompts } from "../agentPrompt";
 import { user } from "../auth";
 import { canvases } from "../canvas";
 import { docs } from "../doc";
+import { workspaceActivities } from "../workspaceActivity";
 
 import { workspaces } from "./workspaces";
 
@@ -17,4 +18,5 @@ export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
   canvas: one(canvases),
   agentPrompts: many(agentPrompts),
   agentMessages: many(agentMessages),
+  activity: many(workspaceActivities),
 }));

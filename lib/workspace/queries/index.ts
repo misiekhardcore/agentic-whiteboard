@@ -11,3 +11,4 @@ export { listArchivedWorkspaces } from "./listArchivedWorkspaces";
 export { countAccountWorkspaces } from "./countAccountWorkspaces";
 export { listWorkspacesFor } from "./listWorkspacesFor";
 export { readWorkspaceWith } from "./readWorkspaceWith";
+export { listWorkspaceActivity } from "./listWorkspaceActivity";

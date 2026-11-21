@@ -29,5 +29,13 @@ export type { NewSubscription, Subscription } from "./billing";
 export { canvases, canvasesRelations } from "./canvas";
 export { docs, docsRelations } from "./doc";
 export { workspaceStatusEnum, workspaces, workspacesRelations } from "./workspace";
+export {
+  workspaceActivities,
+  workspaceActivitiesRelations,
+  workspaceActivityActorTypeEnum,
+  workspaceActivityKindEnum,
+  workspaceActivitySurfaceEnum,
+} from "./workspaceActivity";
+export type { WorkspaceActivity } from "./workspaceActivity";
 export { userSettings } from "./userSettings";
 export type { UserSettings } from "./userSettings";

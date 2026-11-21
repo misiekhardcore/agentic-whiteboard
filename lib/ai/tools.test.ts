@@ -184,6 +184,7 @@ describe("updateWorkspace tool", () => {
 
     expect(service.updateWorkspaceWith).toHaveBeenCalledWith(
       access,
+      { ...actor, actorType: "AGENT" },
       {
         id: "wsone9k2m4p7q1r3s5t8u0vx",
         name: "Launch",

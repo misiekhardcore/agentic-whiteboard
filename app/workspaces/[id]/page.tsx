@@ -77,6 +77,9 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
             Last updated {formatDay(workspace.updatedAt)}
             {access.kind === "organization" ? " · Shared with your team" : ""}
           </p>
+          <Button asChild variant="link" size="sm" className="self-start px-0">
+            <Link href={routes.workspaceActivity(workspace.id)}>View activity</Link>
+          </Button>
         </div>
 
         <Card>

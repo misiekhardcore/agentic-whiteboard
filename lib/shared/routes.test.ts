@@ -11,6 +11,10 @@ describe("routes", () => {
     expect(routes.workspace("a/b?c")).toBe("/workspaces/a%2Fb%3Fc");
   });
 
+  it("builds a workspace's history path inside its own segment", () => {
+    expect(routes.workspaceActivity("ws_abc123")).toBe("/workspaces/ws_abc123/activity");
+  });
+
   it("builds an invite path from its id", () => {
     expect(routes.invite("inv_1")).toBe("/invite/inv_1");
   });

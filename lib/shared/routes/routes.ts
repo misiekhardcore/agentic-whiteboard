@@ -28,6 +28,8 @@ export const routes = {
   workspaces: "/workspaces",
   /** The workspace a person opens: `/workspaces/:id`. */
   workspace: (id: string) => `/workspaces/${encodeURIComponent(id)}`,
+  /** One workspace's history: `/workspaces/:id/activity`. */
+  workspaceActivity: (id: string) => `/workspaces/${encodeURIComponent(id)}/activity`,
   /** An organization invitation: `/invite/:id`. */
   invite: (id: string) => `/invite/${encodeURIComponent(id)}`,
 
