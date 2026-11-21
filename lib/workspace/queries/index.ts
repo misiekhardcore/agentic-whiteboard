@@ -1,4 +1,9 @@
-export type { AccountWorkspace, ArchivedWorkspace, BoardWorkspace } from "./types";
+export type {
+  AccountWorkspace,
+  ArchivedWorkspace,
+  BoardWorkspace,
+  WorkspaceCreator,
+} from "./types";
 export { accountWorkspacesWhere } from "./accountWorkspacesWhere";
 export { listAccountWorkspaces } from "./listAccountWorkspaces";
 export { listBoardWorkspaces } from "./listBoardWorkspaces";

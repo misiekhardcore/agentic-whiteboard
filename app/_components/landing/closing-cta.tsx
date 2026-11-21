@@ -21,7 +21,7 @@ export function ClosingCta() {
           className="mt-2 max-w-3xl font-display text-display font-bold text-balance"
         >
           {title.lead}
-          <span className="text-primary">{title.accent}</span>
+          <span className="brand-gradient">{title.accent}</span>
           {title.trail}
         </h2>
 

@@ -9,7 +9,9 @@ vi.mock("@/lib/db", () => ({
       dbState.selects += 1;
       return {
         from: () => ({
-          where: () => Promise.resolve(dbState.rows.shift() ?? []),
+          leftJoin: () => ({
+            where: () => Promise.resolve(dbState.rows.shift() ?? []),
+          }),
         }),
       };
     },

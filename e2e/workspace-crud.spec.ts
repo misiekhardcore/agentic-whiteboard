@@ -70,6 +70,22 @@ async function openDialog(page: Page, trigger: Locator, role: "dialog" | "alertd
   }).toPass({ timeout: 30_000 });
 }
 
+/**
+ * A card's actions live in its overflow menu, so opening one means opening the
+ * menu first. Hydration makes the trigger ignore a click for a moment, hence
+ * the retry.
+ */
+async function chooseCardAction(page: Page, card: Locator, action: "Edit" | "Archive") {
+  await expect(async () => {
+    await card.getByRole("button", { name: /^Actions for / }).click();
+    await expect(page.getByRole("menuitem", { name: action, exact: true })).toBeVisible({
+      timeout: 2_000,
+    });
+  }).toPass({ timeout: 30_000 });
+
+  await page.getByRole("menuitem", { name: action, exact: true }).click();
+}
+
 async function createWorkspace(
   page: Page,
   { name, description, verify = true }: { name: string; description?: string; verify?: boolean },
@@ -187,7 +203,7 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await page.goto("/dashboard");
 
       const card = page.getByRole("listitem").filter({ hasText: workspaceName }).first();
-      await openDialog(page, card.getByRole("button", { name: "Edit" }));
+      await chooseCardAction(page, card, "Edit");
 
       const dialog = page.getByRole("dialog");
       await expect(dialog.getByText("Edit workspace")).toBeVisible();
@@ -237,6 +253,21 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
         page.getByRole("region", { name: "Done" }).getByText("Nothing in this stage yet."),
       ).toBeVisible();
 
+      // Each column states how many cards it holds.
+      await expect(
+        page.getByRole("region", { name: "In progress" }).getByText("1", { exact: true }),
+      ).toBeVisible();
+
+      // The card carries its creator, read with the board's single query.
+      await expect(
+        page
+          .getByRole("region", { name: "In progress" })
+          .getByText("Workspace Tester", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("region", { name: "Done" }).getByText("0", { exact: true }),
+      ).toBeVisible();
+
       // An archived workspace and another account's workspace are in the same
       // table but not in this board.
       await expect(page.getByText(archivedWorkspace)).toHaveCount(0);
@@ -253,11 +284,7 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
 
     await test.step("archiving hides the workspace and frees its plan slot", async () => {
       const card = page.getByRole("listitem").filter({ hasText: renamedWorkspace }).first();
-      await openDialog(
-        page,
-        card.getByRole("button", { name: "Archive", exact: true }),
-        "alertdialog",
-      );
+      await chooseCardAction(page, card, "Archive");
 
       const dialog = page.getByRole("alertdialog");
       await expect(dialog.getByText(`Archive ${renamedWorkspace}?`)).toBeVisible();
@@ -332,11 +359,7 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       // doc and canvas, so the workspace card is managed from /workspaces.
       await page.goto("/workspaces");
       const card = page.getByRole("listitem").filter({ hasText: renamedWorkspace }).first();
-      await openDialog(
-        page,
-        card.getByRole("button", { name: "Archive", exact: true }),
-        "alertdialog",
-      );
+      await chooseCardAction(page, card, "Archive");
       await page
         .getByRole("alertdialog")
         .getByRole("button", { name: "Archive workspace" })

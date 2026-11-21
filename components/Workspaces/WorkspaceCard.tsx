@@ -1,54 +1,62 @@
 import Link from "next/link";
 
-import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
+import { AccountAvatar } from "@/components/AccountMenu/AccountMenuPopover/AccountAvatar";
 import { routes } from "@/lib/shared/routes";
-import { archiveWorkspaceAction } from "@/lib/workspace/actions";
-import type { AccountWorkspace } from "@/lib/workspace/queries";
+import type { AccountWorkspace, WorkspaceCreator } from "@/lib/workspace/queries";
 import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace/status";
 
-import { EditWorkspaceDialog } from "./EditWorkspaceDialog";
+import { WorkspaceCardMenu } from "./WorkspaceCardMenu";
 
 /**
- * A workspace in a grid: its name and description link to the workspace, and
- * the footer carries the stage plus the management actions. Used by the
- * dashboard's latest list and by the all-workspaces page so both stay
- * identical.
+ * A workspace in a grid: its name and description link to the workspace, the
+ * footer carries its creator and stage, and its management actions sit behind
+ * the overflow menu. Used by the board, the dashboard's latest list and the
+ * archive so all three stay identical.
  */
-export function WorkspaceCard({ workspace }: { workspace: AccountWorkspace }) {
+export function WorkspaceCard({
+  workspace,
+}: {
+  workspace: AccountWorkspace & { creator?: WorkspaceCreator | null };
+}) {
   return (
-    <li className="flex h-full flex-col gap-2 card p-3 transition-colors hover:border-primary/40">
-      <Link href={routes.workspace(workspace.id)} className="flex flex-col gap-1">
-        <span className="font-medium">{workspace.name}</span>
-        {workspace.description && (
-          <span className="line-clamp-2 text-sm text-muted-foreground">
-            {workspace.description}
-          </span>
-        )}
-      </Link>
+    <li className="flex h-full flex-col gap-3 card p-3 transition-colors hover:border-primary/40">
+      <div className="flex items-start justify-between gap-2">
+        <Link href={routes.workspace(workspace.id)} className="flex min-w-0 flex-col gap-1">
+          <span className="truncate font-medium">{workspace.name}</span>
+          {workspace.description && (
+            <span className="line-clamp-2 text-sm text-muted-foreground">
+              {workspace.description}
+            </span>
+          )}
+        </Link>
 
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
+        <WorkspaceCardMenu
+          id={workspace.id}
+          name={workspace.name}
+          description={workspace.description}
+          status={workspace.status}
+        />
+      </div>
+
+      <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+        <span className="flex min-w-0 items-center gap-2">
+          {workspace.creator && (
+            <>
+              <AccountAvatar
+                name={workspace.creator.name}
+                image={workspace.creator.image}
+                size="sm"
+              />
+              <span className="truncate text-xs text-muted-foreground">
+                {workspace.creator.name}
+              </span>
+            </>
+          )}
+        </span>
+
         <span className="font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
           {WORKSPACE_STATUS_LABELS[workspace.status]}
         </span>
-
-        <div className="flex items-center gap-1">
-          <EditWorkspaceDialog
-            id={workspace.id}
-            name={workspace.name}
-            description={workspace.description}
-            status={workspace.status}
-          />
-          <ConfirmAction
-            action={archiveWorkspaceAction}
-            fields={{ workspaceId: workspace.id }}
-            title={`Archive ${workspace.name}?`}
-            description="The workspace leaves the dashboard and stops counting against your plan. Its documents, canvas and agent history are kept, and you can restore it at any time."
-            confirmLabel="Archive workspace"
-            pendingLabel="Archiving…"
-            triggerLabel="Archive"
-            triggerVariant="ghost"
-          />
-        </div>
       </div>
     </li>
   );

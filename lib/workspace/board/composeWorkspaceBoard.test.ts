@@ -19,6 +19,7 @@ function row(overrides: {
     description: overrides.description ?? null,
     status: overrides.status,
     position: overrides.position ?? 0,
+    creator: null,
     updatedAt,
   };
 }

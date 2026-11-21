@@ -52,6 +52,11 @@ export default async function WorkspacesPage() {
   return (
     <div className="stack">
       <RefreshOnChanges keys={[CHANGE_KEYS.workspaces, CHANGE_KEYS.account]} />
+
+      <Button asChild variant="ghost" size="sm" className="self-start">
+        <Link href={routes.dashboard}>← Back to dashboard</Link>
+      </Button>
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">All workspaces</h1>
@@ -71,10 +76,6 @@ export default async function WorkspacesPage() {
         )}
         <WorkspaceBoard board={board} emptyState={emptyState} />
       </div>
-
-      <Button asChild variant="ghost" size="sm" className="self-start">
-        <Link href={routes.dashboard}>← Back to dashboard</Link>
-      </Button>
     </div>
   );
 }

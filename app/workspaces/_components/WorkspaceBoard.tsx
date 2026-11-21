@@ -1,3 +1,4 @@
+import { Badge } from "@konopskidev/ui/components/badge";
 import type { ReactNode } from "react";
 
 import { WorkspaceCard } from "@/components/Workspaces/WorkspaceCard";
@@ -24,19 +25,21 @@ export function WorkspaceBoard({
       <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-4">
         {board.map((column) => {
           const headingId = `stage-${column.status}`;
-
           return (
             <section
               key={column.status}
               aria-labelledby={headingId}
-              className="flex flex-col gap-2"
+              className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3"
             >
-              <h2
-                id={headingId}
-                className="font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase"
-              >
-                {WORKSPACE_STATUS_LABELS[column.status]}
-              </h2>
+              <div className="flex items-center justify-between gap-2">
+                <h2
+                  id={headingId}
+                  className="font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase"
+                >
+                  {WORKSPACE_STATUS_LABELS[column.status]}
+                </h2>
+                <Badge variant="secondary">{column.workspaces.length}</Badge>
+              </div>
 
               {column.workspaces.length === 0 ? (
                 <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">

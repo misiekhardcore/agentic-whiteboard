@@ -29,7 +29,7 @@ export default function Home({ searchParams }: PageProps<"/">) {
 
           <h1 className="max-w-4xl font-display text-display font-bold text-balance">
             {hero.title.lead}
-            <span className="text-primary">{hero.title.accent}</span>
+            <span className="brand-gradient">{hero.title.accent}</span>
             {hero.title.trail}
           </h1>
 
