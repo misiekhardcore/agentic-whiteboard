@@ -5,11 +5,18 @@ import { workspaceLimitMessage } from "@/lib/billing/usage";
 import { failure } from "@/lib/capabilities/define";
 import { db } from "@/lib/db";
 import { workspaces } from "@/lib/db/schema";
-import type { AccountActor } from "@/lib/identity/actor";
 
+import type { WorkspaceRequester } from "../activity";
 import type { WorkspaceMutationResult } from "../contracts";
 import { accountWorkspacesWhere } from "../queries";
-import { abortRefusal, hasFieldErrors, normalizeWorkspaceDraft } from "../rules";
+import {
+  abortRefusal,
+  hasFieldErrors,
+  normalizeWorkspaceDraft,
+  workspaceActivityFor,
+} from "../rules";
+
+import { recordActivityWith } from "./recordActivityWith";
 
 /**
  * The workspace writes, shared by the human dialog and the agent's tools.
@@ -31,7 +38,7 @@ import { abortRefusal, hasFieldErrors, normalizeWorkspaceDraft } from "../rules"
  * never see.
  */
 export async function createWorkspaceFor(
-  actor: AccountActor,
+  requester: WorkspaceRequester,
   input: { name: string; description?: string | null },
   { signal }: { signal?: AbortSignal } = {},
 ): Promise<WorkspaceMutationResult> {
@@ -46,11 +53,11 @@ export async function createWorkspaceFor(
   const stopped = abortRefusal(signal);
   if (stopped) return stopped;
 
-  const entitlements = actor.organizationId
-    ? await getOrganizationEntitlements(actor.organizationId)
-    : await getUserEntitlements(actor.userId);
+  const entitlements = requester.organizationId
+    ? await getOrganizationEntitlements(requester.organizationId)
+    : await getUserEntitlements(requester.userId);
 
-  const ownerKey = actor.organizationId ?? `personal:${actor.userId}`;
+  const ownerKey = requester.organizationId ?? `personal:${requester.userId}`;
 
   return db.transaction(async (tx) => {
     // Serialize creates per account so the quota cannot be exceeded by two
@@ -62,13 +69,13 @@ export async function createWorkspaceFor(
     const [row] = await tx
       .select({ total: count() })
       .from(workspaces)
-      .where(accountWorkspacesWhere(actor.userId, actor.organizationId));
+      .where(accountWorkspacesWhere(requester.userId, requester.organizationId));
 
     const message = workspaceLimitMessage({
       used: Number(row?.total ?? 0),
       limit: entitlements.limits.workspaces,
       plan: entitlements.plan.name,
-      accountName: actor.accountName,
+      accountName: requester.accountName,
     });
 
     if (message) return failure(message, { limitReached: true });
@@ -83,8 +90,8 @@ export async function createWorkspaceFor(
       .values({
         name: draft.name,
         description: draft.description,
-        creatorId: actor.userId,
-        orgId: actor.organizationId,
+        creatorId: requester.userId,
+        orgId: requester.organizationId,
       })
       .returning({
         id: workspaces.id,
@@ -95,6 +102,18 @@ export async function createWorkspaceFor(
     if (!created) {
       return failure("The workspace was not created.");
     }
+
+    // In the same transaction as the insert: a workspace without its creation
+    // activity is a history with a hole, and a failed log write must roll the
+    // workspace back rather than leave it unrecorded.
+    await recordActivityWith(
+      tx,
+      workspaceActivityFor(
+        created.id,
+        [{ surface: "WORKSPACE", kind: "CREATED", details: {} }],
+        requester,
+      ),
+    );
 
     return { ok: true as const, workspace: created };
   });

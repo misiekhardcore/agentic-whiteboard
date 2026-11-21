@@ -46,6 +46,10 @@ const agent: CapabilityContext = {
   promptId: "prompt_1",
 };
 
+// The agent acts for the person, so its changes are recorded as AGENT against
+// that person's id.
+const agentRequester = { ...actor, actorType: "AGENT" as const };
+
 const access = {
   kind: "personal" as const,
   permission: "edit" as const,
@@ -73,7 +77,7 @@ describe("createWorkspace capability", () => {
     });
 
     expect(service.createWorkspaceFor).toHaveBeenCalledWith(
-      actor,
+      agentRequester,
       { name: "Food delivery", description: "" },
       { signal: undefined },
     );
@@ -207,6 +211,7 @@ describe("updateWorkspace capability", () => {
 
     expect(service.updateWorkspaceWith).toHaveBeenCalledWith(
       access,
+      agentRequester,
       {
         id: "wsone9k2m4p7q1r3s5t8u0vx",
         name: "Launch",

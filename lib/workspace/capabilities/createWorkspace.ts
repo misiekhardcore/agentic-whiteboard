@@ -3,6 +3,7 @@ import { z } from "zod";
 import { defineCapability } from "@/lib/capabilities/define";
 import { CHANGE_KEYS } from "@/lib/shared/changes";
 
+import { workspaceRequesterFor } from "../rules";
 import { createWorkspaceFor } from "../service";
 
 import { linked, resultSchema, workspaceSummary } from "./internals";
@@ -20,7 +21,7 @@ export const createWorkspace = defineCapability({
   changes: () => [{ key: CHANGE_KEYS.workspaces, scope: "account" }],
   handler: async (ctx, input, _resource, { signal }) => {
     const result = await createWorkspaceFor(
-      ctx.actor,
+      workspaceRequesterFor(ctx),
       { name: input.name, description: input.description ?? "" },
       { signal },
     );

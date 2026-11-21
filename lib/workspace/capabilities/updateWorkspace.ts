@@ -4,7 +4,7 @@ import { defineCapability } from "@/lib/capabilities/define";
 import { CHANGE_KEYS, workspaceChangeKey } from "@/lib/shared/changes";
 
 import { authorizeWorkspace } from "../access";
-import { workspaceIdSchema } from "../rules";
+import { workspaceIdSchema, workspaceRequesterFor } from "../rules";
 import { updateWorkspaceWith } from "../service";
 import { WORKSPACE_STATUSES } from "../status";
 
@@ -28,9 +28,10 @@ export const updateWorkspace = defineCapability({
   ],
   notFound: NOT_FOUND,
   authorize: async (ctx, input) => authorizeWorkspace(ctx.actor, input.workspaceId, "edit"),
-  handler: async (_ctx, input, access, { signal }) => {
+  handler: async (ctx, input, access, { signal }) => {
     const result = await updateWorkspaceWith(
       access,
+      workspaceRequesterFor(ctx),
       {
         id: access.workspace.id,
         name: input.name,

@@ -1,4 +1,5 @@
 import type { WorkspaceAccess } from "../access";
+import type { WorkspaceRequester } from "../activity";
 import type { WorkspaceMutationResult } from "../contracts";
 
 import { setArchivedWith } from "./internals";
@@ -9,7 +10,8 @@ import { setArchivedWith } from "./internals";
  */
 export async function archiveWorkspaceWith(
   access: WorkspaceAccess,
+  requester: WorkspaceRequester,
   options: { signal?: AbortSignal } = {},
 ): Promise<WorkspaceMutationResult> {
-  return setArchivedWith(access, new Date(), options);
+  return setArchivedWith(access, requester, new Date(), options);
 }

@@ -12,3 +12,7 @@ export { hasFieldErrors } from "./hasFieldErrors";
 export { mergeWorkspaceUpdate } from "./mergeWorkspaceUpdate";
 export { deleteRefusal } from "./deleteRefusal";
 export { abortRefusal } from "./abortRefusal";
+export { workspaceRequesterFor } from "./workspaceRequesterFor";
+export { workspaceActivityFor } from "./workspaceActivityFor";
+export { activityChangesForUpdate } from "./activityChangesForUpdate";
+export { describeActivity } from "./describeActivity";
