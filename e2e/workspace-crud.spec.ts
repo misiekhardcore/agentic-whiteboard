@@ -148,6 +148,9 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
 
       await expect(page.getByRole("heading", { name: workspaceName })).toBeVisible();
       await expect(page.getByText("The workspace editor is on its way")).toBeVisible();
+      // The shell around it is the page's main landmark; nesting another fails
+      // the landmark audit.
+      await expect(page.getByRole("main")).toHaveCount(1);
       // The detail page is a surface of the workspaces section, not a standalone page.
       await expect(page.getByRole("link", { name: "All workspaces" })).toBeVisible();
 
