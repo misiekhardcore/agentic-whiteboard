@@ -124,13 +124,13 @@ test("a conversation stays in the account it was started in", async ({ page }) =
       const rows = await withDb(async (db) => {
         const { rows } = await db.query<{
           text: string;
-          ownerId: string;
+          organizationId: string | null;
           userId: string;
-          accountType: string;
-          accountId: string;
+          conversationOrganizationId: string | null;
         }>(
           `select m.content->'parts'->0->>'text' as text,
-                  p."ownerId", p."userId", c."accountType", c."accountId"
+                  p."organizationId", p."userId",
+                  c."organizationId" as "conversationOrganizationId"
              from "agentPrompt" p
              join "agentMessage" m on m."promptId" = p.id and m.role = 'USER'
              join "agentConversation" c on c.id = p."conversationId"
@@ -144,11 +144,13 @@ test("a conversation stays in the account it was started in", async ({ page }) =
       const personal = rows.find((row) => row.text === "Personal plan");
       const team = rows.find((row) => row.text === "Team plan");
 
-      expect(personal?.accountType).toBe("PERSONAL");
-      expect(personal?.ownerId).toBe(personal?.userId);
-      expect(team?.accountType).toBe("ORGANIZATION");
-      expect(team?.accountId).not.toBe(team?.userId);
-      expect(team?.ownerId).toBe(team?.accountId);
+      // The personal prompt is billed to the person and filed in their own
+      // account; the team prompt is billed to the organization in both places.
+      expect(personal?.organizationId).toBeNull();
+      expect(personal?.conversationOrganizationId).toBeNull();
+      expect(team?.organizationId).toBeTruthy();
+      expect(team?.organizationId).toBe(team?.conversationOrganizationId);
+      expect(team?.organizationId).not.toBe(team?.userId);
       expect(rows).toHaveLength(2);
     });
   } finally {

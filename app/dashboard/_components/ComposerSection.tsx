@@ -8,7 +8,6 @@ import {
   RECENT_CONVERSATION_LIMIT,
   resolveActiveConversation,
 } from "@/lib/ai/thread/conversations";
-import { conversationOwner } from "@/lib/ai/thread/rules";
 import { getSessionAccount } from "@/lib/identity/account";
 import { readPersonalSettings } from "@/lib/identity/settings";
 
@@ -58,10 +57,7 @@ async function ComposerSectionInner({
   const userId = account.session.user.id;
   // The composer shows this person's threads in the account they are acting as;
   // switching accounts is a different owner and therefore a different set.
-  const owner = conversationOwner({
-    userId,
-    organizationId: account.activeOrganizationId,
-  });
+  const owner = { userId, organizationId: account.activeOrganizationId };
   const conversationId = await resolveActiveConversation({
     owner,
     requested: requestedConversation,

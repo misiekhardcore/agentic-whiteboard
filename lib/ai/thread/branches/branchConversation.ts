@@ -55,7 +55,7 @@ export async function branchConversation({
       .select({
         id: agentPrompts.id,
         createdAt: agentPrompts.createdAt,
-        ownerId: agentPrompts.ownerId,
+        organizationId: agentPrompts.organizationId,
         provider: agentPrompts.provider,
         model: agentPrompts.model,
       })
@@ -124,7 +124,7 @@ export async function branchConversation({
       const [copy] = await tx
         .insert(agentPrompts)
         .values({
-          ownerId: prompt.ownerId,
+          organizationId: prompt.organizationId,
           userId: owner.userId,
           conversationId: branchId,
           // History: the copy is finished even when the source turn failed or

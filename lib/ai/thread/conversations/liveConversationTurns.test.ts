@@ -41,7 +41,7 @@ vi.mock("@/lib/db", () => ({
 
 import { liveConversationTurns } from "./liveConversationTurns";
 
-const owner = { userId: "user_1", accountType: "PERSONAL", accountId: "user_1" } as const;
+const owner = { userId: "user_1", organizationId: null } as const;
 
 const prompt = (id: string, createdAt: string, status = "COMPLETED") => ({
   id,

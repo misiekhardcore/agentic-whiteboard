@@ -2,7 +2,6 @@ import type {
   AGENT_ACTOR_TYPES,
   AGENT_MESSAGE_ROLES,
   AGENT_PROMPT_STATUSES,
-  CONVERSATION_ACCOUNT_TYPES,
   WORKSPACE_PERMISSIONS,
   WORKSPACE_SURFACES,
 } from "./constants";
@@ -24,8 +23,6 @@ export type AgentPromptStatus = (typeof AGENT_PROMPT_STATUSES)[number];
 export type AgentMessageRole = (typeof AGENT_MESSAGE_ROLES)[number];
 
 export type AgentActorType = (typeof AGENT_ACTOR_TYPES)[number];
-
-export type ConversationAccountType = (typeof CONVERSATION_ACCOUNT_TYPES)[number];
 
 /** A human acting with their own authenticated session. */
 export type UserActor = {

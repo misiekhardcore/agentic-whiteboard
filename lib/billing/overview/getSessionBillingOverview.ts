@@ -35,10 +35,9 @@ export const getSessionBillingOverview = cache(async (): Promise<BillingOverview
     : await getUserEntitlements(session.user.id);
 
   const window = usageWindow(entitlements.subscription);
-  const ownerId = organizationId ?? session.user.id;
 
   const [promptsUsed, workspacesUsed] = await Promise.all([
-    countPromptsForMember({ ownerId, userId: session.user.id, since: window.start }),
+    countPromptsForMember({ organizationId, userId: session.user.id, since: window.start }),
     countAccountWorkspaces(session.user.id, organizationId),
   ]);
 

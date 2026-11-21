@@ -57,8 +57,7 @@ export async function openDashboardPrompt({
       const [conversation] = await tx
         .select({
           userId: agentConversations.userId,
-          accountType: agentConversations.accountType,
-          accountId: agentConversations.accountId,
+          organizationId: agentConversations.organizationId,
         })
         .from(agentConversations)
         .where(eq(agentConversations.id, conversationId))
@@ -70,8 +69,7 @@ export async function openDashboardPrompt({
       if (
         !conversation ||
         conversation.userId !== owner.userId ||
-        conversation.accountType !== owner.accountType ||
-        conversation.accountId !== owner.accountId
+        conversation.organizationId !== owner.organizationId
       ) {
         return { kind: "missing" };
       }
@@ -97,7 +95,7 @@ export async function openDashboardPrompt({
       const [created] = await tx
         .insert(agentPrompts)
         .values({
-          ownerId: owner.accountId,
+          organizationId: owner.organizationId,
           userId: owner.userId,
           conversationId,
           provider,

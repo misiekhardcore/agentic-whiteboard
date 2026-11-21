@@ -13,7 +13,7 @@ import {
   BRANCH_UNFINISHED,
   branchConversation as branchConversationInto,
 } from "./thread/branches";
-import { conversationIdProblem, conversationOwner } from "./thread/rules";
+import { conversationIdProblem } from "./thread/rules";
 import { refineConversationTitle } from "./titles";
 
 /**
@@ -42,10 +42,10 @@ export const branchConversation = defineCapability({
   handler: async (ctx, input) => {
     // The branch continues a thread of the active account, so it is filed in the
     // same one; the source read already requires it.
-    const owner = conversationOwner({
+    const owner = {
       userId: ctx.actor.userId,
       organizationId: ctx.actor.organizationId,
-    });
+    };
 
     const result = await branchConversationInto({
       owner,

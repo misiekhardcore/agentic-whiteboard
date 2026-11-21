@@ -1,4 +1,4 @@
-import { eq, type SQL } from "drizzle-orm";
+import { eq, isNull, type SQL } from "drizzle-orm";
 
 import type { ConversationOwner } from "@/lib/ai/thread/rules";
 import { agentConversations } from "@/lib/db/schema";
@@ -10,11 +10,15 @@ import { agentConversations } from "@/lib/db/schema";
  * accounts: every caller spreads this into its own `where`, so a new query that
  * forgets the account does not type-check against the owner it was given. The
  * person is still part of it, because an organization's threads are per member.
+ *
+ * A null organization is its own condition rather than a missing one: `= null`
+ * matches nothing, so the personal account would select no rows at all.
  */
 export function conversationOwnerConditions(owner: ConversationOwner): SQL[] {
   return [
     eq(agentConversations.userId, owner.userId),
-    eq(agentConversations.accountType, owner.accountType),
-    eq(agentConversations.accountId, owner.accountId),
+    owner.organizationId === null
+      ? isNull(agentConversations.organizationId)
+      : eq(agentConversations.organizationId, owner.organizationId),
   ];
 }

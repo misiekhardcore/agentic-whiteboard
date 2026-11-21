@@ -27,8 +27,7 @@ export async function resolveActiveConversation({
     const [owned] = await db
       .select({
         userId: agentConversations.userId,
-        accountType: agentConversations.accountType,
-        accountId: agentConversations.accountId,
+        organizationId: agentConversations.organizationId,
       })
       .from(agentConversations)
       .where(eq(agentConversations.id, requested))
@@ -36,9 +35,7 @@ export async function resolveActiveConversation({
 
     if (
       !owned ||
-      (owned.userId === owner.userId &&
-        owned.accountType === owner.accountType &&
-        owned.accountId === owner.accountId)
+      (owned.userId === owner.userId && owned.organizationId === owner.organizationId)
     ) {
       return requested;
     }

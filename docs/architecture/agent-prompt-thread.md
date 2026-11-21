@@ -36,7 +36,7 @@ Wiring it up needed answers to four questions the schema did not settle:
 | Prompt record         | One `agentPrompt` row per accepted prompt                                                            | Input, execution status/usage and the allowance count are one fact; a queued prompt is a status, and a rejected prompt writes nothing, so there is no second ledger to keep in sync.                                                                                                   |
 | Prompt text           | The `USER` `agentMessage` of that prompt                                                             | The thread is a conversation; storing the text twice invites them to disagree.                                                                                                                                                                                                         |
 | Dashboard thread      | `agentPrompt.workspaceId` is `null`                                                                  | The conversation belongs to the person. A workspace conversation sets it, so the same table serves both.                                                                                                                                                                               |
-| Allowance             | Counted per `(ownerId, userId)` in the billing window                                                | The promise is per member inside the paying account; a personal prompt counts against the same allowance as a workspace prompt.                                                                                                                                                        |
+| Allowance             | Counted per `(organizationId, userId)` in the billing window                                         | The promise is per member inside the paying account; a personal prompt counts against the same allowance as a workspace prompt.                                                                                                                                                        |
 | Refusals              | Out of prompts or unconfigured provider returns 402/503 and creates nothing                          | An allowance counts prompts that ran. A refused request is not a prompt, and a toast explains it.                                                                                                                                                                                      |
 | Agent authority       | Tools close over the authenticated actor                                                             | The model chooses operations, never the user, account or workspace id.                                                                                                                                                                                                                 |
 | Workspace operations  | One catalog in `lib/workspace-service.ts`                                                            | The dialog and the tools enforce the same validation, quota, advisory lock and permission rules; server actions only authenticate and revalidate.                                                                                                                                      |
@@ -80,9 +80,11 @@ drops prompts that never ran.
 ### Why a user-scoped thread
 
 `workspaceId` is nullable and the dashboard thread uses `null`. That keeps one
-conversation per person, independent of which account is active, while the
-allowance row records the account (`ownerId`) that paid for it. Moving the
-conversation into a workspace later is an update, not a second model.
+conversation per person on the dashboard, while the allowance row records the
+account (`organizationId`, null for the person) that paid for it. Conversations
+are since partitioned by account as well - see
+[conversation-accounts](conversation-accounts.md). Moving a conversation into a
+workspace later is an update, not a second model.
 
 ## Flow
 

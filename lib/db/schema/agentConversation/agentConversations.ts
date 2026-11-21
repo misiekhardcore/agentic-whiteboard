@@ -3,8 +3,6 @@ import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { user } from "../auth";
 
-import { conversationAccountTypeEnum } from "./conversationAccountTypeEnum";
-
 /**
  * One agent conversation: the container a person's prompts belong to, inside the
  * account that person was acting as.
@@ -15,9 +13,10 @@ import { conversationAccountTypeEnum } from "./conversationAccountTypeEnum";
  * is a URL state: the composer knows the id before any prompt has been accepted,
  * so a reload keeps the empty thread instead of falling back to the last one.
  *
- * The account is recorded as a kind plus an id rather than a nullable
- * organization: "personal" is a value, so a read never has to infer it from a
- * missing organization, and one equality names the account either way.
+ * The account is a nullable organization, the same shape a workspace uses: an
+ * organization id, or null for the person's own account. `userId` stays separate
+ * because an organization's threads are per member — `organizationId` says which
+ * account paid, `userId` says whose thread it is inside that account.
  *
  * `workspaceId` is deliberately absent. Only the dashboard thread has
  * conversations today; a workspace conversation would add that column rather than
@@ -32,16 +31,15 @@ export const agentConversations = pgTable(
 
     // The person whose conversation this is, independent of the account paying
     // for its prompts. An organization's conversations are per member, so this
-    // stays part of every read alongside the account tuple.
+    // stays part of every read alongside the organization.
     userId: text("userId")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
 
-    accountType: conversationAccountTypeEnum("accountType").notNull(),
-
-    // The account the conversation belongs to: the organization's id, or the
-    // person's own when the account is personal.
-    accountId: text("accountId").notNull(),
+    // The account the conversation belongs to: the organization's id, or null
+    // for the person's own account. Not a foreign key, matching `workspace.orgId`:
+    // a removed organization leaves its rows behind rather than cascading.
+    organizationId: text("organizationId"),
 
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).defaultNow().notNull(),
 
@@ -71,10 +69,9 @@ export const agentConversations = pgTable(
     // exactly this tuple: one person's conversations in one account, newest
     // first. The previous (userId, updatedAt) index became a redundant prefix
     // once every read gained the account.
-    index("AgentConversation_userId_account_updatedAt_idx").on(
+    index("AgentConversation_userId_organization_updatedAt_idx").on(
       table.userId,
-      table.accountType,
-      table.accountId,
+      table.organizationId,
       table.updatedAt,
     ),
   ],

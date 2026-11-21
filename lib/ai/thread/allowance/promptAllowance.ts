@@ -7,20 +7,20 @@ import type { PromptAllowance } from "./types";
 
 /** Whether this member may send another prompt, and why not when they may not. */
 export async function promptAllowance({
-  ownerId,
+  organizationId,
   userId,
   subscription,
   limits,
   accountName,
 }: {
-  ownerId: string;
+  organizationId: string | null;
   userId: string;
   subscription: SubscriptionRow | null;
   limits: PlanLimits;
   accountName: string;
 }): Promise<PromptAllowance> {
   const window = usageWindow(subscription);
-  const used = await countPromptsForMember({ ownerId, userId, since: window.start });
+  const used = await countPromptsForMember({ organizationId, userId, since: window.start });
   const limit = limits.agentPromptsPerMonth;
 
   return {

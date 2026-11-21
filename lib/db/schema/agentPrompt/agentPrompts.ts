@@ -25,10 +25,11 @@ export const agentPrompts = pgTable(
       .primaryKey()
       .$defaultFn(() => createId()),
 
-    // The paying account: an organization id, or the user id for a personal
-    // account. Snapshotted so the monthly count and audit survive a workspace
-    // or membership change.
-    ownerId: text("ownerId").notNull(),
+    // The paying account: the organization's id, or null for the person's own.
+    // Kept on the prompt rather than read through the workspace or conversation,
+    // so the monthly count and the audit survive either being archived or
+    // renamed.
+    organizationId: text("organizationId"),
 
     // The member whose per-person allowance this prompt consumes. It is also
     // the owner of the planning thread when `workspaceId` is null.
@@ -84,8 +85,8 @@ export const agentPrompts = pgTable(
   },
   (table) => [
     // The monthly per-member count reads exactly this tuple.
-    index("AgentPrompt_ownerId_userId_createdAt_idx").on(
-      table.ownerId,
+    index("AgentPrompt_organizationId_userId_createdAt_idx").on(
+      table.organizationId,
       table.userId,
       table.createdAt,
     ),

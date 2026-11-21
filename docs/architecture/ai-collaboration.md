@@ -101,8 +101,8 @@ Rules:
 ### Prompts and messages
 
 `agentPrompt` is one accepted prompt: the execution record and the row the plan
-allowance counts. It snapshots `ownerId` (the paying account: an organization or
-personal user), `userId` (the member whose allowance it consumes), the
+allowance counts. It records `organizationId` (the paying account's organization,
+or null when the person pays), `userId` (the member whose allowance it consumes), the
 provider/model, status, usage, error and timestamps. One row per prompt means a
 queued prompt is a status, a rejected prompt writes nothing, and the quota count
 cannot disagree with what ran.

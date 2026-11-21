@@ -1,9 +1,5 @@
 import { listConversations } from "@/lib/ai/thread/conversations";
-import {
-  CONVERSATION_HISTORY_LIMIT,
-  type ConversationHistoryEntry,
-  conversationOwner,
-} from "@/lib/ai/thread/rules";
+import { CONVERSATION_HISTORY_LIMIT, type ConversationHistoryEntry } from "@/lib/ai/thread/rules";
 import { getSessionAccount } from "@/lib/identity/account";
 
 /**
@@ -23,10 +19,10 @@ export async function GET(): Promise<Response> {
   }
 
   const conversations = await listConversations(
-    conversationOwner({
+    {
       userId: account.session.user.id,
       organizationId: account.activeOrganizationId,
-    }),
+    },
     CONVERSATION_HISTORY_LIMIT,
   );
 

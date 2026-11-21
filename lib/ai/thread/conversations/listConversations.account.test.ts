@@ -2,31 +2,41 @@ import { getTableName } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 
 /**
- * A tiny in-memory conversation table. The fake applies the equality pairs of
- * the query's own WHERE clause to the stored rows, so the test reads whichever
- * rows the real predicate selects rather than whichever rows it queued. The
- * first-message read is answered empty: the rows carry titles, which is all the
- * switcher needs, and the test is about which conversations are listed.
+ * A tiny in-memory conversation table. The fake decodes the query's own WHERE
+ * clause into predicates — an equality or an `is null` — and applies them to the
+ * stored rows, so the test reads whichever rows the real predicate selects
+ * rather than whichever rows it queued. The first-message read is answered
+ * empty: the rows carry titles, which is all the switcher needs, and the test is
+ * about which conversations are listed.
  */
 const dbState = vi.hoisted(() => ({ conversations: [] as Record<string, unknown>[] }));
 
-type Equality = { column: string; value: unknown };
+type Predicate = (row: Record<string, unknown>) => boolean;
 
-function equalities(condition: unknown): Equality[] {
+function predicates(condition: unknown): Predicate[] {
   const chunks = (condition as { queryChunks?: unknown[] }).queryChunks ?? [];
-  const pairs: Equality[] = [];
+  const found: Predicate[] = [];
 
-  for (let index = 0; index < chunks.length - 1; index += 1) {
+  for (let index = 0; index < chunks.length; index += 1) {
     const column = chunks[index] as { name?: unknown; table?: unknown; queryChunks?: unknown[] };
 
     // `and` nests each condition in its own SQL chunk; only the leaves hold the
-    // column and its value.
+    // column and its operator.
     if (column?.queryChunks) {
-      pairs.push(...equalities(column));
+      found.push(...predicates(column));
       continue;
     }
 
     if (typeof column?.name !== "string" || !column.table) continue;
+
+    const name = column.name;
+    const operator = chunks[index + 1] as { value?: unknown };
+    const text = Array.isArray(operator?.value) ? operator.value.join("") : "";
+
+    if (text.includes("is null")) {
+      found.push((row) => row[name] === null || row[name] === undefined);
+      continue;
+    }
 
     // The value is the parameter after the ` = ` text, not that text itself.
     const bound = chunks
@@ -34,17 +44,15 @@ function equalities(condition: unknown): Equality[] {
       .map((chunk) => chunk as { value?: unknown })
       .find((chunk) => chunk?.value !== undefined && !Array.isArray(chunk.value));
 
-    if (bound) pairs.push({ column: column.name, value: bound.value });
+    if (bound) found.push((row) => row[name] === bound.value);
   }
 
-  return pairs;
+  return found;
 }
 
 function matchingRows(condition: unknown): Record<string, unknown>[] {
-  const pairs = equalities(condition);
-  return dbState.conversations.filter((row) =>
-    pairs.every((pair) => row[pair.column] === pair.value),
-  );
+  const selected = predicates(condition);
+  return dbState.conversations.filter((row) => selected.every((predicate) => predicate(row)));
 }
 
 vi.mock("@/lib/db", () => ({
@@ -78,21 +86,18 @@ import { listConversations } from "./listConversations";
 
 const personalOwner: ConversationOwner = {
   userId: "user_1",
-  accountType: "PERSONAL",
-  accountId: "user_1",
+  organizationId: null,
 };
 const organizationOwner: ConversationOwner = {
   userId: "user_1",
-  accountType: "ORGANIZATION",
-  accountId: "org_1",
+  organizationId: "org_1",
 };
 
 function conversation(id: string, owner: ConversationOwner) {
   return {
     id,
     userId: owner.userId,
-    accountType: owner.accountType,
-    accountId: owner.accountId,
+    organizationId: owner.organizationId,
     title: id,
     updatedAt: new Date("2026-11-21T10:00:00Z"),
   };
@@ -102,8 +107,7 @@ const personalConversation = conversation("conversation_personal", personalOwner
 const organizationConversation = conversation("conversation_organization", organizationOwner);
 const teammateConversation = conversation("conversation_teammate", {
   userId: "user_2",
-  accountType: "ORGANIZATION",
-  accountId: "org_1",
+  organizationId: "org_1",
 });
 
 const listed = async (owner: ConversationOwner) =>

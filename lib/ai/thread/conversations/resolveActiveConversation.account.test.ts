@@ -2,41 +2,51 @@ import { getTableName } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 
 /**
- * The fake applies the equality pairs of each WHERE clause to the stored
- * conversations, so the requested id and the "latest" fallback are answered by
- * the real queries rather than by queued rows.
+ * The fake decodes each WHERE clause into predicates — an equality or an
+ * `is null` — and applies them to the stored conversations, so the requested id
+ * and the "latest" fallback are answered by the real queries rather than by
+ * queued rows.
  */
 const dbState = vi.hoisted(() => ({ conversations: [] as Record<string, unknown>[] }));
 
-type Equality = { column: string; value: unknown };
+type Predicate = (row: Record<string, unknown>) => boolean;
 
-function equalities(condition: unknown): Equality[] {
+function predicates(condition: unknown): Predicate[] {
   const chunks = (condition as { queryChunks?: unknown[] }).queryChunks ?? [];
-  const pairs: Equality[] = [];
+  const found: Predicate[] = [];
 
-  for (const chunk of chunks) {
-    const nested = chunk as { queryChunks?: unknown[]; name?: unknown; table?: unknown };
+  for (let index = 0; index < chunks.length; index += 1) {
+    const column = chunks[index] as { name?: unknown; table?: unknown; queryChunks?: unknown[] };
 
-    if (nested?.queryChunks) {
-      pairs.push(...equalities(nested));
+    if (column?.queryChunks) {
+      found.push(...predicates(column));
       continue;
     }
 
-    if (typeof nested?.name !== "string" || !nested.table) continue;
+    if (typeof column?.name !== "string" || !column.table) continue;
 
-    const next = chunks
-      .slice(chunks.indexOf(chunk) + 1)
-      .map((candidate) => candidate as { value?: unknown })
-      .find((candidate) => candidate?.value !== undefined && !Array.isArray(candidate.value));
+    const name = column.name;
+    const operator = chunks[index + 1] as { value?: unknown };
+    const text = Array.isArray(operator?.value) ? operator.value.join("") : "";
 
-    if (next) pairs.push({ column: nested.name, value: next.value });
+    if (text.includes("is null")) {
+      found.push((row) => row[name] === null || row[name] === undefined);
+      continue;
+    }
+
+    const bound = chunks
+      .slice(index + 1)
+      .map((chunk) => chunk as { value?: unknown })
+      .find((chunk) => chunk?.value !== undefined && !Array.isArray(chunk.value));
+
+    if (bound) found.push((row) => row[name] === bound.value);
   }
 
-  return pairs;
+  return found;
 }
 
 const matches = (condition: unknown, row: Record<string, unknown>) =>
-  equalities(condition).every((pair) => row[pair.column] === pair.value);
+  predicates(condition).every((predicate) => predicate(row));
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -64,29 +74,19 @@ import type { ConversationOwner } from "@/lib/ai/thread/rules";
 
 import { resolveActiveConversation } from "./resolveActiveConversation";
 
-const personal: ConversationOwner = {
-  userId: "user_1",
-  accountType: "PERSONAL",
-  accountId: "user_1",
-};
-const organization: ConversationOwner = {
-  userId: "user_1",
-  accountType: "ORGANIZATION",
-  accountId: "org_1",
-};
+const personal: ConversationOwner = { userId: "user_1", organizationId: null };
+const organization: ConversationOwner = { userId: "user_1", organizationId: "org_1" };
 
 const personalConversation = {
   id: "conversation_personal",
   userId: "user_1",
-  accountType: "PERSONAL",
-  accountId: "user_1",
+  organizationId: null,
   updatedAt: new Date("2026-11-21T10:00:00Z"),
 };
 const organizationConversation = {
   id: "conversation_organization",
   userId: "user_1",
-  accountType: "ORGANIZATION",
-  accountId: "org_1",
+  organizationId: "org_1",
   updatedAt: new Date("2026-11-21T11:00:00Z"),
 };
 

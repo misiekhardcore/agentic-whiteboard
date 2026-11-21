@@ -82,7 +82,7 @@ const aPrompt = (text: string) => {
   };
 };
 
-const personalOwner = { userId: "user_1", accountType: "PERSONAL", accountId: "user_1" } as const;
+const personalOwner = { userId: "user_1", organizationId: null } as const;
 
 beforeEach(() => {
   mocks.conversation = { titleGeneratedAt: null };

@@ -7,7 +7,6 @@ export type {
   AgentPromptStatus,
   AgentStatusEvent,
   CollaborationClaims,
-  ConversationAccountType,
   JsonValue,
   MutationResult,
   UserActor,
@@ -23,7 +22,6 @@ export {
   AGENT_ACTOR_TYPES,
   AGENT_MESSAGE_ROLES,
   AGENT_PROMPT_STATUSES,
-  CONVERSATION_ACCOUNT_TYPES,
   WORKSPACE_PERMISSIONS,
   WORKSPACE_SURFACES,
 } from "./constants";

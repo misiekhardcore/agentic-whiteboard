@@ -30,7 +30,6 @@ export { promptsFromBranch } from "./promptsFromBranch";
 export { branchableStatus } from "./branchableStatus";
 export { promptsThrough } from "./promptsThrough";
 export { conversationIdProblem } from "./conversationIdProblem";
-export { conversationOwner } from "./conversationOwner";
 export { threadMessages } from "./threadMessages";
 export { supersedeApprovals } from "./supersedeApprovals";
 export { addUsage } from "./addUsage";
