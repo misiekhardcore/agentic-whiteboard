@@ -132,7 +132,11 @@ function threeTurns() {
 }
 
 const branch = (messageId = "message_2") =>
-  branchConversation({ userId: "user_1", conversationId: "conversation_1", messageId });
+  branchConversation({
+    owner: { userId: "user_1", accountType: "PERSONAL", accountId: "user_1" },
+    conversationId: "conversation_1",
+    messageId,
+  });
 
 const inserts = (table: string) => mocks.ops.filter((op) => op.table === table);
 

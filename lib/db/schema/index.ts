@@ -13,7 +13,11 @@ export {
   userRelations,
   verification,
 } from "./auth";
-export { agentConversations, agentConversationsRelations } from "./agentConversation";
+export {
+  agentConversations,
+  agentConversationsRelations,
+  conversationAccountTypeEnum,
+} from "./agentConversation";
 export type { AgentConversation } from "./agentConversation";
 export { agentPromptStatusEnum, agentPrompts, agentPromptsRelations } from "./agentPrompt";
 export type { AgentPrompt } from "./agentPrompt";

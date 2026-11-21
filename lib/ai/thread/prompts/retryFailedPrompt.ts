@@ -1,5 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 
+import { conversationOwnerConditions } from "@/lib/ai/thread/conversations/conversationOwnerConditions";
+import type { ConversationOwner } from "@/lib/ai/thread/rules";
 import { db } from "@/lib/db";
 import { agentConversations, agentMessages, agentPrompts } from "@/lib/db/schema";
 
@@ -27,27 +29,39 @@ import type { RetryPromptResult } from "./types";
 export async function retryFailedPrompt({
   conversationId,
   promptId,
-  userId,
+  owner,
 }: {
   conversationId: string;
   promptId: string;
-  userId: string;
+  owner: ConversationOwner;
 }): Promise<RetryPromptResult> {
   // A retry is a send too: the row a restarted server left RUNNING must not be
   // mistaken for a live turn and answered with `busy` forever.
-  await retireOrphanedPrompts(userId);
+  await retireOrphanedPrompts(owner.userId);
 
   const now = new Date();
 
   try {
     return await db.transaction(async (tx) => {
+      // The row is reused only in its own conversation, and that conversation is
+      // only retryable in the account it belongs to.
+      const [conversation] = await tx
+        .select({ id: agentConversations.id })
+        .from(agentConversations)
+        .where(
+          and(eq(agentConversations.id, conversationId), ...conversationOwnerConditions(owner)),
+        )
+        .limit(1);
+
+      if (!conversation) return "expired";
+
       const [resumed] = await tx
         .update(agentPrompts)
         .set(promptStatusColumns({ transition: "reopen", now }))
         .where(
           and(
             eq(agentPrompts.id, promptId),
-            eq(agentPrompts.userId, userId),
+            eq(agentPrompts.userId, owner.userId),
             eq(agentPrompts.conversationId, conversationId),
             isNull(agentPrompts.workspaceId),
             isNull(agentPrompts.supersededAt),

@@ -31,7 +31,15 @@ vi.mock("@/lib/db", async () => {
   });
 
   const conversationRows = () =>
-    mocks.conversationOwner === null ? [] : [{ userId: mocks.conversationOwner }];
+    mocks.conversationOwner === null
+      ? []
+      : [
+          {
+            userId: mocks.conversationOwner,
+            accountType: "PERSONAL",
+            accountId: mocks.conversationOwner,
+          },
+        ];
 
   type FakeDb = {
     transaction: <T>(work: (tx: FakeDb) => Promise<T>) => Promise<T>;
@@ -122,11 +130,12 @@ vi.mock("@/lib/db", async () => {
 
 import { openDashboardPrompt, resumePrompt, retryFailedPrompt } from "./prompts";
 
+const personalOwner = { userId: "user_1", accountType: "PERSONAL", accountId: "user_1" } as const;
+
 const open = (options: { discardFrom?: { id: string; createdAt: Date } } = {}) =>
   openDashboardPrompt({
     conversationId: "conversation_1",
-    ownerId: "user_1",
-    userId: "user_1",
+    owner: personalOwner,
     provider: "lmstudio",
     model: "qwen",
     title: "Plan the schema",
@@ -193,6 +202,8 @@ describe("opening a dashboard prompt", () => {
     expect(conversation?.values).toMatchObject({
       id: "conversation_1",
       userId: "user_1",
+      accountType: "PERSONAL",
+      accountId: "user_1",
       title: "Plan the schema",
     });
   });
@@ -267,11 +278,15 @@ describe("opening a dashboard prompt", () => {
 });
 
 describe("retrying a prompt that failed", () => {
+  beforeEach(() => {
+    mocks.conversationOwner = "user_1";
+  });
+
   const retry = () =>
     retryFailedPrompt({
       conversationId: "conversation_1",
       promptId: "prompt_failed",
-      userId: "user_1",
+      owner: personalOwner,
     });
 
   it("reuses the row and hides the failed replies instead of opening a new prompt", async () => {

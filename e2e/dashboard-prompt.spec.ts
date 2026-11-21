@@ -441,8 +441,8 @@ async function seedFailedPrompt(
 ): Promise<void> {
   await withDb(async (db) => {
     await db.query(
-      `insert into "agentConversation" (id, "userId")
-        select $1, id from "user" where email = $2`,
+      `insert into "agentConversation" (id, "userId", "accountType", "accountId")
+        select $1, id, 'PERSONAL', id from "user" where email = $2`,
       [conversationId, email],
     );
     await db.query(
@@ -493,8 +493,8 @@ async function seedConversation({
 
   await withDb(async (db) => {
     await db.query(
-      `insert into "agentConversation" (id, "userId", "createdAt", "updatedAt")
-        select $1, id, now() - $3::interval, now() - $3::interval
+      `insert into "agentConversation" (id, "userId", "accountType", "accountId", "createdAt", "updatedAt")
+        select $1, id, 'PERSONAL', id, now() - $3::interval, now() - $3::interval
           from "user" where email = $2`,
       [conversationId, email, at],
     );
@@ -527,8 +527,8 @@ async function seedConversation({
 async function seedScrollThread(email: string, conversationId: string): Promise<void> {
   await withDb(async (db) => {
     await db.query(
-      `insert into "agentConversation" (id, "userId")
-        select $1, id from "user" where email = $2`,
+      `insert into "agentConversation" (id, "userId", "accountType", "accountId")
+        select $1, id, 'PERSONAL', id from "user" where email = $2`,
       [conversationId, email],
     );
     await db.query(

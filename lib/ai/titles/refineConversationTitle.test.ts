@@ -38,8 +38,11 @@ vi.mock("@/lib/db", async () => {
             };
           }
 
-          // The live-turns read asks the prompt table first, then its messages.
-          return { where: () => rows(name === "agentPrompt" ? mocks.prompts : mocks.messages) };
+          // The live-turns read joins the prompt table to its conversation,
+          // then reads the messages under it.
+          const where = () => rows(name === "agentPrompt" ? mocks.prompts : mocks.messages);
+
+          return { where, innerJoin: () => ({ where }) };
         },
       }),
       update: (table: unknown) => ({
@@ -79,6 +82,8 @@ const aPrompt = (text: string) => {
   };
 };
 
+const personalOwner = { userId: "user_1", accountType: "PERSONAL", accountId: "user_1" } as const;
+
 beforeEach(() => {
   mocks.conversation = { titleGeneratedAt: null };
   mocks.messages = [aPrompt("Plan the schema for teams")];
@@ -90,7 +95,7 @@ beforeEach(() => {
 
 describe("naming a conversation", () => {
   it("writes the generated title to the slot the derived one left open", async () => {
-    await refineConversationTitle({ conversationId: "conversation_1", userId: "user_1" });
+    await refineConversationTitle({ conversationId: "conversation_1", owner: personalOwner });
 
     expect(mocks.requested).toEqual(["Plan the schema for teams"]);
     expect(mocks.ops).toHaveLength(1);
@@ -99,7 +104,7 @@ describe("naming a conversation", () => {
   });
 
   it("tells every open tab, because the switcher shows the label", async () => {
-    await refineConversationTitle({ conversationId: "conversation_1", userId: "user_1" });
+    await refineConversationTitle({ conversationId: "conversation_1", owner: personalOwner });
 
     expect(publishChanges).toHaveBeenCalledWith({
       changes: [{ key: "conversations", scope: "person" }],
@@ -110,7 +115,7 @@ describe("naming a conversation", () => {
   it("names it only once", async () => {
     mocks.conversation = { titleGeneratedAt: new Date() };
 
-    await refineConversationTitle({ conversationId: "conversation_1", userId: "user_1" });
+    await refineConversationTitle({ conversationId: "conversation_1", owner: personalOwner });
 
     expect(mocks.requested).toEqual([]);
     expect(mocks.ops).toEqual([]);
@@ -127,7 +132,7 @@ describe("naming a conversation", () => {
       aPrompt("  "),
     ];
 
-    await refineConversationTitle({ conversationId: "conversation_1", userId: "user_1" });
+    await refineConversationTitle({ conversationId: "conversation_1", owner: personalOwner });
 
     expect(mocks.requested).toEqual([]);
     expect(mocks.ops).toEqual([]);
@@ -136,7 +141,7 @@ describe("naming a conversation", () => {
   it("leaves the derived title when another send already wrote one", async () => {
     mocks.written = [];
 
-    await refineConversationTitle({ conversationId: "conversation_1", userId: "user_1" });
+    await refineConversationTitle({ conversationId: "conversation_1", owner: personalOwner });
 
     expect(publishChanges).not.toHaveBeenCalled();
   });
@@ -144,7 +149,7 @@ describe("naming a conversation", () => {
   it("does nothing for a conversation that is not this person's", async () => {
     mocks.conversation = null;
 
-    await refineConversationTitle({ conversationId: "conversation_other", userId: "user_1" });
+    await refineConversationTitle({ conversationId: "conversation_other", owner: personalOwner });
 
     expect(mocks.requested).toEqual([]);
     expect(mocks.ops).toEqual([]);

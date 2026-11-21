@@ -14,6 +14,17 @@ vi.mock("@/lib/db", () => ({
   db: {
     select: () => ({
       from: () => ({
+        innerJoin: () => ({
+          where: (condition: unknown) => {
+            dbState.conditions.push(condition);
+            const answer = dbState.rows.shift() ?? [];
+            const rows = () => Promise.resolve(answer);
+            return {
+              orderBy: rows,
+              then: (resolve: (value: unknown[]) => unknown) => rows().then(resolve),
+            };
+          },
+        }),
         where: (condition: unknown) => {
           dbState.conditions.push(condition);
           const answer = dbState.rows.shift() ?? [];
@@ -30,6 +41,8 @@ vi.mock("@/lib/db", () => ({
 
 import { liveConversationTurns } from "./liveConversationTurns";
 
+const owner = { userId: "user_1", accountType: "PERSONAL", accountId: "user_1" } as const;
+
 const prompt = (id: string, createdAt: string, status = "COMPLETED") => ({
   id,
   createdAt: new Date(createdAt),
@@ -43,7 +56,7 @@ describe("liveConversationTurns", () => {
     dbState.rows.push([]);
 
     await expect(
-      liveConversationTurns({ userId: "user_1", conversationId: "conversation_1" }),
+      liveConversationTurns({ owner, conversationId: "conversation_1" }),
     ).resolves.toEqual([]);
     expect(dbState.conditions).toHaveLength(1);
   });
@@ -61,7 +74,7 @@ describe("liveConversationTurns", () => {
     );
 
     const turns = await liveConversationTurns({
-      userId: "user_1",
+      owner,
       conversationId: "conversation_1",
     });
 
@@ -81,7 +94,7 @@ describe("liveConversationTurns", () => {
     dbState.rows.push([prompt("prompt_1", "2026-11-03T10:00:00Z", "FAILED")], []);
 
     const [turn] = await liveConversationTurns({
-      userId: "user_1",
+      owner,
       conversationId: "conversation_1",
     });
 

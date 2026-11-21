@@ -2,6 +2,8 @@ import { refineConversationTitle } from "@/lib/ai/titles";
 import { publishChanges } from "@/lib/capabilities/changes";
 import type { SessionAccountContext } from "@/lib/identity/account";
 
+import { conversationOwner } from "../rules";
+
 import type { TurnActor } from "./internals/types";
 import { readTurnConfig } from "./readTurnConfig";
 import { readTurnRequest } from "./readTurnRequest";
@@ -47,8 +49,14 @@ export async function runDashboardTurn({
     organizationId: activeTeam?.id ?? null,
     accountName: activeTeam?.name ?? session.user.name,
   };
+  // The thread is read and written in the active account, so the same account
+  // that pays for the prompt decides which conversation may be continued.
+  const owner = conversationOwner({
+    userId: actor.userId,
+    organizationId: actor.organizationId,
+  });
 
-  const resolved = await resolveTurnPrompt({ request, config, actor });
+  const resolved = await resolveTurnPrompt({ request, config, actor, owner });
   if ("error" in resolved) return resolved.error;
 
   const changes = turnChanges(resolved.continuing);
@@ -70,7 +78,7 @@ export async function runDashboardTurn({
   if (!resolved.continuing) {
     void refineConversationTitle({
       conversationId: resolved.conversationId,
-      userId: actor.userId,
+      owner,
     }).catch((error) => {
       console.error(
         `[ai] titles failed: ${error instanceof Error ? error.message : String(error)}`,

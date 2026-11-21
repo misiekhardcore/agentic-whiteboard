@@ -1,6 +1,10 @@
 import type { UIMessage } from "ai";
 
-import type { AgentMessageRole, AgentPromptStatus } from "@/lib/collab/contracts";
+import type {
+  AgentMessageRole,
+  AgentPromptStatus,
+  ConversationAccountType,
+} from "@/lib/collab/contracts";
 
 /** A persisted message, shaped the way `agentMessage` stores it. */
 export type StoredPromptMessage = {
@@ -10,6 +14,19 @@ export type StoredPromptMessage = {
 };
 
 export type PromptRequestKind = "new" | "continuation";
+
+/**
+ * The person a conversation belongs to, in the one account it is filed under.
+ * Reads and writes take this instead of a bare user id, so a query cannot be
+ * scoped to the person and leave the account behind. A personal account's id is
+ * the person's own; an organization's id is the organization's, so one equality
+ * names the account either way.
+ */
+export type ConversationOwner = {
+  userId: string;
+  accountType: ConversationAccountType;
+  accountId: string;
+};
 
 /**
  * A stored user message that the newest send may continue: its prompt, the

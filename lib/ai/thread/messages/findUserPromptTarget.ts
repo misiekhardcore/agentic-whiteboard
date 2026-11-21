@@ -1,8 +1,9 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 
-import { storedText } from "@/lib/ai/thread/rules";
+import { conversationOwnerConditions } from "@/lib/ai/thread/conversations/conversationOwnerConditions";
+import { type ConversationOwner, storedText } from "@/lib/ai/thread/rules";
 import { db } from "@/lib/db";
-import { agentMessages, agentPrompts } from "@/lib/db/schema";
+import { agentConversations, agentMessages, agentPrompts } from "@/lib/db/schema";
 
 import type { UserPromptTarget } from "./types";
 
@@ -18,11 +19,11 @@ import type { UserPromptTarget } from "./types";
 export async function findUserPromptTarget({
   conversationId,
   messageId,
-  userId,
+  owner,
 }: {
   conversationId: string;
   messageId: string;
-  userId: string;
+  owner: ConversationOwner;
 }): Promise<UserPromptTarget | null> {
   const [row] = await db
     .select({
@@ -33,12 +34,13 @@ export async function findUserPromptTarget({
     })
     .from(agentMessages)
     .innerJoin(agentPrompts, eq(agentMessages.promptId, agentPrompts.id))
+    .innerJoin(agentConversations, eq(agentPrompts.conversationId, agentConversations.id))
     .where(
       and(
         eq(agentMessages.id, messageId),
         eq(agentMessages.role, "USER"),
         isNull(agentMessages.supersededAt),
-        eq(agentPrompts.userId, userId),
+        ...conversationOwnerConditions(owner),
         eq(agentPrompts.conversationId, conversationId),
         isNull(agentPrompts.workspaceId),
       ),

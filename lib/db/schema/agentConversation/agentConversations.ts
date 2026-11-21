@@ -3,14 +3,21 @@ import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { user } from "../auth";
 
+import { conversationAccountTypeEnum } from "./conversationAccountTypeEnum";
+
 /**
- * One agent conversation: the container a person's prompts belong to.
+ * One agent conversation: the container a person's prompts belong to, inside the
+ * account that person was acting as.
  *
  * It exists so a person can leave a thread and start another without losing the
  * first, and it is created lazily with the first prompt. Its id is chosen by the
  * browser (a random UUID) rather than generated here, because "New conversation"
  * is a URL state: the composer knows the id before any prompt has been accepted,
  * so a reload keeps the empty thread instead of falling back to the last one.
+ *
+ * The account is recorded as a kind plus an id rather than a nullable
+ * organization: "personal" is a value, so a read never has to infer it from a
+ * missing organization, and one equality names the account either way.
  *
  * `workspaceId` is deliberately absent. Only the dashboard thread has
  * conversations today; a workspace conversation would add that column rather than
@@ -24,10 +31,17 @@ export const agentConversations = pgTable(
       .$defaultFn(() => createId()),
 
     // The person whose conversation this is, independent of the account paying
-    // for its prompts.
+    // for its prompts. An organization's conversations are per member, so this
+    // stays part of every read alongside the account tuple.
     userId: text("userId")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+
+    accountType: conversationAccountTypeEnum("accountType").notNull(),
+
+    // The account the conversation belongs to: the organization's id, or the
+    // person's own when the account is personal.
+    accountId: text("accountId").notNull(),
 
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).defaultNow().notNull(),
 
@@ -53,7 +67,15 @@ export const agentConversations = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    // The dashboard's "latest" and recent list read exactly this tuple.
-    index("AgentConversation_userId_updatedAt_idx").on(table.userId, table.updatedAt),
+    // The dashboard's "latest", the recent list and the history dialog read
+    // exactly this tuple: one person's conversations in one account, newest
+    // first. The previous (userId, updatedAt) index became a redundant prefix
+    // once every read gained the account.
+    index("AgentConversation_userId_account_updatedAt_idx").on(
+      table.userId,
+      table.accountType,
+      table.accountId,
+      table.updatedAt,
+    ),
   ],
 );

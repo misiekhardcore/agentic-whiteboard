@@ -6,7 +6,7 @@ import { getOrganizationEntitlements, getUserEntitlements } from "@/lib/billing/
 import { promptAllowance } from "../allowance";
 import { markThreadStream } from "../live";
 import { openDashboardPrompt } from "../prompts";
-import { lastUserText, type PromptPosition } from "../rules";
+import { conversationOwner, lastUserText, type PromptPosition } from "../rules";
 
 import { BUSY, CONVERSATION_MISSING } from "./internals/constants";
 import { jsonError } from "./internals/jsonError";
@@ -40,6 +40,9 @@ export async function openNewTurn({
 }): Promise<{ promptId: string; history: UIMessage[] } | TurnFailure> {
   const { userId, organizationId, accountName } = actor;
   const ownerId = organizationId ?? userId;
+  // The thread is filed under the account that pays for it: both come from the
+  // session, so a switch moves the conversation set and the charge together.
+  const owner = conversationOwner({ userId, organizationId });
 
   const entitlements = organizationId
     ? await getOrganizationEntitlements(organizationId)
@@ -58,8 +61,7 @@ export async function openNewTurn({
 
   const opened = await openDashboardPrompt({
     conversationId,
-    ownerId,
-    userId,
+    owner,
     provider,
     model,
     // The conversation is named by the prompt that creates it, before any model
@@ -80,7 +82,7 @@ export async function openNewTurn({
 
   const recorded = await recordTurn({
     promptId: opened.promptId,
-    userId,
+    owner,
     submitted,
     keepMessageId,
   });

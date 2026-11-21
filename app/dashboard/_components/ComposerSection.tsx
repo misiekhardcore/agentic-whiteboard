@@ -8,6 +8,7 @@ import {
   RECENT_CONVERSATION_LIMIT,
   resolveActiveConversation,
 } from "@/lib/ai/thread/conversations";
+import { conversationOwner } from "@/lib/ai/thread/rules";
 import { getSessionAccount } from "@/lib/identity/account";
 import { readPersonalSettings } from "@/lib/identity/settings";
 
@@ -55,13 +56,19 @@ async function ComposerSectionInner({
   }
 
   const userId = account.session.user.id;
-  const conversationId = await resolveActiveConversation({
+  // The composer shows this person's threads in the account they are acting as;
+  // switching accounts is a different owner and therefore a different set.
+  const owner = conversationOwner({
     userId,
+    organizationId: account.activeOrganizationId,
+  });
+  const conversationId = await resolveActiveConversation({
+    owner,
     requested: requestedConversation,
   });
   const [thread, conversations, settings] = await Promise.all([
-    loadConversationThread({ userId, conversationId }),
-    listConversations(userId, RECENT_CONVERSATION_LIMIT),
+    loadConversationThread({ owner, conversationId }),
+    listConversations(owner, RECENT_CONVERSATION_LIMIT),
     readPersonalSettings(userId),
   ]);
 

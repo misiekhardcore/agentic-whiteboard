@@ -173,9 +173,10 @@ writer, and `turn.ts` is the only module that composes the others.
 
 ## Flow
 
-1. The dashboard reads `?conversation=`. A stored id the session owns is used; an
-   id nobody owns is replaced by the person's most recent conversation; no id
-   means the most recent conversation, or a fresh UUID on the first visit.
+1. The dashboard reads `?conversation=`. A stored id the session owns in the
+   active account is used; an id nobody owns (or that belongs to another
+   account) is replaced by the person's most recent conversation there; no id
+   means that most recent conversation, or a fresh UUID on the first visit.
 2. The section loads that conversation's live thread (superseded prompts and
    messages filtered out), whether its tip failed, the five recent conversations
    and the person's reading preference, then mounts the composer with them.
@@ -213,9 +214,9 @@ writer, and `turn.ts` is the only module that composes the others.
 - A page reload replays the live thread, so an abandoned edit branch cannot come
   back. A second tab that still holds one cannot replay it either: what the model
   is shown is read from the stored turns, not from the browser.
-- The conversation list is per person, not per account: switching the active
-  account does not hide a conversation, and the allowance still follows the
-  account that ran each prompt.
+- The conversation list is per person and per account; this consequence was
+  superseded by [conversation-accounts](conversation-accounts.md). The allowance
+  still follows the account that ran each prompt.
 - The thread box scrolls instead of the page, and stops following while the
   reader is scrolled up.
 - Branching costs nothing and loses nothing: the copy is not counted, and the

@@ -4,8 +4,9 @@ import { titleFromPrompt } from "@/lib/ai/titles";
 import { db } from "@/lib/db";
 import { agentConversations, agentMessages, agentPrompts } from "@/lib/db/schema";
 
+import { conversationOwnerConditions } from "../conversations/conversationOwnerConditions";
 import { promptStatusColumns } from "../prompts/transition";
-import { branchableStatus, promptsThrough, storedText } from "../rules";
+import { branchableStatus, type ConversationOwner, promptsThrough, storedText } from "../rules";
 
 import type { BranchResult } from "./types";
 
@@ -14,11 +15,12 @@ import type { BranchResult } from "./types";
  * by the same person, and returns the new conversation's id.
  */
 export async function branchConversation({
-  userId,
+  owner,
   conversationId,
   messageId,
 }: {
-  userId: string;
+  /** The person and account of the source conversation; the branch inherits both. */
+  owner: ConversationOwner;
   /** The conversation the reply is in. */
   conversationId: string;
   /** The reply to branch from; it and everything before it are copied. */
@@ -33,10 +35,11 @@ export async function branchConversation({
       })
       .from(agentMessages)
       .innerJoin(agentPrompts, eq(agentMessages.promptId, agentPrompts.id))
+      .innerJoin(agentConversations, eq(agentPrompts.conversationId, agentConversations.id))
       .where(
         and(
           eq(agentMessages.id, messageId),
-          eq(agentPrompts.userId, userId),
+          ...conversationOwnerConditions(owner),
           eq(agentPrompts.conversationId, conversationId),
           isNull(agentPrompts.workspaceId),
           isNull(agentPrompts.supersededAt),
@@ -57,9 +60,10 @@ export async function branchConversation({
         model: agentPrompts.model,
       })
       .from(agentPrompts)
+      .innerJoin(agentConversations, eq(agentPrompts.conversationId, agentConversations.id))
       .where(
         and(
-          eq(agentPrompts.userId, userId),
+          ...conversationOwnerConditions(owner),
           eq(agentPrompts.conversationId, conversationId),
           isNull(agentPrompts.workspaceId),
           isNull(agentPrompts.supersededAt),
@@ -108,7 +112,7 @@ export async function branchConversation({
     const branchId = crypto.randomUUID();
     await tx.insert(agentConversations).values({
       id: branchId,
-      userId,
+      ...owner,
       title: titleFromPrompt(newestUserMessage ? storedText(newestUserMessage.content) : ""),
     });
 
@@ -121,7 +125,7 @@ export async function branchConversation({
         .insert(agentPrompts)
         .values({
           ownerId: prompt.ownerId,
-          userId,
+          userId: owner.userId,
           conversationId: branchId,
           // History: the copy is finished even when the source turn failed or
           // was stopped, so it can never take the single-flight slot or offer a

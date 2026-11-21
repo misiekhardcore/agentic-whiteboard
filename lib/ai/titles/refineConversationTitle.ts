@@ -1,8 +1,8 @@
 import { and, eq, isNull } from "drizzle-orm";
 
 import { AiConfigurationError } from "@/lib/ai/providers";
-import { liveConversationTurns } from "@/lib/ai/thread/conversations";
-import { storedText } from "@/lib/ai/thread/rules";
+import { conversationOwnerConditions, liveConversationTurns } from "@/lib/ai/thread/conversations";
+import { type ConversationOwner, storedText } from "@/lib/ai/thread/rules";
 import { publishChanges } from "@/lib/capabilities/changes";
 import { db } from "@/lib/db";
 import { agentConversations } from "@/lib/db/schema";
@@ -15,8 +15,8 @@ const TITLE_TIMEOUT_MS = 15_000;
 /** A fork copies its thread; the newest few prompts say what it is about. */
 const TITLE_SOURCE_PROMPTS = 3;
 
-async function sourceText(conversationId: string, userId: string): Promise<string> {
-  const turns = await liveConversationTurns({ userId, conversationId });
+async function sourceText(owner: ConversationOwner, conversationId: string): Promise<string> {
+  const turns = await liveConversationTurns({ owner, conversationId });
 
   return turns
     .flatMap((turn) => turn.messages)
@@ -37,15 +37,15 @@ async function sourceText(conversationId: string, userId: string): Promise<strin
  */
 export async function refineConversationTitle({
   conversationId,
-  userId,
+  owner,
 }: {
   conversationId: string;
-  userId: string;
+  owner: ConversationOwner;
 }): Promise<void> {
   const [conversation] = await db
     .select({ titleGeneratedAt: agentConversations.titleGeneratedAt })
     .from(agentConversations)
-    .where(and(eq(agentConversations.id, conversationId), eq(agentConversations.userId, userId)))
+    .where(and(eq(agentConversations.id, conversationId), ...conversationOwnerConditions(owner)))
     .limit(1);
 
   if (!conversation || conversation.titleGeneratedAt) return;
@@ -54,7 +54,7 @@ export async function refineConversationTitle({
   // A turn with no readable prompt text has nothing to name, and the slot can
   // only be written once — spending the model call on it would lock in a name
   // nobody asked for.
-  const source = await sourceText(conversationId, userId);
+  const source = await sourceText(owner, conversationId);
   if (!source.trim()) return;
 
   let title: string | null;
@@ -82,7 +82,7 @@ export async function refineConversationTitle({
     .where(
       and(
         eq(agentConversations.id, conversationId),
-        eq(agentConversations.userId, userId),
+        ...conversationOwnerConditions(owner),
         isNull(agentConversations.titleGeneratedAt),
       ),
     )
@@ -92,6 +92,6 @@ export async function refineConversationTitle({
 
   await publishChanges({
     changes: [{ key: CHANGE_KEYS.conversations, scope: "person" }],
-    actor: { userId, organizationId: null },
+    actor: { userId: owner.userId, organizationId: null },
   });
 }

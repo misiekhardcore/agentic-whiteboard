@@ -13,7 +13,7 @@ import {
   BRANCH_UNFINISHED,
   branchConversation as branchConversationInto,
 } from "./thread/branches";
-import { conversationIdProblem } from "./thread/rules";
+import { conversationIdProblem, conversationOwner } from "./thread/rules";
 import { refineConversationTitle } from "./titles";
 
 /**
@@ -40,8 +40,15 @@ export const branchConversation = defineCapability({
   callers: ["human"] as const,
   changes: () => [{ key: CHANGE_KEYS.conversations, scope: "person" }],
   handler: async (ctx, input) => {
-    const result = await branchConversationInto({
+    // The branch continues a thread of the active account, so it is filed in the
+    // same one; the source read already requires it.
+    const owner = conversationOwner({
       userId: ctx.actor.userId,
+      organizationId: ctx.actor.organizationId,
+    });
+
+    const result = await branchConversationInto({
+      owner,
       conversationId: input.conversationId,
       messageId: input.messageId,
     });
@@ -53,7 +60,7 @@ export const branchConversation = defineCapability({
     // already complete without a generated title.
     void refineConversationTitle({
       conversationId: result.conversationId,
-      userId: ctx.actor.userId,
+      owner,
     }).catch((error) => {
       console.error(
         `[ai] titles failed: ${error instanceof Error ? error.message : String(error)}`,

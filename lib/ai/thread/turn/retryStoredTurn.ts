@@ -2,6 +2,7 @@ import type { UIMessage } from "ai";
 
 import { markThreadStream } from "../live";
 import { retryFailedPrompt } from "../prompts";
+import type { ConversationOwner } from "../rules";
 
 import { BUSY, RETRY_EXPIRED } from "./internals/constants";
 import { jsonError } from "./internals/jsonError";
@@ -16,22 +17,22 @@ import type { TurnFailure } from "./internals/types";
 export async function retryStoredTurn({
   conversationId,
   promptId,
-  userId,
+  owner,
 }: {
   conversationId: string;
   promptId: string;
-  userId: string;
+  owner: ConversationOwner;
 }): Promise<{ promptId: string; history: UIMessage[] } | TurnFailure> {
-  const resumed = await retryFailedPrompt({ conversationId, promptId, userId });
+  const resumed = await retryFailedPrompt({ conversationId, promptId, owner });
   if (resumed === "busy") {
     return { error: jsonError(BUSY, 409) };
   }
   if (resumed === "expired") {
     return { error: jsonError(RETRY_EXPIRED, 409) };
   }
-  markThreadStream(userId, promptId);
+  markThreadStream(owner.userId, promptId);
 
-  const replayed = await recordTurn({ promptId, userId });
+  const replayed = await recordTurn({ promptId, owner });
   if ("error" in replayed) return replayed;
 
   return { promptId, history: replayed.history };
