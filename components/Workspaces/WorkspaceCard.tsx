@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AccountAvatar } from "@/components/AccountMenu/AccountMenuPopover/AccountAvatar";
 import { routes } from "@/lib/shared/routes";
+import { formatLastActivity } from "@/lib/workspace/presentation";
 import type { AccountWorkspace, WorkspaceCreator } from "@/lib/workspace/queries";
 import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace/status";
 
@@ -16,7 +17,7 @@ import { WorkspaceCardMenu } from "./WorkspaceCardMenu";
 export function WorkspaceCard({
   workspace,
 }: {
-  workspace: AccountWorkspace & { creator?: WorkspaceCreator | null };
+  workspace: AccountWorkspace & { creator?: WorkspaceCreator | null; lastActivity?: Date };
 }) {
   return (
     <li className="flex h-full flex-col gap-3 card p-3 transition-colors hover:border-primary/40">
@@ -37,6 +38,12 @@ export function WorkspaceCard({
           status={workspace.status}
         />
       </div>
+
+      {workspace.lastActivity && (
+        <p className="text-xs text-muted-foreground">
+          Last activity {formatLastActivity(workspace.lastActivity, new Date())}
+        </p>
+      )}
 
       <div className="mt-auto flex items-center justify-between gap-2 pt-1">
         <span className="flex min-w-0 items-center gap-2">

@@ -27,8 +27,14 @@ export type WorkspaceCreator = {
   image: string | null;
 };
 
-/** A workspace as the board reads it: the list row, its position and its creator. */
-export type BoardWorkspace = AccountWorkspace & {
+/** A workspace as the board's row read returns it: position, creator, creation. */
+export type BoardWorkspaceRow = AccountWorkspace & {
   position: number;
   creator: WorkspaceCreator | null;
+  createdAt: Date;
+};
+
+/** A board card: the row read plus the workspace's newest activity. */
+export type BoardWorkspace = BoardWorkspaceRow & {
+  lastActivity: Date;
 };

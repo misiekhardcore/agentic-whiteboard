@@ -1,4 +1,5 @@
 export type { ActivityDay } from "./groupActivityByDay";
+export type { WorkspaceSurfaceActivityTime } from "./newestActivityByWorkspace";
 export type {
   NewWorkspaceActivity,
   WorkspaceActivityActorType,
@@ -21,3 +22,4 @@ export {
 } from "./constants";
 export { decodeActivityCursor, encodeActivityCursor } from "./activityCursor";
 export { groupActivityByDay } from "./groupActivityByDay";
+export { newestActivityByWorkspace } from "./newestActivityByWorkspace";

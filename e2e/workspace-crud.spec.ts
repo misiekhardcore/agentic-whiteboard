@@ -258,11 +258,12 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
         page.getByRole("region", { name: "In progress" }).getByText("1", { exact: true }),
       ).toBeVisible();
 
-      // The card carries its creator, read with the board's single query.
+      // The card carries its creator and when the work last moved, both read
+      // with the board's bounded queries.
+      const inProgress = page.getByRole("region", { name: "In progress" });
+      await expect(inProgress.getByText("Workspace Tester", { exact: true })).toBeVisible();
       await expect(
-        page
-          .getByRole("region", { name: "In progress" })
-          .getByText("Workspace Tester", { exact: true }),
+        inProgress.getByText(/^Last activity (just now|\d+ minutes? ago)$/),
       ).toBeVisible();
       await expect(
         page.getByRole("region", { name: "Done" }).getByText("0", { exact: true }),

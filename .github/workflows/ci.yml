@@ -136,6 +136,11 @@ jobs:
       - name: Migrate the database
         run: pnpm db:migrate
 
+      # The board's last-activity aggregate is the one read the unit suite can
+      # only mock; this job's Postgres proves the query it actually runs.
+      - name: Run the Postgres integration tests
+        run: pnpm test:db
+
       - name: Install the Stripe CLI
         if: needs.stripe-secrets.outputs.available == 'true'
         run: |

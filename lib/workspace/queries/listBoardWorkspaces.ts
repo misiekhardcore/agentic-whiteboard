@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { user, workspaces } from "@/lib/db/schema";
 
 import { accountWorkspacesWhere } from "./accountWorkspacesWhere";
-import type { BoardWorkspace } from "./types";
+import type { BoardWorkspaceRow } from "./types";
 
 /**
  * Every non-archived workspace of the selected account, with the position the
@@ -15,7 +15,7 @@ import type { BoardWorkspace } from "./types";
 export async function listBoardWorkspaces(
   userId: string,
   organizationId: string | null,
-): Promise<BoardWorkspace[]> {
+): Promise<BoardWorkspaceRow[]> {
   const rows = await db
     .select({
       id: workspaces.id,
@@ -23,6 +23,7 @@ export async function listBoardWorkspaces(
       description: workspaces.description,
       status: workspaces.status,
       position: workspaces.position,
+      createdAt: workspaces.createdAt,
       updatedAt: workspaces.updatedAt,
       creatorName: user.name,
       creatorImage: user.image,
