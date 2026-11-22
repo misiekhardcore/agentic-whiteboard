@@ -1,5 +1,5 @@
-/** The cookie the panel's width and collapsed state live in, per device. */
-export const PANEL_LAYOUT_COOKIE = "agent_panel_layout";
+/** Where this device keeps the panel's width and collapsed state. */
+export const PANEL_PREFERENCE_KEY = "agent_panel_preference";
 
 /** The width the panel opens at until this device chooses another. */
 export const DEFAULT_PANEL_WIDTH = 336;

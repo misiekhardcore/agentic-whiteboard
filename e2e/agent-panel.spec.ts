@@ -125,13 +125,17 @@ test("the agent panel survives navigating through the workspaces section", async
 
     await test.step("the panel collapses, expands and remembers its width on this device", async () => {
       const panel = page.getByRole("region", { name: "Agent panel" });
-      const handle = panel.getByRole("separator", { name: "Resize agent panel" });
+      // The handle is the panel group's separator, so it sits beside the panel
+      // rather than inside it.
+      const handle = page.getByRole("separator", { name: "Resize agent panel" });
       await expect(handle).toBeVisible();
 
       const opened = await panel.boundingBox();
       const handleBox = await handle.boundingBox();
       if (!opened || !handleBox) throw new Error("The panel has no measurable box");
 
+      // The handle divides the page from the panel, so dragging it left hands
+      // width to the panel.
       const centreY = handleBox.y + handleBox.height / 2;
       await page.mouse.move(handleBox.x + handleBox.width / 2, centreY);
       await page.mouse.down();
@@ -163,6 +167,22 @@ test("the agent panel survives navigating through the workspaces section", async
       await expect
         .poll(async () => (await panel.boundingBox())?.width ?? 0)
         .toBeGreaterThan(opened.width + 40);
+
+      // The handle is a keyboard control too: the arrow keys resize the same
+      // preference the pointer sets, so the panel is usable without a mouse.
+      await handle.focus();
+      const beforeKeys = (await panel.boundingBox())?.width ?? 0;
+      await page.keyboard.press("ArrowLeft");
+      await expect
+        .poll(async () => (await panel.boundingBox())?.width ?? 0)
+        .toBeGreaterThan(beforeKeys + 4);
+
+      // Back to where the pointer left it, so the page keeps the room the rest
+      // of the spec reads.
+      await page.keyboard.press("ArrowRight");
+      await expect
+        .poll(async () => Math.round((await panel.boundingBox())?.width ?? 0))
+        .toBe(Math.round(beforeKeys));
     });
 
     await test.step("a prompt sent from the panel is the dashboard conversation", async () => {
@@ -333,6 +353,15 @@ test("the agent panel survives navigating through the workspaces section", async
       ).toBeVisible();
       await expect(page.getByRole("region", { name: "Agent panel" })).toHaveCount(0);
       await expect(page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
+    });
+
+    await test.step("the archived workspaces page carries the same panel", async () => {
+      await page.goto("/dashboard/archive");
+
+      await expect(page.getByRole("heading", { name: "Archived workspaces" })).toBeVisible();
+      const panel = page.getByRole("region", { name: "Agent panel" });
+      await expect(panel).toBeVisible();
+      await expect(panel.getByRole("textbox", { name: "Prompt" })).toBeVisible();
     });
   } finally {
     await waitForTurnsToClose(db, email).catch(() => undefined);

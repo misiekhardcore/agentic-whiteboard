@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { type ComponentProps, Suspense } from "react";
 
 import { PromptComposer } from "@/components/Composer/PromptComposer";
 import { Loading } from "@/components/Loading/Loading";
@@ -15,6 +15,28 @@ import { readPersonalSettings } from "@/lib/identity/settings";
  * The composer is keyed by the conversation: switching threads is a remount with
  * that thread's messages, not a prop change a live `useChat` would ignore.
  */
+/**
+ * The dashboard's own surface around the shared composer: the page hero and the
+ * centred column belong to the dashboard, not to the composer the panel mounts.
+ */
+function DashboardComposer(props: ComponentProps<typeof PromptComposer>) {
+  return (
+    <div className="topo-bg px-2 py-10 sm:py-14">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <h1 id="prompt-composer-title" className="page-title text-balance sm:text-display">
+            What are we planning today?
+          </h1>
+          <p className="text-lead text-pretty text-muted-foreground">
+            Describe it, and the agent drafts the doc and the canvas for you.
+          </p>
+        </div>
+        <PromptComposer {...props} />
+      </div>
+    </div>
+  );
+}
+
 export function ComposerSection({
   searchParams,
 }: {
@@ -38,7 +60,7 @@ async function ComposerSectionInner({
   const account = await getSessionAccount();
   if (!account) {
     return (
-      <PromptComposer
+      <DashboardComposer
         initialConversationId={crypto.randomUUID()}
         initialMessages={[]}
         initialCanRetry={false}
@@ -65,7 +87,7 @@ async function ComposerSectionInner({
   // the composer on every server refresh — remounting it and aborting the prompt
   // being sent. "latest" keeps that thread until the person picks another one.
   return (
-    <PromptComposer
+    <DashboardComposer
       key={requestedConversation ?? "latest"}
       initialConversationId={conversationSet.conversationId}
       initialMessages={conversationSet.messages}

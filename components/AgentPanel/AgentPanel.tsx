@@ -1,242 +1,139 @@
 "use client";
 
-import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
-import type { UIMessage } from "ai";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@konopskidev/ui/components/resizable";
+import { cn } from "@konopskidev/ui/lib/utils";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
-import { usePathname, useSearchParams } from "next/navigation";
-import type { KeyboardEvent, PointerEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, Suspense, useEffect, useRef, useState } from "react";
+import { type LayoutChangedMeta, usePanelRef } from "react-resizable-panels";
 
-import { useDataChanges } from "@/components/Changes";
-import { PromptComposer } from "@/components/Composer/PromptComposer";
 import { Loading } from "@/components/Loading/Loading";
-import type { AgentPanelViewPayload, ConversationSetPayload } from "@/lib/ai/thread/conversations";
-import type { DashboardConversation } from "@/lib/ai/thread/rules";
-import { CHANGE_KEYS } from "@/lib/shared/changes";
-import { routes } from "@/lib/shared/routes";
 
+import { AgentPanelThread } from "./AgentPanelThread";
 import {
   clampPanelWidth,
   COLLAPSED_PANEL_WIDTH,
+  DEFAULT_PANEL_WIDTH,
   MAX_PANEL_WIDTH,
   MIN_PANEL_WIDTH,
-  PANEL_LAYOUT_COOKIE,
-  type PanelLayout,
-  serializePanelLayout,
-} from "./panelLayout";
+  PANEL_PREFERENCE_KEY,
+  type PanelPreference,
+  readPanelPreference,
+} from "./panelPreference";
 
-type PanelView = {
-  conversationId: string;
-  messages: UIMessage[];
-  canRetry: boolean;
-  conversations: DashboardConversation[];
-  readAloud: boolean;
-  readAloudVoice: string;
+const CONTENT_PANEL_ID = "workspace-content";
+const AGENT_PANEL_ID = "agent";
+
+const OPENING_PREFERENCE: PanelPreference = {
+  width: DEFAULT_PANEL_WIDTH,
+  collapsed: false,
 };
 
-function toConversations(
-  conversations: ConversationSetPayload["conversations"],
-): DashboardConversation[] {
-  return conversations.map((conversation) => ({
-    id: conversation.id,
-    title: conversation.title,
-    updatedAt: new Date(conversation.updatedAt),
-  }));
-}
-
-function toPanelView(payload: AgentPanelViewPayload): PanelView {
-  return {
-    conversationId: payload.conversationId,
-    messages: payload.messages,
-    canRetry: payload.canRetry,
-    conversations: toConversations(payload.conversations),
-    readAloud: payload.readAloud,
-    readAloudVoice: payload.readAloudVoice,
-  };
-}
-
-async function requestView(
-  conversationId: string | null,
-  signal?: AbortSignal,
-): Promise<AgentPanelViewPayload> {
-  const url = new URL(routes.agentConversationViewApi, window.location.origin);
-  if (conversationId) url.searchParams.set("conversation", conversationId);
-
-  const response = await fetch(url, { signal });
-  const body = (await response.json()) as AgentPanelViewPayload & { error?: string };
-
-  if (!response.ok) {
-    throw new Error(body.error ?? "Could not open the conversation.");
-  }
-
-  return body;
-}
-
 /**
- * The agent as a right column of the workspaces section. It is mounted by the
+ * The agent as the right column of the workspaces section. It is mounted by the
  * section's layout once, so moving between the board and a workspace page keeps
  * the same live thread instead of remounting the composer.
  *
- * The open conversation is `?conversation=<id>`; the mounted panel is the
- * surface that turns that into the shared conversation set. When an in-section
- * link drops the query, the panel keeps the thread it is showing and puts its id
- * back into the URL, so a reload or a copied link still finds it.
+ * The resizable group owns the live width; this component only remembers the
+ * width and collapsed state this device chose.
  */
-export function AgentPanel({ initialLayout }: { initialLayout: PanelLayout }) {
-  const pathname = usePathname();
-  const requested = useSearchParams().get("conversation");
-  const [layout, setLayout] = useState(initialLayout);
-  const layoutRef = useRef(layout);
-  const resize = useRef<{ startX: number; startWidth: number } | null>(null);
+export function AgentPanel({ children }: { children: ReactNode }) {
+  const agentPanel = usePanelRef();
+  const [collapsed, setCollapsed] = useState(false);
+  const preference = useRef<PanelPreference>(OPENING_PREFERENCE);
 
-  const [view, setView] = useState<PanelView | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState(0);
-  const loadedId = view?.conversationId ?? null;
-
+  // The device's choice is applied after mount: the server has no storage, and
+  // a resize needs the group to have measured itself.
   useEffect(() => {
-    if (!requested && loadedId) return;
-    if (requested && requested === loadedId) return;
+    const panel = agentPanel.current;
+    if (!panel) return;
 
-    const controller = new AbortController();
+    const stored = readPanelPreference(window.localStorage.getItem(PANEL_PREFERENCE_KEY));
+    if (!stored) return;
 
-    void (async () => {
-      try {
-        const next = toPanelView(await requestView(requested, controller.signal));
-        setError(null);
-        setView(next);
-      } catch (cause) {
-        // An aborted read is the panel switching conversations, not a failure.
-        if (controller.signal.aborted) return;
-        setError(cause instanceof Error ? cause.message : "Could not open the conversation.");
-      }
-    })();
+    preference.current = stored;
+    panel.resize(stored.width);
+    if (stored.collapsed) panel.collapse();
+  }, [agentPanel]);
 
-    return () => controller.abort();
-  }, [requested, loadedId, attempt]);
-
-  useEffect(() => {
-    if (requested || !loadedId) return;
-    // Native replace, not a router navigation: restoring the thread into the URL
-    // must not compete with a link the person is already following.
-    window.history.replaceState(
-      window.history.state,
-      "",
-      routes.conversationAt(pathname, loadedId),
-    );
-  }, [requested, loadedId, pathname]);
-
-  // The switcher has to learn about a conversation the first prompt created.
-  // Only the list is re-read: the live thread belongs to the mounted composer.
-  useDataChanges([CHANGE_KEYS.conversations], () => {
-    const conversationId = requested ?? view?.conversationId;
-    if (!conversationId) return;
-
-    void (async () => {
-      try {
-        const payload = await requestView(conversationId);
-        setView((current) =>
-          current ? { ...current, conversations: toConversations(payload.conversations) } : current,
-        );
-      } catch {
-        // The next change, or the next navigation, reads the list again.
-      }
-    })();
-  });
-
-  function changeLayout(next: PanelLayout) {
-    layoutRef.current = next;
-    setLayout(next);
+  function remember() {
+    try {
+      window.localStorage.setItem(PANEL_PREFERENCE_KEY, JSON.stringify(preference.current));
+    } catch {
+      // Private mode and a full quota leave the panel usable, just not remembered.
+    }
   }
 
-  // The preference is a cookie, the way the sidebar remembers whether it is
-  // open: per device, readable by the server on the next visit, and neither a
-  // domain field nor a URL parameter.
-  function rememberLayout() {
-    document.cookie = `${PANEL_LAYOUT_COOKIE}=${serializePanelLayout(layoutRef.current)}; path=/; max-age=31536000; samesite=lax`;
+  // Only a choice this person made is worth remembering: a layout the viewport
+  // forced would overwrite the width they picked on a wider window.
+  function rememberResize(meta: LayoutChangedMeta) {
+    const panel = agentPanel.current;
+    if (!meta.isUserInteraction || !panel || panel.isCollapsed()) return;
+
+    preference.current = {
+      width: clampPanelWidth(panel.getSize().inPixels),
+      collapsed: false,
+    };
+    remember();
   }
 
   function toggleCollapsed() {
-    changeLayout({ ...layoutRef.current, collapsed: !layoutRef.current.collapsed });
-    rememberLayout();
-  }
+    const panel = agentPanel.current;
+    if (!panel) return;
 
-  function startResize(event: PointerEvent<HTMLDivElement>) {
-    event.currentTarget.setPointerCapture(event.pointerId);
-    resize.current = { startX: event.clientX, startWidth: layoutRef.current.width };
-  }
+    if (panel.isCollapsed()) {
+      panel.expand();
+      // A restored collapsed panel only knows the rail's width, so the width
+      // this device chose is applied again.
+      panel.resize(preference.current.width);
+      preference.current = { ...preference.current, collapsed: false };
+    } else {
+      preference.current = {
+        width: clampPanelWidth(panel.getSize().inPixels),
+        collapsed: true,
+      };
+      panel.collapse();
+    }
 
-  function moveResize(event: PointerEvent<HTMLDivElement>) {
-    const dragging = resize.current;
-    if (!dragging) return;
-
-    // The handle sits on the panel's left edge, so moving left widens it.
-    changeLayout({
-      ...layoutRef.current,
-      width: clampPanelWidth(dragging.startWidth - (event.clientX - dragging.startX)),
-    });
-  }
-
-  function endResize(event: PointerEvent<HTMLDivElement>) {
-    if (!resize.current) return;
-
-    resize.current = null;
-    event.currentTarget.releasePointerCapture(event.pointerId);
-    rememberLayout();
-  }
-
-  function resizeWithKeyboard(event: KeyboardEvent<HTMLDivElement>) {
-    const step = event.key === "ArrowLeft" ? 16 : event.key === "ArrowRight" ? -16 : 0;
-    if (step === 0) return;
-
-    event.preventDefault();
-    changeLayout({
-      ...layoutRef.current,
-      width: clampPanelWidth(layoutRef.current.width + step),
-    });
-    rememberLayout();
+    remember();
   }
 
   return (
-    <div
-      className="flex shrink-0"
-      style={{ width: layout.collapsed ? COLLAPSED_PANEL_WIDTH : layout.width }}
+    <ResizablePanelGroup
+      className="min-h-0 flex-1"
+      onLayoutChanged={(_, meta) => rememberResize(meta)}
     >
-      <section
-        aria-label="Agent panel"
-        data-collapsed={layout.collapsed ? "true" : "false"}
-        className="relative flex min-w-0 flex-1 flex-col border-l"
-      >
-        {!layout.collapsed && (
-          <div
-            role="separator"
-            aria-label="Resize agent panel"
-            aria-orientation="vertical"
-            aria-valuenow={layout.width}
-            aria-valuemin={MIN_PANEL_WIDTH}
-            aria-valuemax={MAX_PANEL_WIDTH}
-            tabIndex={0}
-            onPointerDown={startResize}
-            onPointerMove={moveResize}
-            onPointerUp={endResize}
-            onPointerCancel={endResize}
-            onKeyDown={resizeWithKeyboard}
-            className="absolute inset-y-0 left-0 z-10 w-2 -translate-x-1/2 cursor-col-resize touch-none focus-ring"
-          />
-        )}
+      {/* The page is the other panel, so the handle between them is the only
+          thing that decides how much room each one gets. */}
+      <ResizablePanel id={CONTENT_PANEL_ID} className="min-w-0">
+        {children}
+      </ResizablePanel>
 
-        <div
-          className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pl-4 ${
-            layout.collapsed ? "items-center pt-1" : ""
-          }`}
-        >
+      <ResizableHandle aria-label="Resize agent panel" withHandle />
+
+      <ResizablePanel
+        id={AGENT_PANEL_ID}
+        panelRef={agentPanel}
+        className="min-w-0"
+        collapsible
+        defaultSize={DEFAULT_PANEL_WIDTH}
+        minSize={MIN_PANEL_WIDTH}
+        maxSize={MAX_PANEL_WIDTH}
+        collapsedSize={COLLAPSED_PANEL_WIDTH}
+        onResize={(size) => setCollapsed(size.inPixels <= COLLAPSED_PANEL_WIDTH)}
+      >
+        <section aria-label="Agent panel" className="flex h-full min-w-0 flex-col border-l">
           <div
-            className={`flex items-center gap-2 ${
-              layout.collapsed ? "justify-center" : "justify-between"
-            }`}
+            className={cn(
+              "flex items-center gap-2 py-1",
+              collapsed ? "justify-center px-1" : "justify-between pr-2 pl-4",
+            )}
           >
-            {layout.collapsed ? (
+            {collapsed ? (
               <span className="sr-only">Agent</span>
             ) : (
               <h2 className="text-sm font-semibold">Agent</h2>
@@ -245,47 +142,27 @@ export function AgentPanel({ initialLayout }: { initialLayout: PanelLayout }) {
               type="button"
               variant="ghost"
               size="icon-sm"
-              aria-label={layout.collapsed ? "Expand agent panel" : "Collapse agent panel"}
+              aria-label={collapsed ? "Expand agent panel" : "Collapse agent panel"}
               onClick={toggleCollapsed}
             >
-              {layout.collapsed ? <PanelRightOpen /> : <PanelRightClose />}
+              {collapsed ? <PanelRightOpen /> : <PanelRightClose />}
             </Button>
           </div>
 
-          {!layout.collapsed &&
-            (error ? (
-              <Alert variant="destructive">
-                <AlertDescription className="flex flex-wrap items-center gap-2">
-                  <span>{error}</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setError(null);
-                      setAttempt((previous) => previous + 1);
-                    }}
-                  >
-                    Try again
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            ) : !view || (requested !== null && requested !== view.conversationId) ? (
-              <Loading label="Opening the conversation…" />
-            ) : (
-              <PromptComposer
-                key={view.conversationId}
-                variant="panel"
-                initialConversationId={view.conversationId}
-                initialMessages={view.messages}
-                initialCanRetry={view.canRetry}
-                initialConversations={view.conversations}
-                initialReadAloud={view.readAloud}
-                initialReadAloudVoice={view.readAloudVoice}
-              />
-            ))}
-        </div>
-      </section>
-    </div>
+          {/* Folded away instead of unmounted, so hiding the panel does not
+              throw away a reply that is still arriving. */}
+          <div
+            className={cn(
+              "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-4",
+              collapsed && "hidden",
+            )}
+          >
+            <Suspense fallback={<Loading label="Opening the conversation…" />}>
+              <AgentPanelThread />
+            </Suspense>
+          </div>
+        </section>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 }
