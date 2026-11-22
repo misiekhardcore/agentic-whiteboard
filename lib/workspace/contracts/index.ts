@@ -1,5 +1,6 @@
 export type {
   WorkspaceDetail,
+  WorkspaceMoveInput,
   WorkspaceMutationResult,
   WorkspaceOverview,
   WorkspaceReadResult,

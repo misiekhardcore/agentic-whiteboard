@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   chooseReply,
   SCRIPTED_DENIED_REPLY,
+  SCRIPTED_MOVED_REPLY,
   SCRIPTED_REPLY_PREFIX,
   SCRIPTED_TOOL_REPLY,
 } from "./policy.mjs";
@@ -19,6 +20,7 @@ const offeredTools = [
   "archiveWorkspace",
   "deleteWorkspace",
   "openWorkspace",
+  "moveWorkspace",
 ];
 
 const user = (text: string) => ({ role: "user", content: text });
@@ -116,6 +118,50 @@ describe("chooseReply", () => {
     expect(chooseReply({ messages: denied, offeredTools })).toEqual({
       kind: "text",
       text: SCRIPTED_DENIED_REPLY,
+    });
+  });
+
+  it("lists the workspaces and moves the named one to the stage it was asked for", () => {
+    const listed = [
+      user('move the workspace called "Launch" to In review'),
+      {
+        role: "assistant",
+        content: null,
+        tool_calls: [{ function: { name: "listWorkspaces", arguments: "{}" } }],
+      },
+      { role: "tool", content: JSON.stringify({ ok: true, workspaces: [{ id: "ws_1" }] }) },
+    ];
+
+    expect(chooseReply({ messages: listed, offeredTools })).toEqual({
+      kind: "tool",
+      name: "moveWorkspace",
+      input: { workspaceId: "ws_1", status: "IN_REVIEW" },
+    });
+  });
+
+  it("confirms a move once the tool result is back", () => {
+    const moved = [
+      user('move the workspace called "Launch" to Done'),
+      {
+        role: "assistant",
+        content: null,
+        tool_calls: [{ function: { name: "listWorkspaces", arguments: "{}" } }],
+      },
+      { role: "tool", content: JSON.stringify({ ok: true, workspaces: [{ id: "ws_1" }] }) },
+      {
+        role: "assistant",
+        content: null,
+        tool_calls: [{ function: { name: "moveWorkspace", arguments: "{}" } }],
+      },
+      {
+        role: "tool",
+        content: JSON.stringify({ ok: true, workspace: { id: "ws_1", status: "DONE" } }),
+      },
+    ];
+
+    expect(chooseReply({ messages: moved, offeredTools })).toEqual({
+      kind: "text",
+      text: SCRIPTED_MOVED_REPLY,
     });
   });
 

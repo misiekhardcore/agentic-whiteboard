@@ -22,6 +22,9 @@ export const workspaceToolPresentations: ToolCatalogue = {
   updateWorkspace: {
     present: (input) => ({ title: "Update workspace", subject: quoted(field(input, "name")) }),
   },
+  moveWorkspace: {
+    present: () => ({ title: "Move workspace" }),
+  },
   restoreWorkspace: {
     present: () => ({ title: "Restore workspace" }),
   },
