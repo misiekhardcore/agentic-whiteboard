@@ -30,6 +30,7 @@ export function PromptComposer({
   initialConversations,
   initialReadAloud,
   initialReadAloudVoice,
+  variant = "page",
 }: {
   initialConversationId: string;
   initialMessages: UIMessage[];
@@ -37,6 +38,8 @@ export function PromptComposer({
   initialConversations: DashboardConversation[];
   initialReadAloud: boolean;
   initialReadAloudVoice: string;
+  /** The panel keeps the same composer but drops the page hero. */
+  variant?: "page" | "panel";
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const composer = usePromptComposer({
@@ -47,18 +50,26 @@ export function PromptComposer({
     initialReadAloud,
     initialReadAloudVoice,
   });
+  const isPanel = variant === "panel";
 
   const lastMessage = composer.messages[composer.messages.length - 1];
   const retryable = lastUserMessage(composer.messages);
 
   return (
-    <section aria-labelledby="prompt-composer-title" className="topo-bg px-2 py-10 sm:py-14">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+    <section
+      aria-labelledby={isPanel ? undefined : "prompt-composer-title"}
+      aria-label={isPanel ? "Agent composer" : undefined}
+      className={isPanel ? "flex flex-col gap-3" : "topo-bg px-2 py-10 sm:py-14"}
+    >
+      <div
+        className={isPanel ? "flex flex-col gap-4" : "mx-auto flex w-full max-w-5xl flex-col gap-6"}
+      >
         <ComposerHeader
           conversations={initialConversations}
           conversationId={composer.conversationId}
           isBusy={composer.isBusy}
           onNewConversation={composer.startNewConversation}
+          compact={isPanel}
         />
 
         <PromptThread

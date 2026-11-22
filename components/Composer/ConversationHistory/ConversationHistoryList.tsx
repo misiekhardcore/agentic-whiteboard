@@ -12,9 +12,12 @@ import { routes } from "@/lib/shared/routes";
 
 export function ConversationHistoryList({
   currentId,
+  conversationBase,
   onSelect,
 }: {
   currentId: string;
+  /** The pathname that mounted the composer; a link never leaves it. */
+  conversationBase: string;
   /** Runs before the link navigates, so the dialog is not left over the page. */
   onSelect: () => void;
 }) {
@@ -94,7 +97,7 @@ export function ConversationHistoryList({
           return (
             <li key={entry.id}>
               <Link
-                href={routes.dashboardConversation(entry.id)}
+                href={routes.conversationAt(conversationBase, entry.id)}
                 onClick={onSelect}
                 aria-current={current ? "true" : undefined}
                 className="flex items-baseline justify-between gap-3 rounded-lg px-3 py-2 text-sm hover:bg-muted aria-[current=true]:bg-muted"

@@ -8,7 +8,14 @@
  */
 export { CONVERSATION_THREAD_LIMIT, RECENT_CONVERSATION_LIMIT } from "./constants";
 export { conversationOwnerConditions } from "./conversationOwnerConditions";
-export type { LiveTurn, LiveTurnMessage } from "./types";
+export type {
+  AgentPanelViewPayload,
+  ConversationSetPayload,
+  LiveTurn,
+  LiveTurnMessage,
+} from "./types";
+export type { ConversationSet } from "./loadConversationSet";
+export { loadConversationSet } from "./loadConversationSet";
 export { liveConversationTurns } from "./liveConversationTurns";
 export { resolveActiveConversation } from "./resolveActiveConversation";
 export { loadConversationThread } from "./loadConversationThread";

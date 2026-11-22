@@ -2,12 +2,7 @@ import { Suspense } from "react";
 
 import { PromptComposer } from "@/components/Composer/PromptComposer";
 import { Loading } from "@/components/Loading/Loading";
-import {
-  listConversations,
-  loadConversationThread,
-  RECENT_CONVERSATION_LIMIT,
-  resolveActiveConversation,
-} from "@/lib/ai/thread/conversations";
+import { loadConversationSet } from "@/lib/ai/thread/conversations";
 import { getSessionAccount } from "@/lib/identity/account";
 import { readPersonalSettings } from "@/lib/identity/settings";
 
@@ -58,13 +53,10 @@ async function ComposerSectionInner({
   // The composer shows this person's threads in the account they are acting as;
   // switching accounts is a different owner and therefore a different set.
   const owner = { userId, organizationId: account.activeOrganizationId };
-  const conversationId = await resolveActiveConversation({
-    owner,
-    requested: requestedConversation,
-  });
-  const [thread, conversations, settings] = await Promise.all([
-    loadConversationThread({ owner, conversationId }),
-    listConversations(owner, RECENT_CONVERSATION_LIMIT),
+  // The panel reads this same set, so the dashboard and the workspaces section
+  // cannot drift into two answers for "which conversation is open".
+  const [conversationSet, settings] = await Promise.all([
+    loadConversationSet({ owner, requested: requestedConversation }),
     readPersonalSettings(userId),
   ]);
 
@@ -75,10 +67,10 @@ async function ComposerSectionInner({
   return (
     <PromptComposer
       key={requestedConversation ?? "latest"}
-      initialConversationId={conversationId}
-      initialMessages={thread.messages}
-      initialCanRetry={thread.canRetry}
-      initialConversations={conversations}
+      initialConversationId={conversationSet.conversationId}
+      initialMessages={conversationSet.messages}
+      initialCanRetry={conversationSet.canRetry}
+      initialConversations={conversationSet.conversations}
       initialReadAloud={settings.readAloud}
       initialReadAloudVoice={settings.readAloudVoice}
     />

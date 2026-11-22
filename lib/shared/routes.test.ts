@@ -19,6 +19,15 @@ describe("routes", () => {
     expect(routes.invite("inv_1")).toBe("/invite/inv_1");
   });
 
+  it("puts a conversation into the URL of the surface already mounted", () => {
+    expect(routes.conversationAt("/workspaces", "conversation_1")).toBe(
+      "/workspaces?conversation=conversation_1",
+    );
+    expect(routes.conversationAt("/workspaces/ws_1", "a&b=c")).toBe(
+      "/workspaces/ws_1?conversation=a%26b%3Dc",
+    );
+  });
+
   it("keeps every static path rooted, lowercase and without a trailing slash", () => {
     const staticPaths: [string, string][] = [];
     for (const [name, value] of Object.entries(routes)) {

@@ -1,7 +1,7 @@
 "use client";
 
 import type { UIMessage } from "ai";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -29,6 +29,10 @@ export function useConversationNavigation({
   resetRetry: () => void;
 }) {
   const router = useRouter();
+  // The composer does not own the URL: whichever page mounted it keeps the
+  // conversations, so the dashboard stays on /dashboard and the panel stays on
+  // the workspaces surface it is floating over.
+  const pathname = usePathname();
   const [, startTransition] = useTransition();
   // The reply being copied into a new conversation, while the copy is written.
   const [branching, setBranching] = useState<string | null>(null);
@@ -55,7 +59,7 @@ export function useConversationNavigation({
         return;
       }
 
-      router.push(routes.dashboardConversation(result.conversationId));
+      router.push(routes.conversationAt(pathname, result.conversationId));
     });
   }
 
@@ -69,7 +73,7 @@ export function useConversationNavigation({
 
     session.clearFailure();
     resetRetry();
-    router.push(routes.dashboardConversation(crypto.randomUUID()));
+    router.push(routes.conversationAt(pathname, crypto.randomUUID()));
   }
 
   return { branching, branchFrom, startNewConversation };

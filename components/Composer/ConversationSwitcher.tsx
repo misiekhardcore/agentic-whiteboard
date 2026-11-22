@@ -17,9 +17,12 @@ import { routes } from "@/lib/shared/routes";
 export function ConversationSwitcher({
   conversations,
   currentId,
+  conversationBase,
 }: {
   conversations: DashboardConversation[];
   currentId: string;
+  /** The pathname that mounted the composer; a link never leaves it. */
+  conversationBase: string;
 }) {
   if (conversations.length === 0) return null;
 
@@ -39,7 +42,7 @@ export function ConversationSwitcher({
             title={conversation.title}
             asChild
           >
-            <Link href={routes.dashboardConversation(conversation.id)}>
+            <Link href={routes.conversationAt(conversationBase, conversation.id)}>
               <span className="truncate">{conversation.title}</span>
             </Link>
           </Button>

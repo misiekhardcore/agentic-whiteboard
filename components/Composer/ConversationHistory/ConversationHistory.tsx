@@ -14,7 +14,14 @@ import { useState } from "react";
 
 import { ConversationHistoryList } from "./ConversationHistoryList";
 
-export function ConversationHistory({ currentId }: { currentId: string }) {
+export function ConversationHistory({
+  currentId,
+  conversationBase,
+}: {
+  currentId: string;
+  /** The pathname that mounted the composer; a link never leaves it. */
+  conversationBase: string;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -37,7 +44,11 @@ export function ConversationHistory({ currentId }: { currentId: string }) {
         </DialogHeader>
         {/* Mounted with the dialog, so each open reads the list again: a
             conversation started in another tab should be there. */}
-        <ConversationHistoryList currentId={currentId} onSelect={() => setOpen(false)} />
+        <ConversationHistoryList
+          currentId={currentId}
+          conversationBase={conversationBase}
+          onSelect={() => setOpen(false)}
+        />
       </DialogContent>
     </Dialog>
   );
