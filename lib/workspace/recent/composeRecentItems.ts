@@ -1,17 +1,19 @@
-import type { AccountWorkspace } from "../queries";
 import type { ContentSurface } from "../surfaces";
 
 import { surfaceItems } from "./internals";
 import { mergeRecentItems } from "./mergeRecentItems";
-import type { RecentWorkspaceItem } from "./types";
+import type { RecentWorkspaceItem, RecentWorkspaceRow } from "./types";
 
-/** Pure composition: the workspace rows and their surfaces, as one list. */
+/**
+ * Pure composition: the workspace rows and their surfaces, as one list. A
+ * workspace keeps its own creator and activity; a surface has neither.
+ */
 export function composeRecentItems({
   workspaceRows,
   surfaces,
   limit,
 }: {
-  workspaceRows: AccountWorkspace[];
+  workspaceRows: RecentWorkspaceRow[];
   surfaces: ContentSurface[];
   limit: number;
 }): RecentWorkspaceItem[] {
@@ -27,6 +29,8 @@ export function composeRecentItems({
       description: workspace.description,
       status: workspace.status,
       updatedAt: workspace.updatedAt,
+      creator: workspace.creator,
+      lastActivity: workspace.lastActivity,
     })),
     ...surfaceItems(surfaces, workspaceById),
   ];

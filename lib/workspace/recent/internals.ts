@@ -1,7 +1,7 @@
 import type { AccountWorkspace } from "../queries";
 import type { ContentSurface } from "../surfaces";
 
-import type { RecentWorkspaceItem } from "./types";
+import type { RecentSurfaceEntry } from "./types";
 
 export /**
  * A surface has no name and no stage of its own, so it borrows the workspace's.
@@ -12,7 +12,7 @@ export /**
 function surfaceItems(
   surfaces: ContentSurface[],
   workspaceById: Map<string, AccountWorkspace>,
-): RecentWorkspaceItem[] {
+): RecentSurfaceEntry[] {
   return surfaces.flatMap((surface) => {
     const workspace = workspaceById.get(surface.workspaceId);
     if (!workspace) return [];

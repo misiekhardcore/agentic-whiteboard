@@ -9,7 +9,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { Loading } from "@/components/Loading/Loading";
-import { ArchivedWorkspaceList } from "@/components/Workspaces/ArchivedWorkspaceList";
+import { ArchivedWorkspaceGrid } from "@/components/Workspaces/ArchivedWorkspaceGrid";
 import { getSessionAccount } from "@/lib/identity/account";
 import { routes } from "@/lib/shared/routes";
 import { listArchivedWorkspaces } from "@/lib/workspace/queries";
@@ -49,7 +49,7 @@ async function ArchivedSectionInner() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ArchivedWorkspaceList workspaces={workspaces} />
+        <ArchivedWorkspaceGrid workspaces={workspaces} />
       </CardContent>
     </Card>
   );

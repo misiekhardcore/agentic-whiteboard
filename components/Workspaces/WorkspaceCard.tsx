@@ -1,23 +1,45 @@
 import Link from "next/link";
 
 import { AccountAvatar } from "@/components/AccountMenu/AccountMenuPopover/AccountAvatar";
+import { formatDay } from "@/lib/shared/format-date";
 import { routes } from "@/lib/shared/routes";
 import { formatLastActivity } from "@/lib/workspace/presentation";
-import type { AccountWorkspace, WorkspaceCreator } from "@/lib/workspace/queries";
-import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace/status";
+import type { WorkspaceCreator } from "@/lib/workspace/queries";
+import { WORKSPACE_STATUS_LABELS, type WorkspaceStatus } from "@/lib/workspace/status";
 
 import { WorkspaceCardMenu } from "./WorkspaceCardMenu";
 
+type WorkspaceCardBase = {
+  id: string;
+  name: string;
+  description: string | null;
+  status: WorkspaceStatus;
+  /** Null when the creator's row is gone; the card then states no person. */
+  creator: WorkspaceCreator | null;
+};
+
+/**
+ * A workspace as one of the two states a grid shows it in. The state decides the
+ * timestamp the card carries and the operations its menu offers, so neither can
+ * describe a workspace that no longer matches.
+ */
+export type WorkspaceCardWorkspace =
+  | (WorkspaceCardBase & { archived: false; lastActivity: Date })
+  | (WorkspaceCardBase & { archived: true; archivedAt: Date });
+
 /**
  * A workspace in a grid: its name and description link to the workspace, the
- * footer carries its creator and stage, and its management actions sit behind
- * the overflow menu. Used by the board, the dashboard's latest list and the
- * archive so all three stay identical.
+ * footer carries its creator, and its management actions sit behind the overflow
+ * menu. The board, the dashboard's latest list and the archive all render this
+ * card, so the three stay identical. `showStage` is off on the board because the
+ * column already names the stage.
  */
 export function WorkspaceCard({
   workspace,
+  showStage = true,
 }: {
-  workspace: AccountWorkspace & { creator?: WorkspaceCreator | null; lastActivity?: Date };
+  workspace: WorkspaceCardWorkspace;
+  showStage?: boolean;
 }) {
   return (
     <li className="flex h-full flex-col gap-3 card p-3 transition-colors hover:border-primary/40">
@@ -36,14 +58,15 @@ export function WorkspaceCard({
           name={workspace.name}
           description={workspace.description}
           status={workspace.status}
+          archived={workspace.archived}
         />
       </div>
 
-      {workspace.lastActivity && (
-        <p className="text-xs text-muted-foreground">
-          Last activity {formatLastActivity(workspace.lastActivity, new Date())}
-        </p>
-      )}
+      <p className="text-xs text-muted-foreground">
+        {workspace.archived
+          ? `Archived ${formatDay(workspace.archivedAt)}`
+          : `Last activity ${formatLastActivity(workspace.lastActivity, new Date())}`}
+      </p>
 
       <div className="mt-auto flex items-center justify-between gap-2 pt-1">
         <span className="flex min-w-0 items-center gap-2">
@@ -61,9 +84,11 @@ export function WorkspaceCard({
           )}
         </span>
 
-        <span className="font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
-          {WORKSPACE_STATUS_LABELS[workspace.status]}
-        </span>
+        {showStage && (
+          <span className="font-mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+            {WORKSPACE_STATUS_LABELS[workspace.status]}
+          </span>
+        )}
       </div>
     </li>
   );

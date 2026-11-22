@@ -41,22 +41,23 @@ is a defect.
 
 ## Workspace
 
-| Term             | Definition                                                                                                                                            | Owner           |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| workspace        | The unit of work in an account: a name, a description, a status, at most one document, at most one canvas, and its agent history.                     | `lib/workspace` |
-| workspace status | Where the work stands: `PLANNING`, `IN_PROGRESS`, `IN_REVIEW`, `DONE`. Archiving is not a status; an archived workspace keeps the one it had.         | `lib/workspace` |
-| board            | The stage columns on `/workspaces`: every non-archived workspace of the active account, placed by status and ordered inside its column.               | `lib/workspace` |
-| column           | One status on the board. Fixed and always shown, so an empty stage is information rather than absence.                                                | `lib/workspace` |
-| position         | A workspace's place inside its column, ascending. Only a move writes it, and a value means something only relative to its neighbours.                 | `lib/workspace` |
-| workspace access | A workspace and the person's relationship to it: personal or organization, the organization, and their role there.                                    | `lib/workspace` |
-| archive          | The reversible removal: hides a workspace from the dashboard, frees its plan slot, and keeps its content and history for a restore.                   | `lib/workspace` |
-| restore          | Clearing the archive, undoing the person's own archive. The agent may restore.                                                                        | `lib/workspace` |
-| delete           | Permanent removal of an archived workspace and everything under it. Only an archived workspace can be deleted, so one request cannot erase live work. | `lib/workspace` |
-| workspace limit  | The number of non-archived workspaces an account may hold on a plan, checked under a lock so two creates cannot take the last slot.                   | `lib/workspace` |
-| activity         | One recorded state change of a workspace on one of its surfaces: the kind, the actor, the time and what changed. Append-only.                         | `lib/workspace` |
-| activity kind    | The named change: created, renamed, described, stage moved, archived, restored, doc saved, canvas saved.                                              | `lib/workspace` |
-| actor            | Who performed an activity: a person, or the agent acting on a person's behalf, which records that person as the requester.                            | `lib/workspace` |
-| last activity    | A workspace's newest activity, counting the rows for its document and canvas. What a card shows.                                                      | `lib/workspace` |
+| Term             | Definition                                                                                                                                                                                                    | Owner           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| workspace        | The unit of work in an account: a name, a description, a status, at most one document, at most one canvas, and its agent history.                                                                             | `lib/workspace` |
+| workspace status | Where the work stands: `PLANNING`, `IN_PROGRESS`, `IN_REVIEW`, `DONE`. Archiving is not a status; an archived workspace keeps the one it had.                                                                 | `lib/workspace` |
+| board            | The stage columns on `/workspaces`: every non-archived workspace of the active account, placed by status and ordered inside its column.                                                                       | `lib/workspace` |
+| column           | One status on the board. Fixed and always shown, so an empty stage is information rather than absence.                                                                                                        | `lib/workspace` |
+| position         | A workspace's place inside its column, ascending. Only a move writes it, and a value means something only relative to its neighbours.                                                                         | `lib/workspace` |
+| workspace access | A workspace and the person's relationship to it: personal or organization, the organization, and their role there.                                                                                            | `lib/workspace` |
+| archive          | The reversible removal: hides a workspace from the dashboard, frees its plan slot, and keeps its content and history for a restore.                                                                           | `lib/workspace` |
+| restore          | Clearing the archive, undoing the person's own archive. The agent may restore.                                                                                                                                | `lib/workspace` |
+| delete           | Permanent removal of an archived workspace and everything under it. Only an archived workspace can be deleted, so one request cannot erase live work.                                                         | `lib/workspace` |
+| workspace limit  | The number of non-archived workspaces an account may hold on a plan, checked under a lock so two creates cannot take the last slot.                                                                           | `lib/workspace` |
+| activity         | One recorded state change of a workspace on one of its surfaces: the kind, the actor, the time and what changed. Append-only.                                                                                 | `lib/workspace` |
+| activity kind    | The named change: created, renamed, described, stage moved, archived, restored, doc saved, canvas saved.                                                                                                      | `lib/workspace` |
+| actor            | Who performed an activity: a person, or the agent acting on a person's behalf, which records that person as the requester.                                                                                    | `lib/workspace` |
+| last activity    | A workspace's newest activity, counting the rows for its document and canvas. What a card shows.                                                                                                              | `lib/workspace` |
+| workspace card   | The one rendering of a workspace in a grid: name, description, creator, the timestamp its state shows, and an overflow menu of the operations that state allows. A board card leaves the stage to its column. | `lib/workspace` |
 
 ## Content surfaces
 

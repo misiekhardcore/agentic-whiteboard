@@ -75,7 +75,11 @@ async function openDialog(page: Page, trigger: Locator, role: "dialog" | "alertd
  * menu first. Hydration makes the trigger ignore a click for a moment, hence
  * the retry.
  */
-async function chooseCardAction(page: Page, card: Locator, action: "Edit" | "Archive") {
+async function chooseCardAction(
+  page: Page,
+  card: Locator,
+  action: "Edit" | "Archive" | "Restore" | "Delete",
+) {
   await expect(async () => {
     await card.getByRole("button", { name: /^Actions for / }).click();
     await expect(page.getByRole("menuitem", { name: action, exact: true })).toBeVisible({
@@ -302,7 +306,7 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await expect(page.getByRole("heading", { name: "Archived workspaces" })).toBeVisible();
 
       const archived = page.getByRole("listitem").filter({ hasText: renamedWorkspace }).first();
-      await archived.getByRole("button", { name: "Restore" }).click();
+      await chooseCardAction(page, archived, "Restore");
 
       await expect(page.getByText("Nothing archived in Personal account")).toBeVisible();
       await expect(page.getByRole("listitem").filter({ hasText: renamedWorkspace })).toHaveCount(0);
@@ -380,16 +384,12 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
         )
         .toBe(true);
 
-      // Only the archive page offers Delete; the cards offer Edit and Archive.
+      // Only an archived card offers Delete, and it sits behind its overflow menu.
       await page.goto("/dashboard/archive");
       await expect(page.getByText("2 / 3")).toBeVisible();
-      await expect(page.getByRole("listitem").filter({ hasText: renamedWorkspace })).toHaveCount(1);
-
-      await openDialog(
-        page,
-        page.getByRole("button", { name: "Delete", exact: true }),
-        "alertdialog",
-      );
+      const archivedCards = page.getByRole("listitem").filter({ hasText: renamedWorkspace });
+      await expect(archivedCards).toHaveCount(1);
+      await chooseCardAction(page, archivedCards.first(), "Delete");
 
       const dialog = page.getByRole("alertdialog");
       await expect(dialog.getByText(`Delete ${renamedWorkspace} permanently?`)).toBeVisible();
