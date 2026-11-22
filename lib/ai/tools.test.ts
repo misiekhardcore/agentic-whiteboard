@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 const service = vi.hoisted(() => ({
   createWorkspaceFor: vi.fn(),
   updateWorkspaceWith: vi.fn(),
+  moveWorkspaceWith: vi.fn(),
 }));
 
 const queries = vi.hoisted(() => ({
@@ -48,6 +49,7 @@ describe("workspace tools", () => {
       "createWorkspace",
       "getWorkspace",
       "listWorkspaces",
+      "moveWorkspace",
       "openWorkspace",
       "restoreWorkspace",
       "updateWorkspace",
@@ -61,6 +63,7 @@ describe("workspace tools", () => {
       "deleteWorkspace",
       "getWorkspace",
       "listWorkspaces",
+      "moveWorkspace",
       "openWorkspace",
       "restoreWorkspace",
       "updateWorkspace",

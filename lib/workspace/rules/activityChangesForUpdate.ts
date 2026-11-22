@@ -1,5 +1,6 @@
 import type { WorkspaceActivityChange } from "../activity";
 
+import { stageMoveActivity } from "./stageMoveActivity";
 import type { WorkspaceValues } from "./types";
 
 /**
@@ -28,13 +29,7 @@ export function activityChangesForUpdate(
     });
   }
 
-  if (before.status !== after.status) {
-    changes.push({
-      surface: "WORKSPACE",
-      kind: "STAGE_MOVED",
-      details: { from: before.status, to: after.status },
-    });
-  }
+  changes.push(...stageMoveActivity(before.status, after.status));
 
   return changes;
 }

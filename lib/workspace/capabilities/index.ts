@@ -2,6 +2,7 @@ export { createWorkspace } from "./createWorkspace";
 export { listWorkspaces } from "./listWorkspaces";
 export { getWorkspace } from "./getWorkspace";
 export { updateWorkspace } from "./updateWorkspace";
+export { moveWorkspace } from "./moveWorkspace";
 export { restoreWorkspace } from "./restoreWorkspace";
 export { archiveWorkspace } from "./archiveWorkspace";
 export { deleteWorkspace } from "./deleteWorkspace";

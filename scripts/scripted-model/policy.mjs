@@ -14,6 +14,8 @@ export const SCRIPTED_TOOL_REPLY =
 export const SCRIPTED_ARCHIVED_REPLY =
   "**Archived.**\n\nThe workspace is in the archived list now.";
 export const SCRIPTED_DELETED_REPLY = "**Deleted.**\n\nThe workspace and its history are gone.";
+export const SCRIPTED_MOVED_REPLY = "**Moved.**\n\nThe workspace is in its new stage now.";
+export const SCRIPTED_MOVE_REFUSED_REPLY = "**Nothing changed.**\n\nThe move did not happen.";
 export const SCRIPTED_DENIED_REPLY =
   "**Nothing changed.**\n\nYou denied it, so I left the workspace alone.";
 
@@ -115,6 +117,14 @@ function requestedWorkspaceName(text) {
   return match?.[1]?.trim() || "New workspace";
 }
 
+/** The stage a move prompt names; Done is the default the fixture uses. */
+function requestedStage(text) {
+  if (/in review/i.test(text)) return "IN_REVIEW";
+  if (/in progress/i.test(text)) return "IN_PROGRESS";
+  if (/planning/i.test(text)) return "PLANNING";
+  return "DONE";
+}
+
 function titledReply(userText) {
   const source = userText.replace(/\s+/g, " ").trim();
   return `Scripted: ${source.slice(0, 40).trimEnd()}`;
@@ -150,6 +160,7 @@ export function chooseReply({ messages, offeredTools }) {
   const asksToArchive = /\barchive\b/i.test(userText);
   const asksToDelete = /\bdelete\b/i.test(userText);
   const asksToOpen = /\bopen\b/i.test(userText);
+  const asksToMove = /\bmove\b/i.test(userText) && /workspace/i.test(userText);
   const workspaceId = firstWorkspaceId(results);
 
   const reply = (text) => ({ kind: "text", text });
@@ -165,6 +176,18 @@ export function chooseReply({ messages, offeredTools }) {
     if (!calls("listWorkspaces")) return call("listWorkspaces", { includeArchived: true });
     if (workspaceId && !calls("archiveWorkspace")) return call("archiveWorkspace", { workspaceId });
     return reply(refused(run) ? SCRIPTED_DENIED_REPLY : SCRIPTED_ARCHIVED_REPLY);
+  }
+
+  if (asksToMove && offered.has("moveWorkspace")) {
+    if (!calls("listWorkspaces")) return call("listWorkspaces", {});
+    if (workspaceId && !calls("moveWorkspace")) {
+      return call("moveWorkspace", {
+        workspaceId,
+        status: requestedStage(userText),
+      });
+    }
+
+    return reply(refused(run) ? SCRIPTED_MOVE_REFUSED_REPLY : SCRIPTED_MOVED_REPLY);
   }
 
   if (asksToCreate && offered.has("createWorkspace")) {

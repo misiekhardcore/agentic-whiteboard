@@ -37,12 +37,15 @@ export type WorkspaceCardWorkspace =
 export function WorkspaceCard({
   workspace,
   showStage = true,
+  as: Wrapper = "li",
 }: {
   workspace: WorkspaceCardWorkspace;
   showStage?: boolean;
+  /** The board wraps a sortable list item around the card, so it renders a div here. */
+  as?: "li" | "div";
 }) {
   return (
-    <li className="flex h-full flex-col gap-3 card p-3 transition-colors hover:border-primary/40">
+    <Wrapper className="flex h-full flex-col gap-3 card p-3 transition-colors hover:border-primary/40">
       <div className="flex items-start justify-between gap-2">
         <Link href={routes.workspace(workspace.id)} className="flex min-w-0 flex-col gap-1">
           <span className="truncate font-medium">{workspace.name}</span>
@@ -90,6 +93,6 @@ export function WorkspaceCard({
           </span>
         )}
       </div>
-    </li>
+    </Wrapper>
   );
 }

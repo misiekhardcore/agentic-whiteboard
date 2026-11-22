@@ -90,6 +90,35 @@ async function workspaceArchivedAt(email: string, name: string): Promise<Date | 
   });
 }
 
+async function workspaceStatus(email: string, name: string): Promise<string | null> {
+  return withDb(async (db) => {
+    const { rows } = await db.query<{ status: string }>(
+      `select status from workspace
+        where name = $1
+          and "creatorId" = (select id from "user" where email = $2)`,
+      [name, email],
+    );
+
+    return rows[0]?.status ?? null;
+  });
+}
+
+/** The workspace's recorded history, newest first, as the activity page reads it. */
+async function activityKinds(email: string, name: string): Promise<string[]> {
+  return withDb(async (db) => {
+    const { rows } = await db.query<{ kind: string }>(
+      `select a.kind from "workspaceActivity" a
+        join workspace w on w.id = a."workspaceId"
+        where w.name = $1
+          and w."creatorId" = (select id from "user" where email = $2)
+        order by a.sequence`,
+      [name, email],
+    );
+
+    return rows.map((row) => row.kind);
+  });
+}
+
 async function promptCount(email: string): Promise<number> {
   return withDb(async (db) => {
     const { rows } = await db.query<{ total: number }>(
@@ -298,6 +327,59 @@ test("the agent can create a workspace from a dashboard prompt", async ({ page }
         .getByRole("list", { name: "Agent conversation" })
         .getByRole("button", { name: /Create workspace/ }),
     ).toContainText(workspaceName);
+  } finally {
+    await deleteAccount(email);
+  }
+});
+
+test("the agent moves a workspace through the same capability the board uses", async ({ page }) => {
+  const id = randomUUID().slice(0, 8);
+  const email = `e2e-move-tool-${id}@example.com`;
+  const workspaceName = `Agent Target ${id}`;
+
+  try {
+    await signUp(page, email, `e2e-pass-${id}`);
+
+    const composer = page.getByRole("textbox", { name: "Prompt" });
+    const thread = page.getByRole("list", { name: "Agent conversation" });
+
+    await composer.fill(`Create a workspace called "${workspaceName}"`);
+    await composer.press("Enter");
+    await expect(thread).toContainText("The workspace is ready.");
+
+    await composer.fill(`Move the workspace called "${workspaceName}" to Done`);
+    await composer.press("Enter");
+
+    await expect(thread).toContainText("Moved.");
+
+    // The agent's call is listed as a move, and its result carries the stage the
+    // same capability wrote for the board.
+    const toolCall = thread.getByRole("button", { name: /Move workspace/ });
+    await expect(toolCall).toBeVisible();
+    await toolCall.click();
+    await expect(thread).toContainText('"status": "DONE"');
+
+    await expect.poll(() => workspaceStatus(email, workspaceName)).toBe("DONE");
+
+    // The move left one history entry, recorded for the person the agent acted for.
+    await expect
+      .poll(() => activityKinds(email, workspaceName))
+      .toEqual(["CREATED", "STAGE_MOVED"]);
+
+    // The board is the same read model a drag refreshes: the card is in Done.
+    await page.goto("/workspaces");
+    await expect(
+      page.getByRole("region", { name: "Done", exact: true }).getByRole("link", {
+        name: workspaceName,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Planning", exact: true }).getByRole("link", {
+        name: workspaceName,
+      }),
+    ).toHaveCount(0);
+
+    await expect.poll(() => promptCount(email)).toBe(2);
   } finally {
     await deleteAccount(email);
   }

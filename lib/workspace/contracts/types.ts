@@ -40,6 +40,18 @@ export type WorkspaceUpdateInput = {
   status?: string;
 };
 
+/**
+ * A move names the stage and the two cards the dragged card lands between. The
+ * caller never sends a position: the server derives it from the neighbours it
+ * can see in that column.
+ */
+export type WorkspaceMoveInput = {
+  id: string;
+  status: WorkspaceStatus;
+  previousId?: string;
+  nextId?: string;
+};
+
 export type WorkspaceMutationResult =
   CapabilitySuccess<{ workspace: WorkspaceSummary }> | CapabilityFailure;
 

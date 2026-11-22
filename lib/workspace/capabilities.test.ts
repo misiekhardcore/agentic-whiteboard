@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 const service = vi.hoisted(() => ({
   createWorkspaceFor: vi.fn(),
   updateWorkspaceWith: vi.fn(),
+  moveWorkspaceWith: vi.fn(),
   restoreWorkspaceWith: vi.fn(),
   archiveWorkspaceWith: vi.fn(),
   deleteWorkspaceWith: vi.fn(),
@@ -29,6 +30,7 @@ import {
   deleteWorkspace,
   getWorkspace,
   listWorkspaces,
+  moveWorkspace,
   restoreWorkspace,
   updateWorkspace,
 } from "./capabilities";
@@ -229,6 +231,80 @@ describe("updateWorkspace capability", () => {
         link: "/workspaces/wsone9k2m4p7q1r3s5t8u0vx",
       },
     });
+  });
+});
+
+describe("moveWorkspace capability", () => {
+  it("writes the stage and the position through the authorized row in one call", async () => {
+    accessMock.authorizeWorkspace.mockResolvedValue(access);
+    service.moveWorkspaceWith.mockResolvedValue({
+      ok: true,
+      workspace: { id: "wsone9k2m4p7q1r3s5t8u0vx", name: "Food delivery", status: "IN_REVIEW" },
+    });
+
+    const output = await invoke(moveWorkspace, agent, {
+      workspaceId: "wsone9k2m4p7q1r3s5t8u0vx",
+      status: "IN_REVIEW",
+      previousId: "wsprevious9k2m4p7q1r3s5t",
+      nextId: "wsnext9k2m4p7q1r3s5t8u0v",
+    });
+
+    expect(accessMock.authorizeWorkspace).toHaveBeenCalledWith(
+      actor,
+      "wsone9k2m4p7q1r3s5t8u0vx",
+      "edit",
+    );
+    expect(service.moveWorkspaceWith).toHaveBeenCalledWith(
+      access,
+      agentRequester,
+      {
+        id: "wsone9k2m4p7q1r3s5t8u0vx",
+        status: "IN_REVIEW",
+        previousId: "wsprevious9k2m4p7q1r3s5t",
+        nextId: "wsnext9k2m4p7q1r3s5t8u0v",
+      },
+      { signal: undefined },
+    );
+    expect(output).toEqual({
+      ok: true,
+      workspace: {
+        id: "wsone9k2m4p7q1r3s5t8u0vx",
+        name: "Food delivery",
+        status: "IN_REVIEW",
+        link: "/workspaces/wsone9k2m4p7q1r3s5t8u0vx",
+      },
+    });
+  });
+
+  it("reports a card that vanished with a message a person can act on", async () => {
+    accessMock.authorizeWorkspace.mockResolvedValue(null);
+
+    const output = await invoke(moveWorkspace, agent, {
+      workspaceId: "wsone9k2m4p7q1r3s5t8u0vx",
+      status: "DONE",
+    });
+
+    expect(output).toEqual({
+      ok: false,
+      error: "That workspace could not be found. Refresh the board and try again.",
+    });
+  });
+
+  it("refreshes every board of the account and the workspace's own readers", () => {
+    expect(
+      moveWorkspace.changes?.({
+        ok: true,
+        workspace: {
+          id: "wsone9k2m4p7q1r3s5t8u0vx",
+          name: "Food delivery",
+          status: "DONE",
+          link: "/workspaces/wsone9k2m4p7q1r3s5t8u0vx",
+        },
+      }),
+    ).toEqual([
+      { key: CHANGE_KEYS.workspaces, scope: "account" },
+      { key: "workspace:wsone9k2m4p7q1r3s5t8u0vx", scope: "account" },
+    ]);
   });
 });
 
