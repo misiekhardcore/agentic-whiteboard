@@ -65,7 +65,7 @@ export function DashboardSidebar() {
                 <Users />
                 Shared
               </SidebarMenuLink>
-              <SidebarMenuLink href={routes.dashboardArchive}>
+              <SidebarMenuLink href={routes.workspacesArchive}>
                 <Archive />
                 Archived
               </SidebarMenuLink>

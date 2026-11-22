@@ -356,7 +356,7 @@ test("the agent panel survives navigating through the workspaces section", async
     });
 
     await test.step("the archived workspaces page carries the same panel", async () => {
-      await page.goto("/dashboard/archive");
+      await page.goto("/workspaces/archive");
 
       await expect(page.getByRole("heading", { name: "Archived workspaces" })).toBeVisible();
       const panel = page.getByRole("region", { name: "Agent panel" });

@@ -302,7 +302,7 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
     });
 
     await test.step("the archive page restores a workspace", async () => {
-      await page.goto("/dashboard/archive");
+      await page.goto("/workspaces/archive");
       await expect(page.getByRole("heading", { name: "Archived workspaces" })).toBeVisible();
 
       const archived = page.getByRole("listitem").filter({ hasText: renamedWorkspace }).first();
@@ -385,7 +385,7 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
         .toBe(true);
 
       // Only an archived card offers Delete, and it sits behind its overflow menu.
-      await page.goto("/dashboard/archive");
+      await page.goto("/workspaces/archive");
       await expect(page.getByText("2 / 3")).toBeVisible();
       const archivedCards = page.getByRole("listitem").filter({ hasText: renamedWorkspace });
       await expect(archivedCards).toHaveCount(1);

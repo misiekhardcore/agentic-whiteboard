@@ -5,6 +5,10 @@ import { ArchivedSection } from "./_components/ArchivedSection";
 import { ComposerSection } from "./_components/ComposerSection";
 import { ProjectsSection } from "./_components/ProjectsSection";
 
+// The dashboard is the route's only page, so it names the tab itself instead of
+// a layout that would only pass its children through.
+export const metadata = { title: "Dashboard" };
+
 export default function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   return (
     <div className="stack">

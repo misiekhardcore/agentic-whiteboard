@@ -16,7 +16,6 @@ export const routes = {
   resetPassword: "/reset-password",
 
   dashboard: "/dashboard",
-  dashboardArchive: "/dashboard/archive",
   dashboardShared: "/dashboard/shared",
   dashboardOrganization: "/dashboard/organization",
   dashboardBilling: "/dashboard/billing",
@@ -24,6 +23,8 @@ export const routes = {
   dashboardAiHelper: "/dashboard/ai-helper",
 
   workspaces: "/workspaces",
+  /** Archived workspaces: the section's own archive, not a dashboard page. */
+  workspacesArchive: "/workspaces/archive",
   /** The workspace a person opens: `/workspaces/:id`. */
   workspace: (id: string) => `/workspaces/${encodeURIComponent(id)}`,
   /** One workspace's history: `/workspaces/:id/activity`. */

@@ -39,8 +39,8 @@ test("the sidebar links the dashboard from the other signed-in surfaces", async 
       await expect(page.getByRole("main")).toHaveCount(1);
     });
 
-    await test.step("another dashboard page does not claim the dashboard entry", async () => {
-      await page.goto("/dashboard/archive");
+    await test.step("another surface does not claim the dashboard entry", async () => {
+      await page.goto("/workspaces/archive");
 
       await expect(page.getByRole("link", { name: "Archived" })).toHaveAttribute(
         "data-active",

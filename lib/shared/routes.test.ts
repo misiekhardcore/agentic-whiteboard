@@ -15,6 +15,10 @@ describe("routes", () => {
     expect(routes.workspaceActivity("ws_abc123")).toBe("/workspaces/ws_abc123/activity");
   });
 
+  it("keeps the archive inside the workspaces section it belongs to", () => {
+    expect(routes.workspacesArchive).toBe("/workspaces/archive");
+  });
+
   it("builds an invite path from its id", () => {
     expect(routes.invite("inv_1")).toBe("/invite/inv_1");
   });
