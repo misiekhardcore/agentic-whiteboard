@@ -4,7 +4,9 @@ import { db } from "@/lib/db";
 import { user, workspaces } from "@/lib/db/schema";
 
 import { accountWorkspacesWhere } from "./accountWorkspacesWhere";
+import { creatorColumns } from "./creatorColumns";
 import type { BoardWorkspaceRow } from "./types";
+import { withCreator } from "./withCreator";
 
 /**
  * Every non-archived workspace of the selected account, with the position the
@@ -25,15 +27,11 @@ export async function listBoardWorkspaces(
       position: workspaces.position,
       createdAt: workspaces.createdAt,
       updatedAt: workspaces.updatedAt,
-      creatorName: user.name,
-      creatorImage: user.image,
+      ...creatorColumns,
     })
     .from(workspaces)
     .leftJoin(user, eq(user.id, workspaces.creatorId))
     .where(accountWorkspacesWhere(userId, organizationId));
 
-  return rows.map(({ creatorName, creatorImage, ...workspace }) => ({
-    ...workspace,
-    creator: creatorName ? { name: creatorName, image: creatorImage } : null,
-  }));
+  return rows.map(withCreator);
 }

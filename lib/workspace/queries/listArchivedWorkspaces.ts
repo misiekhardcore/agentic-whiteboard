@@ -1,15 +1,17 @@
-import { and, desc, isNotNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { workspaces } from "@/lib/db/schema";
+import { user, workspaces } from "@/lib/db/schema";
 
+import { creatorColumns } from "./creatorColumns";
 import { accountScopeWhere } from "./internals";
 import type { ArchivedWorkspace } from "./types";
+import { withCreator } from "./withCreator";
 
 /**
  * The archived workspaces of the selected account, most recently archived
- * first. These are hidden from the dashboard list and from the plan meter until
- * they are restored.
+ * first, each with the creator its card shows. These are hidden from the
+ * dashboard list and from the plan meter until they are restored.
  */
 export async function listArchivedWorkspaces(
   userId: string,
@@ -22,10 +24,17 @@ export async function listArchivedWorkspaces(
       description: workspaces.description,
       status: workspaces.status,
       archivedAt: workspaces.archivedAt,
+      ...creatorColumns,
     })
     .from(workspaces)
+    .leftJoin(user, eq(user.id, workspaces.creatorId))
     .where(and(accountScopeWhere(userId, organizationId), isNotNull(workspaces.archivedAt)))
     .orderBy(desc(workspaces.archivedAt));
 
-  return rows.flatMap((row) => (row.archivedAt ? [{ ...row, archivedAt: row.archivedAt }] : []));
+  return rows.flatMap((row) => {
+    if (!row.archivedAt) return [];
+
+    const archivedAt = row.archivedAt;
+    return [{ ...withCreator(row), archivedAt }];
+  });
 }

@@ -13,7 +13,7 @@ import { redirect } from "next/navigation";
 
 import { RefreshOnChanges } from "@/components/Changes";
 import { EmptyState } from "@/components/EmptyState/EmptyState";
-import { ArchivedWorkspaceList } from "@/components/Workspaces/ArchivedWorkspaceList";
+import { ArchivedWorkspaceGrid } from "@/components/Workspaces/ArchivedWorkspaceGrid";
 import { getSessionAccount } from "@/lib/identity/account";
 import { CHANGE_KEYS } from "@/lib/shared/changes";
 import { routes, signInPath } from "@/lib/shared/routes";
@@ -79,7 +79,7 @@ export default async function ArchivePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ArchivedWorkspaceList workspaces={workspaces} />
+            <ArchivedWorkspaceGrid workspaces={workspaces} />
           </CardContent>
         </Card>
       )}

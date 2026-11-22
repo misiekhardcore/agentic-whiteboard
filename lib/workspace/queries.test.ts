@@ -1,27 +1,31 @@
 import { describe, expect, it, vi } from "vitest";
 
 /**
- * Each query issues one `select().from().where().orderBy()` chain, so the mock
- * hands the next queued row set to the next call. Rows left in the queue are
- * rows that were never fetched, which is how the archived opt-in is asserted.
+ * Each read issues one select chain, either straight to `where().orderBy()` or
+ * through the creator's left join, so the mock hands the next queued row set to
+ * the next call. Rows left in the queue were never fetched, which is how the
+ * archived opt-in is asserted.
  */
 const dbState = vi.hoisted(() => ({ rows: [] as unknown[][] }));
 
 vi.mock("@/lib/db", () => ({
   db: {
-    select: () => ({
-      from: () => ({
-        where: () => ({
-          orderBy: () => Promise.resolve(dbState.rows.shift() ?? []),
+    select: () => {
+      const ordered = {
+        where: () => ({ orderBy: () => Promise.resolve(dbState.rows.shift() ?? []) }),
+        leftJoin: () => ({
+          where: () => ({ orderBy: () => Promise.resolve(dbState.rows.shift() ?? []) }),
         }),
-      }),
-    }),
+      };
+
+      return { from: () => ordered };
+    },
   },
 }));
 
 import { type WorkspaceAccess, workspacePermission } from "./access";
 import { listWorkspacesFor } from "./queries";
-import { mergeRecentItems, type RecentWorkspaceItem } from "./recent";
+import { mergeRecentItems, type RecentSurfaceEntry, type RecentWorkspaceEntry } from "./recent";
 import { isWorkspaceStatus, WORKSPACE_STATUS_LABELS, WORKSPACE_STATUSES } from "./status";
 
 const actor = {
@@ -132,11 +136,30 @@ describe("workspace permission", () => {
   });
 });
 
-function recentItem(overrides: Partial<RecentWorkspaceItem> = {}): RecentWorkspaceItem {
+function workspaceItem(overrides: Partial<RecentWorkspaceEntry> = {}): RecentWorkspaceEntry {
   return {
     key: "workspace:ws_1",
     type: "workspace",
     id: "ws_1",
+    workspaceId: "ws_1",
+    workspaceName: "Workspace",
+    description: null,
+    status: "PLANNING",
+    updatedAt: new Date("2026-11-01T00:00:00Z"),
+    creator: null,
+    lastActivity: new Date("2026-11-01T00:00:00Z"),
+    ...overrides,
+  };
+}
+
+function surfaceItem(
+  type: RecentSurfaceEntry["type"],
+  overrides: Partial<RecentSurfaceEntry> = {},
+): RecentSurfaceEntry {
+  return {
+    key: `${type}:surface_1`,
+    type,
+    id: "surface_1",
     workspaceId: "ws_1",
     workspaceName: "Workspace",
     description: null,
@@ -150,16 +173,14 @@ describe("recent workspace items", () => {
   it("orders workspaces, docs and canvases together, newest first", () => {
     const items = mergeRecentItems(
       [
-        recentItem({ key: "workspace:ws_1", updatedAt: new Date("2026-11-01T00:00:00Z") }),
-        recentItem({
+        workspaceItem({ key: "workspace:ws_1", updatedAt: new Date("2026-11-01T00:00:00Z") }),
+        surfaceItem("doc", {
           key: "doc:doc_1",
-          type: "doc",
           id: "doc_1",
           updatedAt: new Date("2026-11-03T00:00:00Z"),
         }),
-        recentItem({
+        surfaceItem("canvas", {
           key: "canvas:canvas_1",
-          type: "canvas",
           id: "canvas_1",
           updatedAt: new Date("2026-11-02T00:00:00Z"),
         }),
@@ -176,7 +197,7 @@ describe("recent workspace items", () => {
 
   it("caps the list at the requested limit", () => {
     const items = Array.from({ length: 8 }, (_, index) =>
-      recentItem({
+      workspaceItem({
         key: `workspace:ws_${index}`,
         id: `ws_${index}`,
         updatedAt: new Date(2026, 10, index + 1),
@@ -191,8 +212,8 @@ describe("recent workspace items", () => {
     const at = new Date("2026-11-01T00:00:00Z");
     const items = mergeRecentItems(
       [
-        recentItem({ key: "workspace:b", id: "b", updatedAt: at }),
-        recentItem({ key: "workspace:a", id: "a", updatedAt: at }),
+        workspaceItem({ key: "workspace:b", id: "b", updatedAt: at }),
+        workspaceItem({ key: "workspace:a", id: "a", updatedAt: at }),
       ],
       5,
     );

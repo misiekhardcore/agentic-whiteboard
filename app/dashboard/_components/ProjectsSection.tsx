@@ -9,7 +9,7 @@ import { WorkspaceCard } from "@/components/Workspaces/WorkspaceCard";
 import { getSessionAccount } from "@/lib/identity/account";
 import { formatDay } from "@/lib/shared/format-date";
 import { routes } from "@/lib/shared/routes";
-import { listRecentWorkspaceItems, type RecentWorkspaceItem } from "@/lib/workspace/recent";
+import { listRecentWorkspaceItems, type RecentSurfaceEntry } from "@/lib/workspace/recent";
 import { WORKSPACE_STATUS_LABELS } from "@/lib/workspace/status";
 
 const RECENT_LIMIT = 5;
@@ -66,11 +66,13 @@ async function ProjectsSectionInner() {
             <WorkspaceCard
               key={item.key}
               workspace={{
+                archived: false,
                 id: item.id,
                 name: item.workspaceName,
                 description: item.description,
                 status: item.status,
-                updatedAt: item.updatedAt,
+                creator: item.creator,
+                lastActivity: item.lastActivity,
               }}
             />
           ) : (
@@ -86,7 +88,7 @@ async function ProjectsSectionInner() {
  * A doc or canvas is shown through the workspace that owns it: the surface has
  * no name of its own, and opening the card lands on the workspace.
  */
-function SurfaceCard({ item }: { item: RecentWorkspaceItem }) {
+function SurfaceCard({ item }: { item: RecentSurfaceEntry }) {
   const isDoc = item.type === "doc";
   const Icon = isDoc ? FileText : Frame;
   const label = isDoc ? "Doc" : "Canvas";

@@ -48,7 +48,12 @@ export function WorkspaceBoard({
               ) : (
                 <ul className="flex flex-col gap-3">
                   {column.workspaces.map((workspace) => (
-                    <WorkspaceCard key={workspace.id} workspace={workspace} />
+                    <WorkspaceCard
+                      key={workspace.id}
+                      // The column already names the stage, so the card leaves it out.
+                      workspace={{ ...workspace, archived: false }}
+                      showStage={false}
+                    />
                   ))}
                 </ul>
               )}
