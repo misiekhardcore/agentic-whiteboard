@@ -76,22 +76,29 @@ function column(page: Page, stage: string) {
   return page.getByRole("region", { name: stage, exact: true });
 }
 
+/** A card is the whole list item on the board; there is no separate handle. */
+function card(page: Page, stage: string, name: string) {
+  return column(page, stage).getByRole("listitem").filter({ hasText: name });
+}
+
 async function linkNames(columnLocator: Locator): Promise<string[]> {
   return columnLocator.getByRole("listitem").getByRole("link").allTextContents();
 }
 
 /**
- * A real pointer drag: press the card's handle, cross the activation distance,
- * then move to the target and drop. The target point is configurable so a card
- * can be approached from its right edge instead of its link.
+ * A real pointer drag: press the card body, cross the activation distance, then
+ * move to the target and drop. The target point is configurable so a card can be
+ * approached from its right edge instead of its link, and `whileDragging` runs
+ * with the pointer still down.
  */
 async function drag(
   page: Page,
-  handle: Locator,
+  source: Locator,
   target: Locator,
   targetPoint: { x: number; y: number } = { x: 0.5, y: 0.5 },
+  whileDragging?: () => Promise<void>,
 ) {
-  const from = await handle.boundingBox();
+  const from = await source.boundingBox();
   const to = await target.boundingBox();
   if (!from || !to) throw new Error("The drag source or target is not visible.");
 
@@ -102,6 +109,7 @@ async function drag(
   await page.mouse.down();
   await page.mouse.move(start.x + 12, start.y + 12, { steps: 5 });
   await page.mouse.move(end.x, end.y, { steps: 12 });
+  if (whileDragging) await whileDragging();
   await page.mouse.up();
 }
 
@@ -125,14 +133,27 @@ test("a card is dragged between stages and reordered, and the board remembers it
     await createWorkspace(page, gamma);
 
     await page.goto(routes.workspaces);
-    await expect(page.getByRole("button", { name: `Move ${alpha}` })).toBeVisible();
+    await expect(card(page, "Planning", alpha)).toBeVisible();
+
+    await test.step("the whole card is the activator, with no separate handle", async () => {
+      await expect(page.getByRole("button", { name: /^Move / })).toHaveCount(0);
+      await expect(card(page, "Planning", alpha)).not.toHaveAttribute("role", "button");
+    });
 
     await test.step("a card dragged to another stage lands there and persists", async () => {
       await expect(async () => {
         await drag(
           page,
-          page.getByRole("button", { name: `Move ${alpha}` }),
+          card(page, "Planning", alpha),
           column(page, "In progress"),
+          { x: 0.5, y: 0.5 },
+          async () => {
+            // With the pointer still down, a card that has crossed into another
+            // column is already visible there instead of vanishing until the drop.
+            await expect(
+              column(page, "In progress").getByRole("link", { name: alpha }),
+            ).toBeVisible({ timeout: 2_000 });
+          },
         );
         await expect(column(page, "In progress").getByRole("link", { name: alpha })).toBeVisible({
           timeout: 2_000,
@@ -151,7 +172,7 @@ test("a card is dragged between stages and reordered, and the board remembers it
       await expect(async () => {
         await drag(
           page,
-          page.getByRole("button", { name: `Move ${beta}` }),
+          card(page, "Planning", beta),
           column(page, "In progress").getByRole("listitem").filter({ hasText: alpha }),
           { x: 0.85, y: 0.5 },
         );
@@ -164,13 +185,14 @@ test("a card is dragged between stages and reordered, and the board remembers it
       expect(await linkNames(column(page, "In progress"))).toEqual([beta, alpha]);
     });
 
-    await test.step("a card dragged within its column changes the order", async () => {
-      // Alpha is dragged back above Beta in the same column.
+    await test.step("a card dragged down one place passes the card below it", async () => {
+      // Beta is first and Alpha second; dropping Beta on Alpha swaps the two
+      // rather than leaving the order alone, which is what a one-place move is.
       await expect(async () => {
         await drag(
           page,
-          page.getByRole("button", { name: `Move ${alpha}` }),
-          column(page, "In progress").getByRole("listitem").filter({ hasText: beta }),
+          card(page, "In progress", beta),
+          column(page, "In progress").getByRole("listitem").filter({ hasText: alpha }),
           { x: 0.85, y: 0.5 },
         );
         await expect.poll(() => linkNames(column(page, "In progress"))).toEqual([alpha, beta]);
@@ -183,16 +205,16 @@ test("a card is dragged between stages and reordered, and the board remembers it
     });
 
     await test.step("the keyboard moves a card and a screen reader announces it", async () => {
-      const handle = page.getByRole("button", { name: `Move ${gamma}` });
+      const activator = page.getByRole("group", { name: gamma });
       const liveRegion = page.locator('[id^="DndLiveRegion"]');
 
-      // The handle only listens after hydration, so retry the sequence until the
+      // The card only listens after hydration, so retry the sequence until the
       // live region confirms the card was picked up.
       await expect(async () => {
         await page.keyboard.press("Escape");
-        await handle.focus();
+        await activator.focus();
         await page.keyboard.press("Space");
-        await expect(handle).toHaveAttribute("aria-pressed", "true", { timeout: 2_000 });
+        await expect(liveRegion).toContainText("is over", { timeout: 2_000 });
 
         await page.keyboard.press("ArrowRight");
         await expect(liveRegion).toContainText("is over In progress.", { timeout: 2_000 });
@@ -234,7 +256,7 @@ test("a drop refused because the card was archived elsewhere is rolled back and 
     await createWorkspace(page, name);
 
     await page.goto(routes.workspaces);
-    await expect(page.getByRole("button", { name: `Move ${name}` })).toBeVisible();
+    await expect(card(page, "Planning", name)).toBeVisible();
 
     // Another open board archives the card while this tab keeps its stale copy,
     // so the next drop is refused by the server rather than never attempted.
@@ -244,7 +266,7 @@ test("a drop refused because the card was archived elsewhere is rolled back and 
 
     await expect(column(page, "Planning").getByRole("link", { name })).toBeVisible();
 
-    await drag(page, page.getByRole("button", { name: `Move ${name}` }), column(page, "Done"));
+    await drag(page, card(page, "Planning", name), column(page, "Done"));
 
     // The refusal is explained in words a person can act on, and the stale card
     // is put back where it was instead of staying optimistically in Done.
@@ -262,7 +284,7 @@ test("a drop refused because the card was archived elsewhere is rolled back and 
         await db.query("delete from workspace where name = $1", [name]);
       });
 
-      await drag(page, page.getByRole("button", { name: `Move ${name}` }), column(page, "Done"));
+      await drag(page, card(page, "Planning", name), column(page, "Done"));
 
       await expect(
         page.getByText("That workspace could not be found. Refresh the board and try again."),

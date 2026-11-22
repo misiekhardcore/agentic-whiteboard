@@ -48,11 +48,7 @@ export function SortableWorkspaceCard({
         }`}
       >
         {/* The column already names the stage, so the card leaves it out. */}
-        <WorkspaceCard
-          workspace={{ ...workspace, archived: false }}
-          showStage={false}
-          as="div"
-        />
+        <WorkspaceCard workspace={{ ...workspace, archived: false }} showStage={false} as="div" />
       </div>
     </li>
   );
