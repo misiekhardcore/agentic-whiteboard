@@ -13,6 +13,7 @@
     "lint": "next typegen && eslint . --max-warnings=0",
     "test": "vitest run",
     "test:ai": "AI_LIVE=1 vitest run lib/ai/live.test.ts",
+    "test:db": "vitest run lib/workspace/board/listWorkspaceBoard.postgres.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:brand": "BRAND_SCREENSHOTS=1 playwright test e2e/brand-screenshots.spec.ts",
     "brand:assets": "node scripts/generate-brand-assets.mjs",

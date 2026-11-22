@@ -5,6 +5,8 @@ import type { WORKSPACE_STATUSES } from "../status";
 import { composeWorkspaceBoard } from "./composeWorkspaceBoard";
 
 const updatedAt = new Date("2026-11-01T00:00:00Z");
+const createdAt = new Date("2026-10-01T00:00:00Z");
+const lastActivity = new Date("2026-11-02T00:00:00Z");
 
 function row(overrides: {
   id: string;
@@ -20,6 +22,8 @@ function row(overrides: {
     status: overrides.status,
     position: overrides.position ?? 0,
     creator: null,
+    createdAt,
+    lastActivity,
     updatedAt,
   };
 }
