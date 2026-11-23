@@ -11,6 +11,7 @@
  * utilities — comes from `@konopskidev/ui/styles.css`. What stays here is the
  * app shell, which a component library cannot own.
  */
+
 @layer base {
   /*
    * The one number the shell is built around: the header's height. Pages are
