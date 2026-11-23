@@ -197,8 +197,8 @@ importers:
         specifier: ^3.2.2
         version: 3.2.2(react@19.3.1)
       '@konopskidev/ui':
-        specifier: ~0.6.0
-        version: 0.6.0(@base-ui/react@1.9.0(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(lucide-react@1.73.0(@types/react@19.3.0)(react@19.3.1))(next-themes@0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react-resizable-panels@4.24.1(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)(sonner@2.0.8(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(tailwindcss@4.3.5)
+        specifier: ~0.7.0
+        version: 0.7.0(@base-ui/react@1.9.0(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(lucide-react@1.73.0(@types/react@19.3.0)(react@19.3.1))(next-themes@0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react-resizable-panels@4.24.1(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)(sonner@2.0.8(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(tailwindcss@4.3.5)
       '@paralleldrive/cuid2':
         specifier: ^3.3.0
         version: 3.3.0
@@ -702,6 +702,7 @@ packages:
   '@csstools/css-tokenizer@4.0.3':
     resolution: {integrity: sha512-gdkFe/Z4KU1q8Y5S3GYScXGcOnO56dgWwIs5+97Ij1VIKISItOIUlCXUq4VLbdnRclF+SSQ49sLsn3KeV111AA==}
     engines: {node: '>=20.19.0'}
+
   '@dnd-kit/accessibility@3.1.1':
     resolution: {integrity: sha512-2P+YgaXF+gRsIihwwY1gCsQSYnu9Zyj2py8kY5fFvUM1qm2WA2u639R6YNVfU4GWr+ZM5mqEsfHZZLoRONbemw==}
     peerDependencies:
@@ -1480,12 +1481,13 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@konopskidev/ui@0.6.0':
-    resolution: {integrity: sha512-K9bw3YZh3QejSgeG8Ex9PUWGKdh3nWuB2Z8U2pe7ZPkJy543KlVgrE9hZ+6r2abQNo3VLM9/CpPUja7imrogEQ==}
+  '@konopskidev/ui@0.7.0':
+    resolution: {integrity: sha512-9c8ZGuhz+clfD4sf73p8PN0Jr4V7D2ZzMy4J6NCLyg5tWqXQgIVcce2wQXq8xa+X/GevS3vvDcbYrOFZeHeZ9w==}
     engines: {node: '>=20'}
     peerDependencies:
       '@base-ui/react': ^1.9.0
       '@shadcn/react': ^0.3.1
+      '@videojs/react': ^10.6.0
       cmdk: ^1.1.1
       embla-carousel-react: ^8.6.0
       input-otp: ^1.5.0
@@ -1504,6 +1506,8 @@ packages:
       '@base-ui/react':
         optional: true
       '@shadcn/react':
+        optional: true
+      '@videojs/react':
         optional: true
       cmdk:
         optional: true
@@ -6163,6 +6167,7 @@ snapshots:
       css-tree: 3.2.1
 
   '@csstools/css-tokenizer@4.0.3': {}
+
   '@dnd-kit/accessibility@3.1.1(react@19.3.1)':
     dependencies:
       react: 19.3.1
@@ -6678,7 +6683,7 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@konopskidev/ui@0.6.0(@base-ui/react@1.9.0(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(lucide-react@1.73.0(@types/react@19.3.0)(react@19.3.1))(next-themes@0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react-resizable-panels@4.24.1(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)(sonner@2.0.8(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(tailwindcss@4.3.5)':
+  '@konopskidev/ui@0.7.0(@base-ui/react@1.9.0(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(lucide-react@1.73.0(@types/react@19.3.0)(react@19.3.1))(next-themes@0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react-resizable-panels@4.24.1(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)(sonner@2.0.8(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(tailwindcss@4.3.5)':
     dependencies:
       class-variance-authority: 0.7.1
       cn: 0.5.2

@@ -38,7 +38,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@konopskidev/ui": "~0.6.0",
+    "@konopskidev/ui": "~0.7.0",
     "@paralleldrive/cuid2": "^3.3.0",
     "@stripe/react-stripe-js": "^7.1.0",
     "@stripe/stripe-js": "^10.3.0",
