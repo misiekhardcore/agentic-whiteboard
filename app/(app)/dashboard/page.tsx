@@ -11,7 +11,7 @@ export const metadata = { title: "Dashboard" };
 
 export default function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   return (
-    <div className="stack">
+    <div className="stack p-4">
       <RefreshOnChanges
         keys={[
           CHANGE_KEYS.workspaces,
