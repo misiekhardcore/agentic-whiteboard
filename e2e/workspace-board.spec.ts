@@ -140,6 +140,17 @@ test("a card is dragged between stages and reordered, and the board remembers it
       await expect(card(page, "Planning", alpha)).not.toHaveAttribute("role", "button");
     });
 
+    await test.step("the stages sit side by side with the agent panel open", async () => {
+      // A board stacked into one column puts the next stage below the fold, and
+      // a drag towards it scrolls the page out from under the pointer.
+      const planning = await column(page, "Planning").boundingBox();
+      const inProgress = await column(page, "In progress").boundingBox();
+      if (!planning || !inProgress) throw new Error("The board columns are not visible.");
+
+      expect(inProgress.y).toBe(planning.y);
+      expect(inProgress.x).toBeGreaterThan(planning.x);
+    });
+
     await test.step("a card dragged to another stage lands there and persists", async () => {
       await expect(async () => {
         await drag(

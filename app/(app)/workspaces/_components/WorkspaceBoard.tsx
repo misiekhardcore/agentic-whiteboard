@@ -235,9 +235,10 @@ export function WorkspaceBoard({
       >
         {/* The grid follows the room the board has, not the window: the agent
             panel shares the width, so a viewport breakpoint would leave four
-            columns squeezed into a phone-wide strip. */}
+            columns squeezed into a phone-wide strip. Four columns need the
+            panel folded away to fit beside the sidebar on a laptop. */}
         <div className="@container">
-          <div className="grid grid-cols-1 items-start gap-3 @2xl:grid-cols-2 @5xl:grid-cols-4">
+          <div className="grid grid-cols-1 items-start gap-3 @md:grid-cols-2 @3xl:grid-cols-4">
             {columns.map((column) => (
               <BoardColumn
                 key={column.status}
