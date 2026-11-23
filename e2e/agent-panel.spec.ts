@@ -134,6 +134,13 @@ test("the agent panel survives navigating through the workspaces section", async
       const handleBox = await handle.boundingBox();
       if (!opened || !handleBox) throw new Error("The panel has no measurable box");
 
+      // The page keeps an inset from the handle instead of running its content
+      // into the divider.
+      const pageContent = page.locator("main .stack");
+      const contentBox = await pageContent.boundingBox();
+      if (!contentBox) throw new Error("The page has no measurable content");
+      expect(handleBox.x - (contentBox.x + contentBox.width)).toBeGreaterThanOrEqual(8);
+
       // The handle divides the page from the panel, so dragging it left hands
       // width to the panel.
       const centreY = handleBox.y + handleBox.height / 2;

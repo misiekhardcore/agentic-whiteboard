@@ -108,8 +108,9 @@ export function AgentPanel({ children }: { children: ReactNode }) {
       onLayoutChanged={(_, meta) => rememberResize(meta)}
     >
       {/* The page is the other panel, so the handle between them is the only
-          thing that decides how much room each one gets. */}
-      <ResizablePanel id={CONTENT_PANEL_ID} className="min-w-0">
+          thing that decides how much room each one gets. It stands where the
+          page used to end in a gap, so the page keeps its own inset from it. */}
+      <ResizablePanel id={CONTENT_PANEL_ID} className="min-w-0 pr-4">
         {children}
       </ResizablePanel>
 
