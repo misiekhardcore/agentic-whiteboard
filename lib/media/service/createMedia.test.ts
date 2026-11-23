@@ -40,7 +40,6 @@ describe("storing a media object", () => {
     const created = await createMedia({
       storage: objects,
       uploadedByUserId: "user_1",
-      workspaceId: "ws_roadmap",
       contentType: "image/png",
       byteSize: body.byteLength,
       body,
@@ -54,7 +53,6 @@ describe("storing a media object", () => {
     expect(state.rows[0]).toMatchObject({
       id: created.id,
       uploadedByUserId: "user_1",
-      workspaceId: "ws_roadmap",
       mimeType: "image/png",
       byteSize: body.byteLength,
       storageKey: created.id,
@@ -69,7 +67,6 @@ describe("storing a media object", () => {
       createMedia({
         storage: objects,
         uploadedByUserId: "user_1",
-        workspaceId: null,
         contentType: "image/png",
         byteSize: body.byteLength,
         body,

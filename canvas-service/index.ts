@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+
 import { createCanvasAppClient } from "./app/canvasAppClient";
 import { resolveServiceConfig } from "./config/resolveServiceConfig";
 import { createCanvasService } from "./http/canvasService";

@@ -1,8 +1,6 @@
 import { createId } from "@paralleldrive/cuid2";
 import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
-import { workspaces } from "../workspace";
-
 /**
  * A stored file: an image on a canvas today, an attachment in a conversation or
  * a document later. The row is the file's identity and its access scope; the
@@ -21,8 +19,6 @@ export const media = pgTable(
 
     uploadedByUserId: text("uploadedByUserId").notNull(),
 
-    workspaceId: text("workspaceId").references(() => workspaces.id, { onDelete: "cascade" }),
-
     mimeType: text("mimeType").notNull(),
 
     byteSize: integer("byteSize").notNull(),
@@ -31,5 +27,5 @@ export const media = pgTable(
 
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).defaultNow().notNull(),
   },
-  (table) => [index("Media_workspaceId_idx").on(table.workspaceId)],
+  (table) => [index("Media_storageKey_idx").on(table.storageKey)],
 );

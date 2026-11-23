@@ -5,7 +5,7 @@ import { media } from "@/lib/db/schema";
 
 import type { MediaStorage } from "../storage";
 
-/**
+/**/
 /**
  * Stores one file: the object first, then the row that names it.
  *
@@ -17,14 +17,12 @@ import type { MediaStorage } from "../storage";
 export async function createMedia({
   storage,
   uploadedByUserId,
-  workspaceId,
   contentType,
   byteSize,
   body,
 }: {
   storage: MediaStorage;
   uploadedByUserId: string;
-  workspaceId: string | null;
   contentType: string;
   byteSize: number;
   body: ArrayBuffer;
@@ -37,7 +35,6 @@ export async function createMedia({
     await db.insert(media).values({
       id,
       uploadedByUserId,
-      workspaceId,
       mimeType: contentType,
       byteSize,
       storageKey: id,

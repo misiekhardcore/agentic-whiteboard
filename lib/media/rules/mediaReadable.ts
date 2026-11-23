@@ -10,10 +10,8 @@ export function mediaReadable({
   media,
   viewer,
 }: {
-  media: { uploadedByUserId: string; workspaceId: string | null };
+  media: { uploadedByUserId: string; workspaceId?: unknown };
   viewer: { userId: string; canReadWorkspace: boolean };
 }): boolean {
-  if (media.workspaceId) return viewer.canReadWorkspace;
-
   return media.uploadedByUserId === viewer.userId;
 }

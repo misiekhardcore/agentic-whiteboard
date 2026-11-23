@@ -3,7 +3,6 @@ import { resolveMediaConfig } from "@/lib/media/config";
 import { mediaReadable } from "@/lib/media/rules";
 import { findMediaById } from "@/lib/media/service";
 import { createSupabaseMediaStorage } from "@/lib/media/storage";
-import { getWorkspaceForUser } from "@/lib/workspace/access";
 
 /**
  * Serves a stored object to someone allowed to see it, through the app rather
@@ -29,15 +28,11 @@ export async function GET(
     return Response.json({ error: "That file could not be found." }, { status: 404 });
   }
 
-  const access = row.workspaceId
-    ? await getWorkspaceForUser(row.workspaceId, account.session.user.id)
-    : null;
-
   const readable = mediaReadable({
     media: row,
     viewer: {
       userId: account.session.user.id,
-      canReadWorkspace: access !== null,
+      canReadWorkspace: false,
     },
   });
   if (!readable) {

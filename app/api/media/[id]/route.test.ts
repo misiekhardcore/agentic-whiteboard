@@ -56,7 +56,6 @@ const config = {
 const imageRow = {
   id: "media_1",
   uploadedByUserId: "user_1",
-  workspaceId: "ws_roadmap",
   mimeType: "image/png",
   byteSize: 6,
   storageKey: "media_1",
@@ -87,7 +86,7 @@ describe("the media read route", () => {
     expect((await call("media_missing")).status).toBe(404);
   });
 
-  it("answers 404 for a workspace's media when the caller cannot read the workspace", async () => {
+  it("answers 404 for media that the caller cannot read", async () => {
     state.account = session;
     state.row = imageRow;
     state.config = config;
