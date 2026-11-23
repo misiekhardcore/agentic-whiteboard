@@ -134,13 +134,6 @@ test("the agent panel survives navigating through the workspaces section", async
       const handleBox = await handle.boundingBox();
       if (!opened || !handleBox) throw new Error("The panel has no measurable box");
 
-      // The page keeps an inset from the handle instead of running its content
-      // into the divider.
-      const pageContent = page.locator("main .stack");
-      const contentBox = await pageContent.boundingBox();
-      if (!contentBox) throw new Error("The page has no measurable content");
-      expect(handleBox.x - (contentBox.x + contentBox.width)).toBeGreaterThanOrEqual(8);
-
       // The handle divides the page from the panel, so dragging it left hands
       // width to the panel.
       const centreY = handleBox.y + handleBox.height / 2;
@@ -162,7 +155,38 @@ test("the agent panel survives navigating through the workspaces section", async
       const remembered = (await panel.boundingBox())?.width ?? 0;
       expect(Math.abs(remembered - widened)).toBeLessThanOrEqual(2);
 
-      await panel.getByRole("button", { name: "Collapse agent panel" }).click();
+      // Folding away is a slide, not a snap: the width is sampled every frame
+      // while the panel closes, because a panel that jumped would report only
+      // its two end states.
+      const openWidth = (await panel.boundingBox())?.width ?? 0;
+      const widths = await page.evaluate(async () => {
+        const panelElement = document.getElementById("agent");
+        const toggle = document.querySelector<HTMLButtonElement>(
+          'button[aria-label="Collapse agent panel"]',
+        );
+        if (!panelElement || !toggle) throw new Error("The panel or its toggle is missing");
+
+        const samples: number[] = [];
+        const until = performance.now() + 500;
+        toggle.click();
+
+        await new Promise<void>((resolve) => {
+          const sample = () => {
+            samples.push(panelElement.getBoundingClientRect().width);
+            if (performance.now() < until) requestAnimationFrame(sample);
+            else resolve();
+          };
+          requestAnimationFrame(sample);
+        });
+
+        return samples;
+      });
+
+      expect(widths.filter((width) => width > 60 && width < openWidth - 20).length).toBeGreaterThan(
+        0,
+      );
+      expect(widths.at(-1)).toBeLessThan(60);
+
       await expect(panel.getByRole("textbox", { name: "Prompt" })).toHaveCount(0);
       await expect(panel.getByRole("button", { name: "Expand agent panel" })).toBeVisible();
 

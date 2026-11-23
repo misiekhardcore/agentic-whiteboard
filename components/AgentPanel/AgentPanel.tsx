@@ -44,6 +44,8 @@ const OPENING_PREFERENCE: PanelPreference = {
 export function AgentPanel({ children }: { children: ReactNode }) {
   const agentPanel = usePanelRef();
   const [collapsed, setCollapsed] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [foldAnimates, setFoldAnimates] = useState(false);
   const preference = useRef<PanelPreference>(OPENING_PREFERENCE);
 
   // The device's choice is applied after mount: the server has no storage, and
@@ -53,12 +55,31 @@ export function AgentPanel({ children }: { children: ReactNode }) {
     if (!panel) return;
 
     const stored = readPanelPreference(window.localStorage.getItem(PANEL_PREFERENCE_KEY));
-    if (!stored) return;
+    if (stored) {
+      preference.current = stored;
+      panel.resize(stored.width);
+      if (stored.collapsed) panel.collapse();
+    }
 
-    preference.current = stored;
-    panel.resize(stored.width);
-    if (stored.collapsed) panel.collapse();
+    // A visit that opens on a remembered fold is applied before the slide is
+    // allowed, so the panel does not shut itself in front of the reader.
+    const frame = requestAnimationFrame(() => setFoldAnimates(true));
+    return () => cancelAnimationFrame(frame);
   }, [agentPanel]);
+
+  // A drag rewrites the panel's flex every frame; a transition there would make
+  // the panel trail the pointer.
+  useEffect(() => {
+    if (!dragging) return;
+
+    const release = () => setDragging(false);
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
+    return () => {
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+    };
+  }, [dragging]);
 
   function remember() {
     try {
@@ -104,17 +125,21 @@ export function AgentPanel({ children }: { children: ReactNode }) {
 
   return (
     <ResizablePanelGroup
-      className="min-h-0 flex-1"
+      className={cn("min-h-0 flex-1", foldAnimates && !dragging && "panel-fold")}
       onLayoutChanged={(_, meta) => rememberResize(meta)}
     >
       {/* The page is the other panel, so the handle between them is the only
           thing that decides how much room each one gets. It stands where the
           page used to end in a gap, so the page keeps its own inset from it. */}
-      <ResizablePanel id={CONTENT_PANEL_ID} className="min-w-0 pr-4">
+      <ResizablePanel id={CONTENT_PANEL_ID} className="min-w-0 p-4">
         {children}
       </ResizablePanel>
 
-      <ResizableHandle aria-label="Resize agent panel" withHandle />
+      <ResizableHandle
+        aria-label="Resize agent panel"
+        withHandle
+        onPointerDown={() => setDragging(true)}
+      />
 
       <ResizablePanel
         id={AGENT_PANEL_ID}
@@ -128,16 +153,14 @@ export function AgentPanel({ children }: { children: ReactNode }) {
         onResize={(size) => setCollapsed(size.inPixels <= COLLAPSED_PANEL_WIDTH)}
       >
         <section aria-label="Agent panel" className="flex h-full min-w-0 flex-col border-l">
-          <div
-            className={cn(
-              "flex items-center gap-2 py-1",
-              collapsed ? "justify-center px-1" : "justify-between pr-2 pl-4",
-            )}
-          >
+          {/* The control keeps its place at the right edge through the fold, so
+              it travels with the panel instead of jumping to the rail's centre
+              while the width is still changing. */}
+          <div className="flex items-center justify-end gap-2 py-1 pr-2">
             {collapsed ? (
               <span className="sr-only">Agent</span>
             ) : (
-              <h2 className="text-sm font-semibold">Agent</h2>
+              <h2 className="mr-auto pl-2 text-sm font-semibold">Agent</h2>
             )}
             <Button
               type="button"
