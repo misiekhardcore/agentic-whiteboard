@@ -117,6 +117,12 @@ jobs:
       BROADCAST_SINK_URL: http://127.0.0.1:3312
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+      # The canvas needs its own process, started below. The browser address is
+      # inlined at build time, so it is set here rather than on the run step.
+      NEXT_PUBLIC_CANVAS_SERVICE_URL: ws://127.0.0.1:4100
+      CANVAS_SERVICE_SECRET: e2e-canvas-service-secret-0123456789abcdef
+      CANVAS_SERVICE_PORT: "4100"
+      CANVAS_APP_INTERNAL_URL: http://localhost:3000
 
     steps:
       - uses: actions/checkout@v4.4.0
@@ -220,6 +226,21 @@ jobs:
           done
           echo "The app did not start:"
           cat /tmp/app.log
+          exit 1
+
+      # The canvas spec draws on a real board, which needs the room service the
+      # app only mints connection tokens for.
+      - name: Start the canvas service
+        run: |
+          pnpm canvas:dev > /tmp/canvas-service.log 2>&1 &
+          for _ in $(seq 1 30); do
+            if curl -sf -o /dev/null http://127.0.0.1:4100/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "The canvas service did not start:"
+          cat /tmp/canvas-service.log
           exit 1
 
       - name: Run the end-to-end tests
