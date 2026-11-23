@@ -1,13 +1,8 @@
-import { Suspense } from "react";
+import { type ComponentProps, Suspense } from "react";
 
 import { PromptComposer } from "@/components/Composer/PromptComposer";
 import { Loading } from "@/components/Loading/Loading";
-import {
-  listConversations,
-  loadConversationThread,
-  RECENT_CONVERSATION_LIMIT,
-  resolveActiveConversation,
-} from "@/lib/ai/thread/conversations";
+import { loadConversationSet } from "@/lib/ai/thread/conversations";
 import { getSessionAccount } from "@/lib/identity/account";
 import { readPersonalSettings } from "@/lib/identity/settings";
 
@@ -20,6 +15,28 @@ import { readPersonalSettings } from "@/lib/identity/settings";
  * The composer is keyed by the conversation: switching threads is a remount with
  * that thread's messages, not a prop change a live `useChat` would ignore.
  */
+/**
+ * The dashboard's own surface around the shared composer: the page hero and the
+ * centred column belong to the dashboard, not to the composer the panel mounts.
+ */
+function DashboardComposer(props: ComponentProps<typeof PromptComposer>) {
+  return (
+    <div className="topo-bg px-2 py-10 sm:py-14">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <h1 id="prompt-composer-title" className="page-title text-balance sm:text-display">
+            What are we planning today?
+          </h1>
+          <p className="text-lead text-pretty text-muted-foreground">
+            Describe it, and the agent drafts the doc and the canvas for you.
+          </p>
+        </div>
+        <PromptComposer {...props} />
+      </div>
+    </div>
+  );
+}
+
 export function ComposerSection({
   searchParams,
 }: {
@@ -43,7 +60,7 @@ async function ComposerSectionInner({
   const account = await getSessionAccount();
   if (!account) {
     return (
-      <PromptComposer
+      <DashboardComposer
         initialConversationId={crypto.randomUUID()}
         initialMessages={[]}
         initialCanRetry={false}
@@ -58,13 +75,10 @@ async function ComposerSectionInner({
   // The composer shows this person's threads in the account they are acting as;
   // switching accounts is a different owner and therefore a different set.
   const owner = { userId, organizationId: account.activeOrganizationId };
-  const conversationId = await resolveActiveConversation({
-    owner,
-    requested: requestedConversation,
-  });
-  const [thread, conversations, settings] = await Promise.all([
-    loadConversationThread({ owner, conversationId }),
-    listConversations(owner, RECENT_CONVERSATION_LIMIT),
+  // The panel reads this same set, so the dashboard and the workspaces section
+  // cannot drift into two answers for "which conversation is open".
+  const [conversationSet, settings] = await Promise.all([
+    loadConversationSet({ owner, requested: requestedConversation }),
     readPersonalSettings(userId),
   ]);
 
@@ -73,12 +87,12 @@ async function ComposerSectionInner({
   // the composer on every server refresh — remounting it and aborting the prompt
   // being sent. "latest" keeps that thread until the person picks another one.
   return (
-    <PromptComposer
+    <DashboardComposer
       key={requestedConversation ?? "latest"}
-      initialConversationId={conversationId}
-      initialMessages={thread.messages}
-      initialCanRetry={thread.canRetry}
-      initialConversations={conversations}
+      initialConversationId={conversationSet.conversationId}
+      initialMessages={conversationSet.messages}
+      initialCanRetry={conversationSet.canRetry}
+      initialConversations={conversationSet.conversations}
       initialReadAloud={settings.readAloud}
       initialReadAloudVoice={settings.readAloudVoice}
     />

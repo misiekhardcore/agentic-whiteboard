@@ -43,7 +43,7 @@ async function ArchivedSectionInner() {
         <CardTitle>Archived workspaces</CardTitle>
         <CardDescription>
           Restore a workspace to bring it back to the dashboard, or delete it permanently.{" "}
-          <Link href={routes.dashboardArchive} className="underline underline-offset-4">
+          <Link href={routes.workspacesArchive} className="underline underline-offset-4">
             View all archived
           </Link>
         </CardDescription>

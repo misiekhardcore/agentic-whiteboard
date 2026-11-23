@@ -34,7 +34,7 @@ export const instant = false;
  */
 export default async function ArchivePage() {
   const account = await getSessionAccount();
-  if (!account) redirect(signInPath(routes.dashboardArchive));
+  if (!account) redirect(signInPath(routes.workspacesArchive));
 
   const { activeTeam, session } = account;
   const accountName = activeTeam?.name ?? "Personal account";

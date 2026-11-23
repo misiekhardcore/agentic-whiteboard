@@ -162,6 +162,24 @@
   }
 }
 
+/* The resizable group writes `flex-grow` and `flex-basis` inline on every panel,
+   so a fold can only slide from outside the panel element. Dragging rewrites
+   those values each frame, which is why the agent panel drops this class while
+   the pointer holds the separator. */
+@utility panel-fold {
+  & > [data-panel] {
+    transition:
+      flex-grow 200ms ease-out,
+      flex-basis 200ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    & > [data-panel] {
+      transition: none;
+    }
+  }
+}
+
 @utility brand-gradient {
   @apply bg-linear-to-r from-(--brand-ai-from) to-(--brand-ai-to) bg-clip-text text-transparent;
 }

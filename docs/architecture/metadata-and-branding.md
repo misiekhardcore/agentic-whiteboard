@@ -31,13 +31,15 @@ letters because the image renderer does not reliably paint gradient text.
 - The landing page is the only indexable route and the only entry in the
   sitemap. It carries the canonical URL, Open Graph and Twitter metadata, and
   `SoftwareApplication` JSON-LD.
-- Signed-in pages (`/dashboard`, `/workspaces`, `/workspace/:id`), the auth
-  pages and `/invite/:id` export `robots: { index: false, follow: false }`.
-  Layouts carry it so a new page inherits the directive. They also set
+- Signed-in pages (everything in the `(app)` route group: `/dashboard` and
+  `/workspaces` with a workspace, its history and the archive), the auth pages
+  and `/invite/:id` export `robots: { index: false, follow: false }`. The group
+  layout carries it so a new signed-in page inherits the directive. It also sets
   `alternates.canonical` to `null`: inheriting the homepage canonical would tell
   a crawler the private page is a duplicate of the marketing page.
-- Only `/dashboard` names itself in the layout because it has no page metadata of
-  its own; every other route titles its page.
+- Every page titles its own tab; no layout names one. The dashboard sets its
+  title on the page because the group layout only provides the shell and the
+  directive.
 - `robots.txt` disallows the app and `/api/`, but deliberately allows the auth
   and invitation routes: a blocked URL cannot be read, so its `noindex` would
   never take effect and it could still be listed without a snippet.

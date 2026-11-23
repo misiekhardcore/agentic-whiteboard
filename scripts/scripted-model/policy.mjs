@@ -130,6 +130,20 @@ function titledReply(userText) {
   return `Scripted: ${source.slice(0, 40).trimEnd()}`;
 }
 
+/** The workspace the app's view context put in front of the model. */
+const VIEW_WORKSPACE = /looking at the workspace with id ([A-Za-z0-9_-]+)/;
+
+function viewedWorkspaceIdOf(messages) {
+  for (const message of messages) {
+    if (message.role !== "system") continue;
+
+    const found = VIEW_WORKSPACE.exec(textOf(message.content));
+    if (found) return found[1];
+  }
+
+  return null;
+}
+
 function isTitleRequest(messages) {
   return messages.some(
     (message) =>
@@ -149,6 +163,19 @@ export function chooseReply({ messages, offeredTools }) {
   }
 
   const userText = latestUserText(messages);
+
+  // Lets the e2e suite observe the page context the app sent, without the app
+  // having to record its own instructions anywhere.
+  if (/\bwhere am i\b/i.test(userText)) {
+    const viewedWorkspaceId = viewedWorkspaceIdOf(messages);
+    return {
+      kind: "text",
+      text: viewedWorkspaceId
+        ? `You are looking at workspace ${viewedWorkspaceId}.`
+        : "You are not looking at a workspace.",
+    };
+  }
+
   const offered = new Set(offeredTools ?? []);
   const run = currentRun(messages);
   const called = calledTools(run);

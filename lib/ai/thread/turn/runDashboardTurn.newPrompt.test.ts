@@ -60,6 +60,19 @@ describe("which turns the model is shown", () => {
     expect(mocks.stored[0]?.messageId).toBe("message_user");
   });
 
+  it("opens one prompt and streams one turn for one send", async () => {
+    mocks.history = [userMessage("message_user", "Plan the schema")];
+    const { openDashboardPrompt } = await import("../prompts");
+    vi.mocked(openDashboardPrompt).mockClear();
+
+    const response = await send(body([userMessage("message_user", "Plan the schema")]));
+
+    expect(response.status).toBe(200);
+    expect(vi.mocked(openDashboardPrompt)).toHaveBeenCalledTimes(1);
+    expect(mocks.stored).toHaveLength(1);
+    expect(mocks.streamed).toHaveLength(1);
+  });
+
   it("fails the turn when the history cannot be read back", async () => {
     const { loadPromptHistory } = await import("../conversations");
     vi.mocked(loadPromptHistory).mockRejectedValueOnce(new Error("database is down"));

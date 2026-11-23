@@ -16,9 +16,6 @@ export const routes = {
   resetPassword: "/reset-password",
 
   dashboard: "/dashboard",
-  /** The dashboard with one agent conversation open. */
-  dashboardConversation: (id: string) => `/dashboard?conversation=${encodeURIComponent(id)}`,
-  dashboardArchive: "/dashboard/archive",
   dashboardShared: "/dashboard/shared",
   dashboardOrganization: "/dashboard/organization",
   dashboardBilling: "/dashboard/billing",
@@ -26,16 +23,23 @@ export const routes = {
   dashboardAiHelper: "/dashboard/ai-helper",
 
   workspaces: "/workspaces",
+  /** Archived workspaces: the section's own archive, not a dashboard page. */
+  workspacesArchive: "/workspaces/archive",
   /** The workspace a person opens: `/workspaces/:id`. */
   workspace: (id: string) => `/workspaces/${encodeURIComponent(id)}`,
   /** One workspace's history: `/workspaces/:id/activity`. */
   workspaceActivity: (id: string) => `/workspaces/${encodeURIComponent(id)}/activity`,
+  /** The mounted surface at `pathname`, showing one conversation. */
+  conversationAt: (pathname: string, id: string) =>
+    `${pathname}?conversation=${encodeURIComponent(id)}`,
   /** An organization invitation: `/invite/:id`. */
   invite: (id: string) => `/invite/${encodeURIComponent(id)}`,
 
   agentPromptsApi: "/api/agent/prompts",
   /** The session's conversations, for the dashboard's history dialog. */
   agentConversationsApi: "/api/agent/conversations",
+  /** One conversation as a mounted composer reads it, named by `?conversation=`. */
+  agentConversationViewApi: "/api/agent/conversations/view",
   /** A short-lived Realtime token and the channels this session may join. */
   realtimeTokenApi: "/api/realtime/token",
 } as const;

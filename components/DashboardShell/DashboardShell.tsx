@@ -15,7 +15,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       <DashboardSidebar />
       {/* The shell owns the page's one main landmark; a page inside it is a
           section, so it must not render another. */}
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-4">{children}</main>
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">{children}</main>
     </SidebarProvider>
   );
 }
