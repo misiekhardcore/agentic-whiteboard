@@ -19,6 +19,7 @@ pnpm install
 cp .env.example .env      # then fill in the values below
 pnpm db:up                # Postgres, REST, Storage, Realtime and Studio
 pnpm db:migrate
+pnpm media:bucket         # the private bucket stored images live in
 pnpm dev                  # the app on :3000
 pnpm canvas:dev           # the canvas sync service on :4100, in a second terminal
 ```
@@ -71,6 +72,13 @@ client and the sync server. The canvas sync service (`pnpm canvas:dev`) holds on
 authoritative room per canvas and is the only writer of live state; the
 `canvas.content` snapshot is a projection of that room and `canvas.revision` is
 the optimistic check on each snapshot write.
+
+An image dropped on a board is stored as media: the bytes go to the stack's
+private Storage bucket and the document keeps only `/api/media/:id`, which the
+app serves after checking the workspace. Nothing is inlined into the snapshot,
+and the same row is what a document image or a conversation attachment will use
+([media-store](docs/architecture/media-store.md)). `pnpm media:bucket` creates
+the bucket once; without it an upload is refused and the board still works.
 
 A browser joins with a token minted per connection attempt from its session and
 the workspace access check. Read-only is decided by the room, so an archived

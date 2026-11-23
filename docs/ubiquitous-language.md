@@ -74,8 +74,15 @@ is a defect.
 | node            | A shape on a canvas that a diagram is built from.                                                                                                       | `lib/canvas`     |
 | edge            | A connection between two nodes on a canvas.                                                                                                             | `lib/canvas`     |
 | diagram         | Nodes and their edges read as one structure, rather than as shapes that happen to be near each other.                                                   | `lib/canvas`     |
-| diagram spec    | The declarative description of a diagram to draw: its nodes and edges, with no positions. The agent computes the layout from it.                        | `lib/canvas`     |
-| layout          | Where a diagram spec's nodes and edges are placed on the canvas. Pure, so the same spec always produces the same drawing.                               | `lib/canvas`     |
+| diagram spec    | The declarative description of a diagram to draw: its nodes and edges, with no positions. The agent computes the layout from it.                        | `lib/canvas`     |     | layout | Where a diagram spec's nodes and edges are placed on the canvas. Pure, so the same spec always produces the same drawing. | `lib/canvas` |
+
+## Media
+
+| Term             | Definition                                                                                                                                                         | Owner       |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
+| media            | A stored file: its row in Postgres plus its bytes in object storage. Attached to a workspace, which is what decides who may read it.                               | `lib/media` |
+| storage key      | The name a media object is stored under in the bucket. Never shown to a browser; a reader asks the app for the file by its media id instead.                       | `lib/media` |
+| media attachment | The relationship between a media row and the workspace it belongs to. An unattached file is its uploader's alone, which is the shape a conversation file will use. | `lib/media` |
 
 ## Billing and plans
 

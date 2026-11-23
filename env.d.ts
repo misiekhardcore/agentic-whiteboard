@@ -32,5 +32,7 @@ declare namespace NodeJS {
     CANVAS_APP_INTERNAL_URL?: string;
     /** tldraw's production licence; without one the editor carries a watermark. */
     NEXT_PUBLIC_TLDRAW_LICENSE_KEY?: string;
+    /** The Storage bucket stored media lives in; defaults to `media`. */
+    MEDIA_BUCKET?: string;
   }
 }

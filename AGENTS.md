@@ -137,6 +137,7 @@ Write the failing test before the production code, for every behaviour change.
 | `lib/workspace/`     | The reference context: status/contracts/forms, rules, access, queries, surfaces, recent, capabilities, actions. |
 | `lib/ai/`            | Providers, runtime (agent + instructions), thread (rules, store, allowance, turn, composer), tools adapter.     |
 | `lib/billing/`       | Plans, entitlements, usage rules (pure), subscriptions, checkout, Stripe adapter.                               |
+| `lib/media/`         | Stored files: upload rules, who may read a media row, the storage adapter, the create/read services.            |
 | `lib/shared/`        | Routes, form-data reading and date formatting — the only genuinely shared primitives.                           |
 | `components/`        | Shared client UI grouped by area; `components/ui` are shadcn-style primitives.                                  |
 | `lib/db/`            | Drizzle schema, connection, column helpers.                                                                     |

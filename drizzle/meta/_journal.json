@@ -134,6 +134,13 @@
       "when": 1795442736682,
       "tag": "0020_lucky_umar",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795460668943,
+      "tag": "0021_slimy_ikaris",
+      "breakpoints": true
     }
   ]
 }

@@ -107,6 +107,7 @@ lib/
                     capabilities and actions, tools
   collab/           Yjs/realtime contracts and topic names
   canvas/           canvas rules, connection tokens, snapshot contract, service client
+  media/            stored files: upload validation, access rule, object-store adapter, services
   notifications/    outbound email
   db/               pool, schema, migrations input
   shared/           routes, form-data, date formatting
@@ -150,6 +151,9 @@ lib/capabilities (kernel)        other contexts' published functions
 - The canvas service is a second process, not a folder in the app
   ([canvas-surface](canvas-surface.md)); the architecture test's boundary is the
   app side, `lib/canvas`.
+- Media objects outlive their rows only by accident: deleting a workspace
+  cascades its media rows, and sweeping the unreferenced objects in the bucket
+  is deferred ([media-store](media-store.md)).
 - An event bus or outbox. The first genuine cross-context side effect beyond a
   direct call gets its own record.
 - Per-workspace RBAC. `workspace/access.ts` is the one place it will narrow.

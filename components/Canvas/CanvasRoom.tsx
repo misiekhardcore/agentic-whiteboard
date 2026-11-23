@@ -1,11 +1,12 @@
 "use client";
 
 import { useSync } from "@tldraw/sync";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { inlineBase64AssetStore, Tldraw } from "tldraw";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Tldraw } from "tldraw";
 
 import "tldraw/tldraw.css";
 
+import { createCanvasAssetStore } from "./canvasAssetStore";
 import { CanvasNotice } from "./CanvasNotice";
 import { requestCanvasConnection } from "./requestCanvasConnection";
 
@@ -44,7 +45,11 @@ export function CanvasRoom({
     return requestCanvasConnection(workspaceId);
   }, [workspaceId]);
 
-  const store = useSync({ uri, assets: inlineBase64AssetStore });
+  // Images belong to the workspace, so they are stored through the app rather
+  // than inlined into the document the room relays.
+  const assets = useMemo(() => createCanvasAssetStore(workspaceId), [workspaceId]);
+
+  const store = useSync({ uri, assets });
 
   useEffect(() => {
     if (store.status !== "loading") return;

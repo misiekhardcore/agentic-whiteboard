@@ -1,10 +1,10 @@
 import { resolveCanvasConfig } from "@/lib/canvas/config";
 import { canvasConnectionUri } from "@/lib/canvas/room";
-import { canvasReadOnly } from "@/lib/canvas/rules";
 import { probeCanvasService } from "@/lib/canvas/service";
 import { mintCanvasToken } from "@/lib/canvas/tokens";
 import { getSessionAccount } from "@/lib/identity/account";
 import { getWorkspaceForUser, workspacePermission } from "@/lib/workspace/access";
+import { workspaceReadOnly } from "@/lib/workspace/rules";
 
 /**
  * The one connection attempt a browser is about to make. The workspace and the
@@ -37,7 +37,7 @@ export async function GET(
   }
 
   const permission = workspacePermission(access);
-  const readOnly = canvasReadOnly({
+  const readOnly = workspaceReadOnly({
     permission,
     archived: access.workspace.archivedAt !== null,
   });

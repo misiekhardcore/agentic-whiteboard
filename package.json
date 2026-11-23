@@ -20,6 +20,7 @@
     "brand:assets": "node scripts/generate-brand-assets.mjs",
     "test:e2e:realtime": "REALTIME_E2E=1 playwright test",
     "test:e2e:smtp": "node scripts/smtp-sink.mjs",
+    "media:bucket": "node scripts/create-media-bucket.mjs",
     "db:up": "docker compose -f supabase-project/docker-compose.yml up -d --wait",
     "db:down": "docker compose -f supabase-project/docker-compose.yml down",
     "db:mail": "docker compose -f supabase-project/docker-compose.yml --profile mail up -d --wait mail",
