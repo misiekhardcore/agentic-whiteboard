@@ -19,6 +19,12 @@ const scriptedModelPort = process.env.SCRIPTED_MODEL_PORT ?? "3311";
 const scriptedModelUrl = `http://127.0.0.1:${scriptedModelPort}`;
 const broadcastSinkPort = process.env.BROADCAST_SINK_PORT ?? "3312";
 const broadcastSinkUrl = `http://127.0.0.1:${broadcastSinkPort}`;
+// The canvas is a second process. The suite starts it with its own secret, so a
+// service left over from a developer's terminal never answers these specs.
+const canvasServicePort = process.env.CANVAS_SERVICE_PORT ?? "4100";
+const canvasServiceUrl = `ws://127.0.0.1:${canvasServicePort}`;
+const canvasServiceSecret =
+  process.env.CANVAS_SERVICE_SECRET ?? "e2e-canvas-service-secret-0123456789abcdef";
 
 // The main suite records what the app publishes in a sink, so it can assert the
 // publication without a stack. `REALTIME_E2E=1` runs the other half instead: the
@@ -82,6 +88,24 @@ export default defineConfig({
                 timeout: 30_000,
               },
             ]),
+        ...(realtime
+          ? []
+          : [
+              {
+                // One authoritative room per canvas, in its own process: the
+                // canvas cannot open without it, and a spec proving the
+                // drawing survives needs the real sync path.
+                command: "pnpm canvas:dev",
+                env: {
+                  CANVAS_SERVICE_PORT: canvasServicePort,
+                  CANVAS_SERVICE_SECRET: canvasServiceSecret,
+                  CANVAS_APP_INTERNAL_URL: baseURL,
+                },
+                url: `http://127.0.0.1:${canvasServicePort}/health`,
+                reuseExistingServer: false,
+                timeout: 60_000,
+              },
+            ]),
         {
           // The app has one provider path: HTTP chat completions. The suite
           // points it at a scripted endpoint instead of shipping a fake model.
@@ -128,6 +152,14 @@ export default defineConfig({
             // enough because the scripted endpoint never leaves the machine.
             AI_TOOL_APPROVAL_SECRET:
               process.env.AI_TOOL_APPROVAL_SECRET ?? "e2e-tool-approval-secret-0123456789abcdef",
+            // The canvas service the app mints connection tokens for, and the
+            // secret that service authenticates with.
+            ...(realtime
+              ? {}
+              : {
+                  NEXT_PUBLIC_CANVAS_SERVICE_URL: canvasServiceUrl,
+                  CANVAS_SERVICE_SECRET: canvasServiceSecret,
+                }),
           },
           url: baseURL,
           // Never reuse: a server someone already has open runs whatever

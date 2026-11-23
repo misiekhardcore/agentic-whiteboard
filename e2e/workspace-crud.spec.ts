@@ -179,11 +179,12 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
     await test.step("the workspace route opens only for someone with access", async () => {
       if (!workspaceId) throw new Error("The workspace id is missing");
 
-      await page.getByRole("link", { name: workspaceName }).click();
+      await page.getByRole("link", { name: workspaceName }).first().click();
       await page.waitForURL(`**${routes.workspace(workspaceId)}`);
 
       await expect(page.getByRole("heading", { name: workspaceName })).toBeVisible();
-      await expect(page.getByText("The workspace editor is on its way")).toBeVisible();
+      // The workspace opens on its canvas, which is created with the workspace.
+      await expect(page.getByTestId("workspace-canvas")).toBeVisible();
       // The shell around it is the page's main landmark; nesting another fails
       // the landmark audit.
       await expect(page.getByRole("main")).toHaveCount(1);
@@ -206,7 +207,13 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
     await test.step("renaming and restaging the workspace persists", async () => {
       await page.goto("/dashboard");
 
-      const card = page.getByRole("listitem").filter({ hasText: workspaceName }).first();
+      // A workspace's canvas is listed beside it once the room has stored the
+      // board, and both cards link to the same page; only a workspace card has
+      // the actions menu.
+      const card = page
+        .getByRole("listitem")
+        .filter({ hasText: workspaceName })
+        .filter({ has: page.getByRole("button", { name: /^Actions for / }) });
       await chooseCardAction(page, card, "Edit");
 
       const dialog = page.getByRole("dialog");
@@ -288,7 +295,10 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
     });
 
     await test.step("archiving hides the workspace and frees its plan slot", async () => {
-      const card = page.getByRole("listitem").filter({ hasText: renamedWorkspace }).first();
+      const card = page
+        .getByRole("listitem")
+        .filter({ hasText: renamedWorkspace })
+        .filter({ has: page.getByRole("button", { name: /^Actions for / }) });
       await chooseCardAction(page, card, "Archive");
 
       const dialog = page.getByRole("alertdialog");
@@ -305,7 +315,10 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       await page.goto("/workspaces/archive");
       await expect(page.getByRole("heading", { name: "Archived workspaces" })).toBeVisible();
 
-      const archived = page.getByRole("listitem").filter({ hasText: renamedWorkspace }).first();
+      const archived = page
+        .getByRole("listitem")
+        .filter({ hasText: renamedWorkspace })
+        .filter({ has: page.getByRole("button", { name: /^Actions for / }) });
       await chooseCardAction(page, archived, "Restore");
 
       await expect(page.getByText("Nothing archived in Personal account")).toBeVisible();
@@ -320,11 +333,9 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
     await test.step("the dashboard lists workspaces, docs and canvases together", async () => {
       if (!workspaceId) throw new Error("The workspace id is missing");
 
+      // The canvas already exists: it is created with its workspace. Only the
+      // document needs seeding for the list to hold both surfaces.
       await db.query('insert into doc (id, "workspaceId") values ($1, $2)', [
-        randomUUID(),
-        workspaceId,
-      ]);
-      await db.query('insert into canvas (id, "workspaceId") values ($1, $2)', [
         randomUUID(),
         workspaceId,
       ]);
@@ -363,7 +374,10 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
       // The dashboard's latest list is capped and now holds this workspace's
       // doc and canvas, so the workspace card is managed from /workspaces.
       await page.goto("/workspaces");
-      const card = page.getByRole("listitem").filter({ hasText: renamedWorkspace }).first();
+      const card = page
+        .getByRole("listitem")
+        .filter({ hasText: renamedWorkspace })
+        .filter({ has: page.getByRole("button", { name: /^Actions for / }) });
       await chooseCardAction(page, card, "Archive");
       await page
         .getByRole("alertdialog")
@@ -436,7 +450,9 @@ test("a workspace is archived, restored and deleted from its own page", async ({
     const creatorId = userId;
     await createWorkspace(page, { name: workspaceName });
 
-    await page.getByRole("link", { name: workspaceName }).click();
+    // The workspace card and, once its board has been stored, its canvas card
+    // both lead here; either is the workspace.
+    await page.getByRole("link", { name: workspaceName }).first().click();
     await page.waitForURL("**/workspaces/**");
 
     await test.step("archiving from the workspace page shows the archived state", async () => {
@@ -470,7 +486,7 @@ test("a workspace is archived, restored and deleted from its own page", async ({
     });
 
     await test.step("deleting the archived workspace removes it for good", async () => {
-      await page.getByRole("link", { name: workspaceName }).click();
+      await page.getByRole("link", { name: workspaceName }).first().click();
       await page.waitForURL("**/workspaces/**");
 
       await openDialog(

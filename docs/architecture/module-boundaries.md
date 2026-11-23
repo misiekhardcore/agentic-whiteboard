@@ -106,6 +106,7 @@ lib/
                     allowance, orphans, live, conversations, branches, turn),
                     capabilities and actions, tools
   collab/           Yjs/realtime contracts and topic names
+  canvas/           canvas rules, connection tokens, snapshot contract, service client
   notifications/    outbound email
   db/               pool, schema, migrations input
   shared/           routes, form-data, date formatting
@@ -142,10 +143,13 @@ lib/capabilities (kernel)        other contexts' published functions
 
 ## Deferred
 
-- The content surfaces' mutation family. The workspace context reads their
-  tables ([content-surfaces](content-surfaces.md)); their `create`/`update`/
-  `delete` capabilities land with the editor and the Hocuspocus gateway
+- The document's mutation family. The workspace context reads the content
+  surfaces' tables ([content-surfaces](content-surfaces.md)); `create`/`update`/
+  `delete` land with the document editor and the Hocuspocus gateway
   ([ai-collaboration](ai-collaboration.md)).
+- The canvas service is a second process, not a folder in the app
+  ([canvas-surface](canvas-surface.md)); the architecture test's boundary is the
+  app side, `lib/canvas`.
 - An event bus or outbox. The first genuine cross-context side effect beyond a
   direct call gets its own record.
 - Per-workspace RBAC. `workspace/access.ts` is the one place it will narrow.

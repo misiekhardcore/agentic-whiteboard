@@ -1,0 +1,1 @@
+export { canvasReadOnly } from "./canvasReadOnly";

@@ -19,8 +19,13 @@ pnpm install
 cp .env.example .env      # then fill in the values below
 pnpm db:up                # Postgres, REST, Storage, Realtime and Studio
 pnpm db:migrate
-pnpm dev
+pnpm dev                  # the app on :3000
+pnpm canvas:dev           # the canvas sync service on :4100, in a second terminal
 ```
+
+Running the app needs two processes: the Next server and the canvas sync
+service. Without the service the workspace page says the canvas is unavailable
+and everything else keeps working; it is not a broken app.
 
 Set `NEXT_PUBLIC_SITE_URL` to the origin the deployment answers on. It drives
 `metadataBase`, canonical URLs, `robots.txt` and the sitemap; without it those
@@ -57,6 +62,23 @@ first prompt stays.
 `pnpm test:e2e` starts `scripts/scripted-model/server.mjs`, a scripted
 OpenAI-compatible endpoint, so the suite runs offline through the same HTTP
 contract.
+
+## Canvas
+
+Every workspace has a canvas, and it is where the workspace page opens. The
+board is tldraw v5, pinned to one exact version across the browser, the sync
+client and the sync server. The canvas sync service (`pnpm canvas:dev`) holds one
+authoritative room per canvas and is the only writer of live state; the
+`canvas.content` snapshot is a projection of that room and `canvas.revision` is
+the optimistic check on each snapshot write.
+
+A browser joins with a token minted per connection attempt from its session and
+the workspace access check. Read-only is decided by the room, so an archived
+workspace's canvas cannot be written even by a patched client. `pnpm test:e2e`
+starts the service itself. A production deployment needs a tldraw licence key in
+`NEXT_PUBLIC_TLDRAW_LICENSE_KEY`; without one the editor is watermarked. The
+decision is recorded in
+[docs/architecture/canvas-surface.md](docs/architecture/canvas-surface.md).
 
 ## Live updates
 
