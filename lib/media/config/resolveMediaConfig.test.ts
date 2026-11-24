@@ -23,7 +23,7 @@ describe("the media store's configuration", () => {
         SUPABASE_SERVICE_ROLE_KEY: " secret ",
       }),
     ).toEqual({
-      supabaseUrl: "http://localhost:8000",
+      storageUrl: "http://localhost:8000",
       serviceRoleKey: "secret",
       bucket: "media",
     });

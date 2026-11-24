@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canvasSnapshotSchema } from "./canvasSnapshotSchema";
+import { canvasSnapshotSchema } from "./canvasSnapshot";
 
 describe("a canvas snapshot", () => {
   it("accepts a room snapshot with its records and clocks", () => {

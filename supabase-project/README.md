@@ -17,6 +17,7 @@ storage, a dashboard, and Realtime for its change events.
 | `imgproxy` | `supabase-imgproxy`  | internal                  |
 | `meta`     | `supabase-meta`      | internal                  |
 | `studio`   | `supabase-studio`    | internal                  |
+| `canvas`   | `workspaice-canvas`  | `127.0.0.1:4100`          |
 | `mail`     | `supabase-mail`      | `127.0.0.1:2500` (SMTP) / `:9002` (UI), optional profile |
 
 ## Usage
@@ -27,6 +28,13 @@ docker compose down                  # or: npm run db:down
 docker compose logs -f storage
 docker compose --profile mail up -d  # Inbucket SMTP catcher
 ```
+
+The `canvas` service is the app's tldraw sync service. It runs from the
+repository checkout (it imports the app's canvas modules), so `pnpm install` must
+have run first, and it reads `.env`/`.env.local` from the repository root for the
+shared `CANVAS_SERVICE_SECRET`. The app itself stays on the host with `pnpm dev`;
+the container reaches it at `host.docker.internal:3000`. `pnpm canvas:dev` runs
+the same service without compose.
 
 All configuration is in `.env` in this directory. Existing database files live
 in `volumes/db/data`; storage objects live in the `supabase_storage-data`

@@ -5,24 +5,23 @@ import { media } from "@/lib/db/schema";
 
 import type { MediaStorage } from "../storage";
 
-/**/
 /**
- * Stores one file: the object first, then the row that names it.
- *
- * The order matters, because the row is what a reader trusts. An object without
- * a row is unreachable garbage; a row without an object would be a file that
- * exists and cannot be read. When the row cannot be written the object is
- * removed again, so a failed upload leaves nothing behind.
+ * Stores one file: the object first, then the row that names it, because a row
+ * without an object cannot be read while an object without a row is unreachable
+ * garbage that the failed insert removes again. `organizationId` is the file's
+ * whole scope; null means a personal file, readable by its uploader alone.
  */
 export async function createMedia({
   storage,
   uploadedByUserId,
+  organizationId,
   contentType,
   byteSize,
   body,
 }: {
   storage: MediaStorage;
   uploadedByUserId: string;
+  organizationId: string | null;
   contentType: string;
   byteSize: number;
   body: ArrayBuffer;
@@ -35,6 +34,7 @@ export async function createMedia({
     await db.insert(media).values({
       id,
       uploadedByUserId,
+      orgId: organizationId,
       mimeType: contentType,
       byteSize,
       storageKey: id,

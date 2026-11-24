@@ -1,21 +1,15 @@
-import { z } from "zod";
-
-import { type CanvasSnapshot, canvasSnapshotSchema } from "@/lib/canvas/contracts";
-
-const loadResponseSchema = z.object({
-  revision: z.number().int().min(0),
-  snapshot: canvasSnapshotSchema.nullable(),
-});
-
-const writeResponseSchema = z.object({ revision: z.number().int().min(0) });
-const refusedResponseSchema = z.object({ currentRevision: z.number().int().min(0) });
+import {
+  type CanvasSnapshotLoad,
+  canvasSnapshotLoadSchema,
+  canvasSnapshotRefusedSchema,
+  canvasSnapshotSavedSchema,
+  type CanvasSnapshotWrite,
+  type CanvasSnapshotWriteResult,
+} from "@/lib/canvas/contracts";
 
 export type CanvasAppClient = {
-  load(workspaceId: string): Promise<{ revision: number; snapshot: CanvasSnapshot | null }>;
-  save(
-    workspaceId: string,
-    input: { revision: number; snapshot: CanvasSnapshot },
-  ): Promise<{ ok: true; revision: number } | { ok: false; currentRevision: number | null }>;
+  load(workspaceId: string): Promise<CanvasSnapshotLoad>;
+  save(workspaceId: string, input: CanvasSnapshotWrite): Promise<CanvasSnapshotWriteResult>;
 };
 
 /**
@@ -47,7 +41,7 @@ export function createCanvasAppClient({
         throw new Error(`canvas snapshot load failed with status ${response.status}`);
       }
 
-      return loadResponseSchema.parse(await response.json());
+      return canvasSnapshotLoadSchema.parse(await response.json());
     },
 
     async save(workspaceId, input) {
@@ -58,7 +52,7 @@ export function createCanvasAppClient({
       });
 
       if (response.status === 409) {
-        const refused = refusedResponseSchema.parse(await response.json());
+        const refused = canvasSnapshotRefusedSchema.parse(await response.json());
 
         return { ok: false, currentRevision: refused.currentRevision };
       }
@@ -67,7 +61,7 @@ export function createCanvasAppClient({
         throw new Error(`canvas snapshot write failed with status ${response.status}`);
       }
 
-      return { ok: true, ...writeResponseSchema.parse(await response.json()) };
+      return { ok: true, ...canvasSnapshotSavedSchema.parse(await response.json()) };
     },
   };
 }

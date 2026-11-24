@@ -141,6 +141,13 @@
       "when": 1795460668943,
       "tag": "0021_slimy_ikaris",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1795517732082,
+      "tag": "0022_aberrant_the_santerians",
+      "breakpoints": true
     }
   ]
 }

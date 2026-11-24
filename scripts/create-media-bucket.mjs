@@ -11,18 +11,20 @@ import { config as loadEnv } from "dotenv";
 loadEnv({ path: ".env.local", quiet: true });
 loadEnv({ quiet: true });
 
-const supabaseUrl = process.env.SUPABASE_URL?.trim().replace(/\/+$/, "");
+const storageUrl = (
+  process.env.MEDIA_STORAGE_URL?.trim() || process.env.SUPABASE_URL?.trim()
+)?.replace(/\/+$/, "");
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 const bucket = process.env.MEDIA_BUCKET?.trim() || "media";
 
-if (!supabaseUrl || !serviceRoleKey) {
+if (!storageUrl || !serviceRoleKey) {
   console.error(
-    "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set before the media bucket can be created.",
+    "MEDIA_STORAGE_URL (or SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY must be set before the media bucket can be created.",
   );
   process.exit(1);
 }
 
-const response = await fetch(`${supabaseUrl}/storage/v1/bucket`, {
+const response = await fetch(`${storageUrl}/storage/v1/bucket`, {
   method: "POST",
   headers: {
     authorization: `Bearer ${serviceRoleKey}`,

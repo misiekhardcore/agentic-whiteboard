@@ -932,12 +932,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "workspaceId": {
-          "name": "workspaceId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "mimeType": {
           "name": "mimeType",
           "type": "text",
@@ -965,11 +959,11 @@
         }
       },
       "indexes": {
-        "Media_workspaceId_idx": {
-          "name": "Media_workspaceId_idx",
+        "Media_storageKey_idx": {
+          "name": "Media_storageKey_idx",
           "columns": [
             {
-              "expression": "workspaceId",
+              "expression": "storageKey",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -981,21 +975,7 @@
           "with": {}
         }
       },
-      "foreignKeys": {
-        "media_workspaceId_workspace_id_fk": {
-          "name": "media_workspaceId_workspace_id_fk",
-          "tableFrom": "media",
-          "tableTo": "workspace",
-          "columnsFrom": [
-            "workspaceId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "media_storageKey_unique": {

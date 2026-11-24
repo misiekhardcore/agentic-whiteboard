@@ -9,13 +9,13 @@ import type { MediaStorage, StoredMediaObject } from "./types";
  * object through the app's own route instead.
  */
 export function createSupabaseMediaStorage({
-  supabaseUrl,
+  storageUrl,
   serviceRoleKey,
   bucket,
   fetch = globalThis.fetch,
 }: MediaConfig & { fetch?: typeof globalThis.fetch }): MediaStorage {
   const objectUrl = (key: string) =>
-    `${supabaseUrl}/storage/v1/object/${encodeURIComponent(bucket)}/${encodeURIComponent(key)}`;
+    `${storageUrl}/storage/v1/object/${encodeURIComponent(bucket)}/${encodeURIComponent(key)}`;
 
   const headers = {
     authorization: `Bearer ${serviceRoleKey}`,

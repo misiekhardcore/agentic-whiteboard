@@ -27,17 +27,15 @@ describe("the canvas asset store", () => {
     vi.stubGlobal("fetch", fetch);
 
     const file = new File([new Uint8Array([1, 2, 3])], "shot.png", { type: "image/png" });
-    const stored = await createCanvasAssetStore(workspaceId).upload(
-      image(),
-      file,
-      new AbortController().signal,
-    );
+    const signal = new AbortController().signal;
+    const stored = await createCanvasAssetStore(workspaceId).upload(image(), file, signal);
 
     expect(stored).toEqual({ src: "/api/media/media_1" });
 
     const [url, init] = fetch.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/media");
     expect(init.method).toBe("POST");
+    expect(init.signal).toBe(signal);
     const sent = init.body as FormData;
     expect(sent.get("workspaceId")).toBe(workspaceId);
     expect((sent.get("file") as File).name).toBe("shot.png");

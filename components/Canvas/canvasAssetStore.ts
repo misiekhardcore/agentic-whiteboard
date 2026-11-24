@@ -1,13 +1,10 @@
 import type { TLAssetStore } from "tldraw";
 
 /**
- * Where a board's images live: the app's media route, scoped to the workspace
- * that owns the board. The bytes go to object storage and the document keeps
- * only the address, so a canvas snapshot stays a description of the drawing
- * rather than a container for its files.
- *
- * The read path is the same route: access is decided per request, so an
- * archived or revoked workspace's images stop being served.
+ * Where a board's images live: the app's media route, uploaded on behalf of the
+ * board's workspace, which names the account that will scope the file. The
+ * document keeps only the address, so a snapshot stays a description of the
+ * drawing, and each read is authorized again.
  */
 /** The engine treats both hooks as optional; this store always supplies them. */
 export type CanvasAssetStore = TLAssetStore & {
@@ -17,12 +14,12 @@ export type CanvasAssetStore = TLAssetStore & {
 
 export function createCanvasAssetStore(workspaceId: string): CanvasAssetStore {
   return {
-    async upload(_asset, file) {
+    async upload(_asset, file, signal) {
       const form = new FormData();
       form.set("workspaceId", workspaceId);
       form.set("file", file);
 
-      const response = await fetch("/api/media", { method: "POST", body: form });
+      const response = await fetch("/api/media", { method: "POST", body: form, signal });
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
         throw new Error(

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   rows: [] as Record<string, unknown>[],
@@ -33,6 +33,10 @@ function storage() {
   };
 }
 
+beforeEach(() => {
+  state.rows = [];
+});
+
 describe("storing a media object", () => {
   it("writes the object first, then the row that names it", async () => {
     const objects = storage();
@@ -40,6 +44,7 @@ describe("storing a media object", () => {
     const created = await createMedia({
       storage: objects,
       uploadedByUserId: "user_1",
+      organizationId: "org_acme",
       contentType: "image/png",
       byteSize: body.byteLength,
       body,
@@ -53,10 +58,24 @@ describe("storing a media object", () => {
     expect(state.rows[0]).toMatchObject({
       id: created.id,
       uploadedByUserId: "user_1",
+      orgId: "org_acme",
       mimeType: "image/png",
       byteSize: body.byteLength,
       storageKey: created.id,
     });
+  });
+
+  it("records a personal file with no account", async () => {
+    await createMedia({
+      storage: storage(),
+      uploadedByUserId: "user_1",
+      organizationId: null,
+      contentType: "image/png",
+      byteSize: body.byteLength,
+      body,
+    });
+
+    expect(state.rows[0]).toMatchObject({ orgId: null });
   });
 
   it("removes the object it just wrote when the row cannot be stored", async () => {
@@ -67,6 +86,7 @@ describe("storing a media object", () => {
       createMedia({
         storage: objects,
         uploadedByUserId: "user_1",
+        organizationId: null,
         contentType: "image/png",
         byteSize: body.byteLength,
         body,

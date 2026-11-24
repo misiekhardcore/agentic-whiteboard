@@ -78,11 +78,11 @@ is a defect.
 
 ## Media
 
-| Term             | Definition                                                                                                                                                         | Owner       |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
-| media            | A stored file: its row in Postgres plus its bytes in object storage. Attached to a workspace, which is what decides who may read it.                               | `lib/media` |
-| storage key      | The name a media object is stored under in the bucket. Never shown to a browser; a reader asks the app for the file by its media id instead.                       | `lib/media` |
-| media attachment | The relationship between a media row and the workspace it belongs to. An unattached file is its uploader's alone, which is the shape a conversation file will use. | `lib/media` |
+| Term          | Definition                                                                                                                                                                               | Owner       |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| media         | A stored file: its row in Postgres plus its bytes in object storage. Scoped to the account it was uploaded into, which is what decides who may read it; only its uploader may delete it. | `lib/media` |
+| media account | The organization a media row belongs to, taken from the board the file was uploaded from. A null account is the uploader's own file.                                                     | `lib/media` |
+| storage key   | The name a media object is stored under in the bucket. Never shown to a browser; a reader asks the app for the file by its media id instead.                                             | `lib/media` |
 
 ## Billing and plans
 

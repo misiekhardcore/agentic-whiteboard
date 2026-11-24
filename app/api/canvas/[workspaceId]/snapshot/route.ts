@@ -1,5 +1,10 @@
 import { resolveCanvasConfig } from "@/lib/canvas/config";
-import { canvasSnapshotWriteSchema } from "@/lib/canvas/contracts";
+import {
+  type CanvasSnapshotLoad,
+  type CanvasSnapshotRefused,
+  type CanvasSnapshotSaved,
+  canvasSnapshotWriteSchema,
+} from "@/lib/canvas/contracts";
 import { authorizeCanvasServiceRequest } from "@/lib/canvas/service";
 import { readCanvasSnapshot, saveCanvasSnapshot } from "@/lib/workspace/surfaces";
 
@@ -23,7 +28,9 @@ export async function GET(
     return Response.json({ error: "That workspace has no canvas." }, { status: 404 });
   }
 
-  return Response.json(stored, { headers: { "cache-control": "no-store" } });
+  const body: CanvasSnapshotLoad = stored;
+
+  return Response.json(body, { headers: { "cache-control": "no-store" } });
 }
 
 export async function PUT(
@@ -35,8 +42,8 @@ export async function PUT(
   const unauthorized = authorizeService(request);
   if (unauthorized) return unauthorized;
 
-  const body: unknown = await request.json().catch(() => null);
-  const parsed = canvasSnapshotWriteSchema.safeParse(body);
+  const payload: unknown = await request.json().catch(() => null);
+  const parsed = canvasSnapshotWriteSchema.safeParse(payload);
   if (!parsed.success) {
     return Response.json({ error: "That is not a canvas snapshot." }, { status: 400 });
   }
@@ -48,20 +55,18 @@ export async function PUT(
   });
 
   if (result.ok) {
-    return Response.json(
-      { revision: result.revision },
-      { headers: { "cache-control": "no-store" } },
-    );
+    const saved: CanvasSnapshotSaved = { revision: result.revision };
+
+    return Response.json(saved, { headers: { "cache-control": "no-store" } });
   }
 
   if (result.currentRevision === null) {
     return Response.json({ error: "That workspace has no canvas." }, { status: 404 });
   }
 
-  return Response.json(
-    { currentRevision: result.currentRevision },
-    { status: 409, headers: { "cache-control": "no-store" } },
-  );
+  const refused: CanvasSnapshotRefused = { currentRevision: result.currentRevision };
+
+  return Response.json(refused, { status: 409, headers: { "cache-control": "no-store" } });
 }
 
 /** The refusal for a caller other than the canvas service, or `null` to continue. */

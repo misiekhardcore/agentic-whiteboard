@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createSupabaseMediaStorage } from "./supabaseMediaStorage";
 
 const config = {
-  supabaseUrl: "http://localhost:8000",
+  storageUrl: "http://localhost:8000",
   serviceRoleKey: "service-role",
   bucket: "media",
 };

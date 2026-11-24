@@ -160,7 +160,8 @@ pnpm tsc                # Typecheck without emitting
 pnpm test               # Vitest unit suite
 pnpm test:ai            # Live model check (needs AI_LIVE=1 + a reachable provider)
 pnpm build              # Production build
-pnpm db:up              # Local Supabase/Postgres + migrations prerequisites
+pnpm db:up              # Local Supabase stack + the canvas sync service
+pnpm canvas:dev         # The canvas sync service alone, without Docker
 pnpm db:generate        # Generate a Drizzle migration after schema changes
 pnpm db:migrate         # Apply migrations
 pnpm test:e2e           # Playwright on :3100 with the scripted provider; needs a DB, and `pnpm dev` stopped

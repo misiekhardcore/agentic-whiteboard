@@ -1,5 +1,8 @@
 import dotenv from "dotenv";
-dotenv.config({ path: ".env.local" });
+// Next reads both files; the service does too, so `pnpm canvas:dev` works from
+// a checkout configured with either one. Values already in the environment
+// (docker compose, Playwright) win.
+dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
 import { createCanvasAppClient } from "./app/canvasAppClient";
 import { resolveServiceConfig } from "./config/resolveServiceConfig";

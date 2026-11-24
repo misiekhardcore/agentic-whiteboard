@@ -1,17 +1,17 @@
 /**
- * Whether this person may read a stored object.
- *
- * A file attached to a workspace is part of that workspace, so the workspace's
- * own access check decides - including for the person who uploaded it, who
- * loses the file when they lose the workspace. A file attached to nothing yet
- * (a later conversation attachment) is only its uploader's.
+ * Whether this person may read a stored file. Its uploader may always read it,
+ * so a personal file stays theirs even after they switch accounts. Otherwise
+ * the file follows its account: every member of the organization it was
+ * uploaded into can open it, on any board that references it.
  */
 export function mediaReadable({
   media,
   viewer,
 }: {
-  media: { uploadedByUserId: string; workspaceId?: unknown };
-  viewer: { userId: string; canReadWorkspace: boolean };
+  media: { uploadedByUserId: string; orgId: string | null };
+  viewer: { userId: string; organizationIds: readonly string[] };
 }): boolean {
-  return media.uploadedByUserId === viewer.userId;
+  if (media.uploadedByUserId === viewer.userId) return true;
+
+  return media.orgId !== null && viewer.organizationIds.includes(media.orgId);
 }

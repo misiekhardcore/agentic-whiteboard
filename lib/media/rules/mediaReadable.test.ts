@@ -2,52 +2,34 @@ import { describe, expect, it } from "vitest";
 
 import { mediaReadable } from "./mediaReadable";
 
-const owner = { uploadedByUserId: "user_owner" };
-const unattached = { uploadedByUserId: "user_owner" };
+const personal = { uploadedByUserId: "user_owner", orgId: null };
+const shared = { uploadedByUserId: "user_owner", orgId: "org_acme" };
 
-describe("who may read a media object", () => {
-  it("only the uploader may read their own file", () => {
-    // Since workspaceId is removed, the rule always checks uploader identity
-    expect(
-      mediaReadable({
-        media: owner,
-        viewer: { userId: "user_member", canReadWorkspace: true },
-      }),
-    ).toBe(false);
-  });
+const acmeMember = { userId: "user_member", organizationIds: ["org_acme"] };
+const outsider = { userId: "user_other", organizationIds: ["org_other"] };
 
-  it("refuses a non-owner trying to read", () => {
+describe("who may read a stored file", () => {
+  it("always lets the uploader read their own file", () => {
     expect(
-      mediaReadable({
-        media: owner,
-        viewer: { userId: "user_member", canReadWorkspace: false },
-      }),
-    ).toBe(false);
-  });
-
-  it("refuses the uploader once they can no longer read the workspace", () => {
-    // Since workspaceId is removed, the rule always checks uploader identity
-    // The uploader can always read their own file regardless of workspace access
-    expect(
-      mediaReadable({
-        media: owner,
-        viewer: { userId: "user_owner", canReadWorkspace: false },
-      }),
+      mediaReadable({ media: personal, viewer: { userId: "user_owner", organizationIds: [] } }),
     ).toBe(true);
   });
 
-  it("keeps an unattached file to whoever uploaded it", () => {
+  it("keeps a personal file to its uploader", () => {
+    expect(mediaReadable({ media: personal, viewer: acmeMember })).toBe(false);
+  });
+
+  it("lets a member of the file's account read it", () => {
+    expect(mediaReadable({ media: shared, viewer: acmeMember })).toBe(true);
+  });
+
+  it("refuses someone outside the file's account", () => {
+    expect(mediaReadable({ media: shared, viewer: outsider })).toBe(false);
+  });
+
+  it("keeps the uploader's own access after they leave the account", () => {
     expect(
-      mediaReadable({
-        media: unattached,
-        viewer: { userId: "user_owner", canReadWorkspace: false },
-      }),
+      mediaReadable({ media: shared, viewer: { userId: "user_owner", organizationIds: [] } }),
     ).toBe(true);
-    expect(
-      mediaReadable({
-        media: unattached,
-        viewer: { userId: "user_other", canReadWorkspace: true },
-      }),
-    ).toBe(false);
   });
 });

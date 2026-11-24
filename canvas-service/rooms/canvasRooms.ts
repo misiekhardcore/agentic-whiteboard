@@ -11,15 +11,11 @@ export type CanvasRooms = {
 };
 
 /**
- * One room per canvas, for the life of a connection: a second join reaches the
- * room that already holds the document, so two browsers cannot end up in two
- * rooms that overwrite each other.
- *
- * A room is evicted when its last session leaves. Eviction is awaited before a
- * new room for the same canvas is created, so the closing room's final snapshot
- * is written before the next room loads — otherwise a reconnect could read the
- * canvas back before its last edits landed. Opening completes before the socket
- * is upgraded, so the room cannot miss a session's first message.
+ * One room per canvas: a second join reaches the room that already holds the
+ * document, so two browsers cannot overwrite each other. A room is evicted when
+ * its last session leaves, and the eviction is awaited before the next room for
+ * that canvas loads — otherwise a reconnect could read the canvas back before
+ * its last edits landed. Opening finishes before the socket upgrades.
  */
 export function createCanvasRooms({
   load,
