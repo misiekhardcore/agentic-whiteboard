@@ -19,6 +19,7 @@ pnpm install
 cp .env.example .env      # then fill in the values below
 pnpm db:up                # Postgres, REST, Storage, Realtime and Studio
 pnpm db:migrate
+pnpm media:bucket         # the private bucket stored images live in
 pnpm dev
 ```
 
@@ -57,6 +58,18 @@ first prompt stays.
 `pnpm test:e2e` starts `scripts/scripted-model/server.mjs`, a scripted
 OpenAI-compatible endpoint, so the suite runs offline through the same HTTP
 contract.
+
+## Stored media
+
+A file is a row plus its bytes: `media` names the uploader, the account that may
+read it, its type, size and storage key, and the bytes sit in the stack's private
+Storage bucket. `POST /api/media` takes the file and the workspace it was dropped
+on, checks that workspace's write rule, and stores both; `GET /api/media/:id`
+runs the account rule on every read and streams the object, so revoking a
+membership takes effect at once and no storage URL ever reaches a browser;
+`DELETE /api/media/:id` is its uploader's. `pnpm media:bucket` creates the bucket
+once - without it an upload answers 503 and the rest of the app is unaffected.
+The decision is in [media-store](docs/architecture/media-store.md).
 
 ## Live updates
 

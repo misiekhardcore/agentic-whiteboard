@@ -115,6 +115,10 @@ jobs:
       SUPABASE_URL: http://127.0.0.1:3312
       SUPABASE_SERVICE_ROLE_KEY: scripted-service-role
       BROADCAST_SINK_URL: http://127.0.0.1:3312
+      # Media storage answers somewhere else than the sink: uploads go to the
+      # in-memory bucket started below, so the media specs run here too.
+      MEDIA_STORAGE_URL: http://127.0.0.1:3313
+      MEDIA_BUCKET: media
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
 
@@ -205,6 +209,19 @@ jobs:
           done
           echo "The broadcast sink did not start:"
           cat /tmp/broadcast-sink.log
+          exit 1
+
+      - name: Start the media bucket
+        run: |
+          node scripts/media-bucket.mjs > /tmp/media-bucket.log 2>&1 &
+          for _ in $(seq 1 30); do
+            if curl -sf -o /dev/null http://127.0.0.1:3313/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "The media bucket did not start:"
+          cat /tmp/media-bucket.log
           exit 1
 
       - name: Start the app

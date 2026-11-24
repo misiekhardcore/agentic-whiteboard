@@ -27,6 +27,7 @@ export type { AgentMessage } from "./agentMessage";
 export { billingOwnerTypeEnum, stripeEvents, subscriptions } from "./billing";
 export type { NewSubscription, Subscription } from "./billing";
 export { canvases, canvasesRelations } from "./canvas";
+export { media } from "./media";
 export { docs, docsRelations } from "./doc";
 export { workspaceStatusEnum, workspaces, workspacesRelations } from "./workspace";
 export {

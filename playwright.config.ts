@@ -19,6 +19,10 @@ const scriptedModelPort = process.env.SCRIPTED_MODEL_PORT ?? "3311";
 const scriptedModelUrl = `http://127.0.0.1:${scriptedModelPort}`;
 const broadcastSinkPort = process.env.BROADCAST_SINK_PORT ?? "3312";
 const broadcastSinkUrl = `http://127.0.0.1:${broadcastSinkPort}`;
+// Media storage is its own address, so the sink above can stand in for the
+// stack's broadcast endpoint while uploads still land in a bucket.
+const mediaBucketPort = process.env.MEDIA_STORAGE_PORT ?? "3313";
+const mediaBucketUrl = `http://127.0.0.1:${mediaBucketPort}`;
 
 // The main suite records what the app publishes in a sink, so it can assert the
 // publication without a stack. `REALTIME_E2E=1` runs the other half instead: the
@@ -82,6 +86,20 @@ export default defineConfig({
                 timeout: 30_000,
               },
             ]),
+        ...(realtime
+          ? []
+          : [
+              {
+                // An in-memory stand-in for the stack's storage service, so a
+                // spec proves upload, read and delete through the app without
+                // a Supabase stack on this machine.
+                command: "node scripts/media-bucket.mjs",
+                env: { MEDIA_STORAGE_PORT: mediaBucketPort },
+                url: `${mediaBucketUrl}/health`,
+                reuseExistingServer: true,
+                timeout: 30_000,
+              },
+            ]),
         {
           // The app has one provider path: HTTP chat completions. The suite
           // points it at a scripted endpoint instead of shipping a fake model.
@@ -123,6 +141,7 @@ export default defineConfig({
               : {
                   SUPABASE_URL: broadcastSinkUrl,
                   SUPABASE_SERVICE_ROLE_KEY: "scripted-service-role",
+                  MEDIA_STORAGE_URL: mediaBucketUrl,
                 }),
             // The approval specs need signed requests; a fixed test value is
             // enough because the scripted endpoint never leaves the machine.

@@ -22,5 +22,7 @@ declare namespace NodeJS {
     STRIPE_SECRET_KEY: string;
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: string;
     STRIPE_WEBHOOK_SECRET?: string;
+    /** The Storage bucket stored media lives in; defaults to `media`. */
+    MEDIA_BUCKET?: string;
   }
 }

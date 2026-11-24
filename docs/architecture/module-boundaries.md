@@ -106,6 +106,7 @@ lib/
                     allowance, orphans, live, conversations, branches, turn),
                     capabilities and actions, tools
   collab/           Yjs/realtime contracts and topic names
+  media/            stored files: upload validation, access rule, object-store adapter, services
   notifications/    outbound email
   db/               pool, schema, migrations input
   shared/           routes, form-data, date formatting
@@ -146,6 +147,9 @@ lib/capabilities (kernel)        other contexts' published functions
   tables ([content-surfaces](content-surfaces.md)); their `create`/`update`/
   `delete` capabilities land with the editor and the Hocuspocus gateway
   ([ai-collaboration](ai-collaboration.md)).
+- Media objects outlive their rows only by accident: a file is reachable through
+  its row and nothing sweeps the bucket, so removing a row leaves its object
+  ([media-store](media-store.md)).
 - An event bus or outbox. The first genuine cross-context side effect beyond a
   direct call gets its own record.
 - Per-workspace RBAC. `workspace/access.ts` is the one place it will narrow.

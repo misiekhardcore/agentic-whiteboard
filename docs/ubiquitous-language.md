@@ -69,6 +69,14 @@ is a defect.
 | snapshot        | A read-only view of a live surface: workspace, surface, revision marker, content. Never raw Yjs bytes.                                                  | `lib/collab`    |
 | mutation        | One semantic intent such as adding a shape, applied in a single Yjs transaction. Never a whole-document replacement, so concurrent human edits survive. | `lib/collab`    |
 
+## Media
+
+| Term          | Definition                                                                                                                                                                               | Owner       |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| media         | A stored file: its row in Postgres plus its bytes in object storage. Scoped to the account it was uploaded into, which is what decides who may read it; only its uploader may delete it. | `lib/media` |
+| media account | The organization a media row belongs to, taken from the board the file was uploaded from. A null account is the uploader's own file.                                                     | `lib/media` |
+| storage key   | The name a media object is stored under in the bucket. Never shown to a browser; a reader asks the app for the file by its media id instead.                                             | `lib/media` |
+
 ## Billing and plans
 
 | Term            | Definition                                                                                                                                                                                 | Owner         |
