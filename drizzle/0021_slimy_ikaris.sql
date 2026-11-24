@@ -1,10 +1,11 @@
 CREATE TABLE "media" (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  uploaded_by_user_id TEXT NOT NULL,
-  mime_type TEXT NOT NULL,
-  byte_size INTEGER NOT NULL,
-  storage_key TEXT NOT NULL UNIQUE,
-  created_at TIMESTAMP(3) DEFAULT now() NOT NULL
+	"id" text PRIMARY KEY NOT NULL,
+	"uploadedByUserId" text NOT NULL,
+	"mimeType" text NOT NULL,
+	"byteSize" integer NOT NULL,
+	"storageKey" text NOT NULL,
+	"createdAt" timestamp (3) DEFAULT now() NOT NULL,
+	CONSTRAINT "media_storageKey_unique" UNIQUE("storageKey")
 );
-
-CREATE INDEX "Media_storageKey_idx" ON "media" USING btree (storage_key);
+--> statement-breakpoint
+CREATE INDEX "Media_storageKey_idx" ON "media" USING btree ("storageKey");
