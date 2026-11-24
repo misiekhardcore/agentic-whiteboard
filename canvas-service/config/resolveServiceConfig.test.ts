@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { ConfigurationError } from "@/lib/shared/env";
+
 import { resolveServiceConfig } from "./resolveServiceConfig";
-import { ServiceConfigurationError } from "./ServiceConfigurationError";
 
 const unset = {
   CANVAS_SERVICE_PORT: undefined,
@@ -29,19 +30,19 @@ describe("the canvas service configuration", () => {
   });
 
   it("refuses to start without a secret", () => {
-    expect(() => resolveServiceConfig(unset)).toThrow(ServiceConfigurationError);
+    expect(() => resolveServiceConfig(unset)).toThrow(ConfigurationError);
   });
 
   it("refuses a port or an app address that cannot be used", () => {
     expect(() =>
       resolveServiceConfig({ ...unset, CANVAS_SERVICE_SECRET: "s", CANVAS_SERVICE_PORT: "eighty" }),
-    ).toThrow(ServiceConfigurationError);
+    ).toThrow(ConfigurationError);
     expect(() =>
       resolveServiceConfig({
         ...unset,
         CANVAS_SERVICE_SECRET: "s",
         CANVAS_APP_INTERNAL_URL: "localhost",
       }),
-    ).toThrow(ServiceConfigurationError);
+    ).toThrow(ConfigurationError);
   });
 });

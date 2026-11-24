@@ -1,10 +1,13 @@
-import { CanvasConfigurationError } from "./CanvasConfigurationError";
+import { environmentReader } from "@/lib/shared/env";
+
 import type { CanvasConfig, CanvasEnvironment } from "./types";
 
-const HTTP_ORIGIN_BY_SCHEME: Record<string, string> = {
-  "ws:": "http:",
-  "wss:": "https:",
-};
+/** The same address over HTTP, for the service's health read and its revoke call. */
+function httpOriginOf(serviceUrl: string): string {
+  const url = new URL(serviceUrl);
+
+  return `${url.protocol === "wss:" ? "https:" : "http:"}//${url.host}`;
+}
 
 /**
  * What the app needs to reach the canvas service. `null` means this deployment
@@ -12,18 +15,11 @@ const HTTP_ORIGIN_BY_SCHEME: Record<string, string> = {
  * app works, which is a supported state rather than a broken one.
  */
 export function resolveCanvasConfig(env: CanvasEnvironment = process.env): CanvasConfig | null {
-  const serviceUrl = env.NEXT_PUBLIC_CANVAS_SERVICE_URL?.trim().replace(/\/+$/, "");
-  const serviceSecret = env.CANVAS_SERVICE_SECRET?.trim();
+  const read = environmentReader(env);
+  const serviceUrl = read.socketOrigin("NEXT_PUBLIC_CANVAS_SERVICE_URL");
+  const serviceSecret = read.value("CANVAS_SERVICE_SECRET");
 
   if (!serviceUrl || !serviceSecret) return null;
 
-  const url = new URL(serviceUrl);
-  const protocol = HTTP_ORIGIN_BY_SCHEME[url.protocol];
-  if (!protocol) {
-    throw new CanvasConfigurationError(
-      `NEXT_PUBLIC_CANVAS_SERVICE_URL must be a ws:// or wss:// address, received "${serviceUrl}".`,
-    );
-  }
-
-  return { serviceUrl, httpOrigin: `${protocol}//${url.host}`, serviceSecret };
+  return { serviceUrl, httpOrigin: httpOriginOf(serviceUrl), serviceSecret };
 }

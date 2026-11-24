@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { CanvasConfigurationError } from "./CanvasConfigurationError";
+import { ConfigurationError } from "@/lib/shared/env";
+
 import { resolveCanvasConfig } from "./resolveCanvasConfig";
 
 describe("the canvas configuration", () => {
@@ -44,6 +45,6 @@ describe("the canvas configuration", () => {
         NEXT_PUBLIC_CANVAS_SERVICE_URL: "http://localhost:4100",
         CANVAS_SERVICE_SECRET: "canvas-secret",
       }),
-    ).toThrow(CanvasConfigurationError);
+    ).toThrow(ConfigurationError);
   });
 });
