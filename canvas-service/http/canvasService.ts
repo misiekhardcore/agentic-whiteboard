@@ -1,7 +1,7 @@
 import { createServer, type Server } from "node:http";
 import { WebSocketServer } from "ws";
 
-import { authorizeCanvasServiceRequest } from "@/lib/canvas/service";
+import { authorizeCanvasServiceRequest } from "@/lib/canvas/credential/authorizeCanvasServiceRequest";
 
 import type { CanvasRooms } from "../rooms/canvasRooms";
 

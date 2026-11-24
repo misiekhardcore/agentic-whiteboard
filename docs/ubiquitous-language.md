@@ -62,16 +62,17 @@ is a defect.
 
 ## Content surfaces
 
-| Term            | Definition                                                                                                                                              | Owner            |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| content surface | One of a workspace's two content containers, `doc` or `canvas`. At most one of each, and neither has a name, status or description of its own.          | `lib/workspace`  |
-| document        | The workspace's text surface. Its Yjs state is authoritative and the stored content is that state's projection.                                         | `lib/collab`     |
-| canvas          | The workspace's shapes surface: its own room, joined with a short-lived token.                                                                          | `lib/canvas`     |
-| snapshot        | A read-only view of a live surface: workspace, surface, revision marker, content. Never raw Yjs bytes.                                                  | `lib/collab`     |
-| mutation        | One semantic intent such as adding a shape, applied in a single Yjs transaction. Never a whole-document replacement, so concurrent human edits survive. | `lib/collab`     |
-| canvas revision | The integer on the canvas row, used only as the optimistic check on a snapshot write. It is not a version of the document.                              | `lib/workspace`  |
-| stale edit      | A snapshot write naming a revision the row has already moved past. It is refused, and the room re-sends its state on the revision the app reported.     | `lib/canvas`     |
-| room            | The canvas service's in-memory owner of one canvas: the live document and its only writer. Evicted when its last session leaves.                        | `canvas-service` |
+| Term               | Definition                                                                                                                                                                     | Owner            |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- |
+| content surface    | One of a workspace's two content containers, `doc` or `canvas`. At most one of each, and neither has a name, status or description of its own.                                 | `lib/workspace`  |
+| document           | The workspace's text surface. Its Yjs state is authoritative and the stored content is that state's projection.                                                                | `lib/collab`     |
+| canvas             | The workspace's shapes surface: its own room, joined with a short-lived token.                                                                                                 | `lib/canvas`     |
+| snapshot           | A read-only view of a live surface: workspace, surface, revision marker, content. Never raw Yjs bytes.                                                                         | `lib/collab`     |
+| mutation           | One semantic intent such as adding a shape, applied in a single Yjs transaction. Never a whole-document replacement, so concurrent human edits survive.                        | `lib/collab`     |
+| canvas revision    | The integer on the canvas row, used only as the optimistic check on a snapshot write. It is not a version of the document.                                                     | `lib/workspace`  |
+| stale edit         | A snapshot write naming a revision the row has already moved past. It is refused, and the room re-sends its state on the revision the app reported.                            | `lib/canvas`     |
+| room               | The canvas service's in-memory owner of one canvas: the live document and its only writer. Evicted when its last session leaves.                                               | `canvas-service` |
+| service credential | The one secret the app and the canvas service compare on every call between them, in either direction. Never reaches a browser, and neither process may weaken the comparison. | `lib/canvas`     |
 
 ## Media
 

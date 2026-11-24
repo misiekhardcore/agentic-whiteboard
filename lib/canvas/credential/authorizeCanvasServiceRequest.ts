@@ -1,9 +1,10 @@
 import { timingSafeEqual } from "node:crypto";
 
 /**
- * Whether a request carries the service credential. The canvas service is the
- * only caller of the snapshot route, so a missing or different secret is
- * refused before any row is read or written.
+ * Whether a request carries the service credential: the one secret the app and
+ * the canvas service share. Both processes ask this module, so the service's
+ * revoke door and the app's snapshot door cannot drift on what a bearer is, and
+ * a missing or different secret is refused before any row is read or written.
  */
 export function authorizeCanvasServiceRequest({
   authorization,

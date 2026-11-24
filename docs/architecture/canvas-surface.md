@@ -55,13 +55,18 @@ through the app's snapshot route, authenticated with the shared service secret.
 - `lib/canvas` owns the canvas's own rules and contracts: the connection token,
   the connection address, the configuration, the snapshot contract, and the app's
   calls into the service (health, revoke).
+- The service credential is its own module, `lib/canvas/credential`: both
+  processes compare the shared secret through it, so the seam is visible in the
+  imports and neither side can weaken the comparison alone.
 - The read-only rule is the workspace's, not the canvas's: a canvas token and a
   media upload refuse a write for the same reason, so
   `workspaceWriteDecision(access)` answers both ([media-store](media-store.md)).
 - `lib/workspace` owns the canvas row: creating it with its workspace, reading
   the snapshot a room starts from, and the revisioned write.
 - `canvas-service/` is the process: rooms, snapshot writer and the HTTP doors.
-  It imports the contracts, never the app's schema.
+  It imports the contracts, the token and the credential rule, never the app's
+  client of the service, its schema or its settings; `architecture.test.ts`
+  holds that allowlist.
 - The page and `components/Canvas` own presentation only; they derive no rule.
 
 ## Consequences

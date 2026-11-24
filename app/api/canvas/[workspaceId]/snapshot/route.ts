@@ -5,7 +5,7 @@ import {
   type CanvasSnapshotSaved,
   canvasSnapshotWriteSchema,
 } from "@/lib/canvas/contracts";
-import { authorizeCanvasServiceRequest } from "@/lib/canvas/service";
+import { authorizeCanvasServiceRequest } from "@/lib/canvas/credential/authorizeCanvasServiceRequest";
 import { readCanvasSnapshot, saveCanvasSnapshot } from "@/lib/workspace/surfaces";
 
 /**

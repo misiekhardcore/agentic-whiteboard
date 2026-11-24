@@ -106,7 +106,7 @@ lib/
                     allowance, orphans, live, conversations, branches, turn),
                     capabilities and actions, tools
   collab/           Yjs/realtime contracts and topic names
-  canvas/           canvas rules, connection tokens, snapshot contract, service client
+  canvas/           connection tokens, snapshot contract, service client, service credential
   media/            stored files: upload validation, access rule, object-store adapter, services
   notifications/    outbound email
   db/               pool, schema, migrations input
