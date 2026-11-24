@@ -1,4 +1,4 @@
-import { inArray } from "drizzle-orm";
+import { and, gt, inArray } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { canvases, docs } from "@/lib/db/schema";
@@ -36,7 +36,10 @@ export async function listContentSurfaces(workspaceIds: string[]): Promise<Conte
     db
       .select({ id: canvases.id, workspaceId: canvases.workspaceId, updatedAt: canvases.updatedAt })
       .from(canvases)
-      .where(inArray(canvases.workspaceId, workspaceIds)),
+      // Every workspace has a canvas row from the moment it is created, so a
+      // revision the room has never written is an empty container rather than
+      // a surface someone could open.
+      .where(and(inArray(canvases.workspaceId, workspaceIds), gt(canvases.revision, 0))),
   ]);
 
   return [

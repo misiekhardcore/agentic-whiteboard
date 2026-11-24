@@ -135,7 +135,8 @@ Write the failing test before the production code, for every behaviour change.
 | `lib/identity/`      | Actor, session → active account, roles, better-auth adapter, pre-auth actions.                                  |
 | `lib/organizations/` | Membership, slug rule, invitations, organization settings and their capabilities.                               |
 | `lib/workspace/`     | The reference context: status/contracts/forms, rules, access, queries, surfaces, recent, capabilities, actions. |
-| `lib/ai/`            | Providers, runtime (agent + instructions), thread (rules, store, allowance, turn, composer), tools adapter.     |     | `lib/billing/` | Plans, entitlements, usage rules (pure), subscriptions, checkout, Stripe adapter. |
+| `lib/ai/`            | Providers, runtime (agent + instructions), thread (rules, store, allowance, turn, composer), tools adapter.     |
+| `lib/billing/`       | Plans, entitlements, usage rules (pure), subscriptions, checkout, Stripe adapter.                               |
 | `lib/media/`         | Stored files: upload rules, who may read a media row, the storage adapter, the create/read services.            |
 | `lib/shared/`        | Routes, form-data reading and date formatting — the only genuinely shared primitives.                           |
 | `components/`        | Shared client UI grouped by area; `components/ui` are shadcn-style primitives.                                  |
@@ -159,7 +160,8 @@ pnpm tsc                # Typecheck without emitting
 pnpm test               # Vitest unit suite
 pnpm test:ai            # Live model check (needs AI_LIVE=1 + a reachable provider)
 pnpm build              # Production build
-pnpm db:up              # Local Supabase/Postgres + migrations prerequisites
+pnpm db:up              # Local Supabase stack + the canvas sync service
+pnpm canvas:dev         # The canvas sync service alone, without Docker
 pnpm db:generate        # Generate a Drizzle migration after schema changes
 pnpm db:migrate         # Apply migrations
 pnpm test:e2e           # Playwright on :3100 with the scripted provider; needs a DB, and `pnpm dev` stopped

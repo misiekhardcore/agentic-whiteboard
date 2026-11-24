@@ -4,7 +4,7 @@ import { getOrganizationEntitlements, getUserEntitlements } from "@/lib/billing/
 import { workspaceLimitMessage } from "@/lib/billing/usage";
 import { failure } from "@/lib/capabilities/define";
 import { db } from "@/lib/db";
-import { workspaces } from "@/lib/db/schema";
+import { canvases, workspaces } from "@/lib/db/schema";
 
 import type { WorkspaceRequester } from "../activity";
 import type { WorkspaceMutationResult } from "../contracts";
@@ -102,6 +102,11 @@ export async function createWorkspaceFor(
     if (!created) {
       return failure("The workspace was not created.");
     }
+
+    // A workspace has a canvas is an invariant, so the canvas is inserted in
+    // the transaction that creates its workspace: a workspace without a canvas
+    // must never be observable, even briefly.
+    await tx.insert(canvases).values({ workspaceId: created.id });
 
     // In the same transaction as the insert: a workspace without its creation
     // activity is a history with a hole, and a failed log write must roll the

@@ -17,11 +17,17 @@ in [docs/architecture](docs/architecture).
 ```bash
 pnpm install
 cp .env.example .env      # then fill in the values below
-pnpm db:up                # Postgres, REST, Storage, Realtime and Studio
+pnpm db:up                # Postgres, REST, Storage, Realtime, Studio and the canvas service
 pnpm db:migrate
 pnpm media:bucket         # the private bucket stored images live in
-pnpm dev
+pnpm dev                  # the app on :3000
 ```
+
+The canvas sync service runs in the compose stack on `:4100`, so the whole
+local setup is one `db:up` and one `pnpm dev`. `pnpm canvas:dev` runs the service
+on its own when you do not want the stack. Without the service the workspace
+page says the canvas is unavailable and everything else keeps working; it is not
+a broken app.
 
 Set `NEXT_PUBLIC_SITE_URL` to the origin the deployment answers on. It drives
 `metadataBase`, canonical URLs, `robots.txt` and the sitemap; without it those
@@ -59,17 +65,34 @@ first prompt stays.
 OpenAI-compatible endpoint, so the suite runs offline through the same HTTP
 contract.
 
-## Stored media
+## Canvas
 
-A file is a row plus its bytes: `media` names the uploader, the account that may
-read it, its type, size and storage key, and the bytes sit in the stack's private
-Storage bucket. `POST /api/media` takes the file and the workspace it was dropped
-on, checks that workspace's write rule, and stores both; `GET /api/media/:id`
-runs the account rule on every read and streams the object, so revoking a
-membership takes effect at once and no storage URL ever reaches a browser;
-`DELETE /api/media/:id` is its uploader's. `pnpm media:bucket` creates the bucket
-once - without it an upload answers 503 and the rest of the app is unaffected.
-The decision is in [media-store](docs/architecture/media-store.md).
+Every workspace has a canvas, and it is where the workspace page opens. The
+board is tldraw v5, pinned to one exact version across the browser, the sync
+client and the sync server. The canvas sync service (a container in the compose
+stack, or `pnpm canvas:dev` alone) holds one authoritative room per canvas and is
+the only writer of live state; the
+`canvas.content` snapshot is a projection of that room and `canvas.revision` is
+the optimistic check on each snapshot write.
+
+An image dropped on a board is stored as media: the bytes go to the stack's
+private Storage bucket and the document keeps only `/api/media/:id`, which the
+app serves after checking the file's account. Nothing is inlined into the
+snapshot, and the same row is what a document image or a conversation attachment
+will use ([media-store](docs/architecture/media-store.md)). A file is scoped to
+the account of the board it was uploaded from, so every member of that account
+can open it on any board, and only its uploader can delete it. `pnpm test:e2e`
+covers the upload, read and delete routes against an in-memory bucket;
+`pnpm media:bucket` creates the real one once, and without it an upload is
+refused while the board still works.
+
+A browser joins with a token minted per connection attempt from its session and
+the workspace access check. Read-only is decided by the room, so an archived
+workspace's canvas cannot be written even by a patched client. `pnpm test:e2e`
+starts the service itself. A production deployment needs a tldraw licence key in
+`NEXT_PUBLIC_TLDRAW_LICENSE_KEY`; without one the editor is watermarked. The
+decision is recorded in
+[docs/architecture/canvas-surface.md](docs/architecture/canvas-surface.md).
 
 ## Live updates
 

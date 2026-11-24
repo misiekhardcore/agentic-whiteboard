@@ -61,13 +61,24 @@ is a defect.
 
 ## Content surfaces
 
-| Term            | Definition                                                                                                                                              | Owner           |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| content surface | One of a workspace's two content containers, `doc` or `canvas`. At most one of each, and neither has a name, status or description of its own.          | `lib/workspace` |
-| document        | The workspace's text surface. Its Yjs state is authoritative and the stored content is that state's projection.                                         | `lib/collab`    |
-| canvas          | The workspace's shapes surface.                                                                                                                         | `lib/collab`    |
-| snapshot        | A read-only view of a live surface: workspace, surface, revision marker, content. Never raw Yjs bytes.                                                  | `lib/collab`    |
-| mutation        | One semantic intent such as adding a shape, applied in a single Yjs transaction. Never a whole-document replacement, so concurrent human edits survive. | `lib/collab`    |
+| Term            | Definition                                                                                                                                              | Owner            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| content surface | One of a workspace's two content containers, `doc` or `canvas`. At most one of each, and neither has a name, status or description of its own.          | `lib/workspace`  |
+| document        | The workspace's text surface. Its Yjs state is authoritative and the stored content is that state's projection.                                         | `lib/collab`     |
+| canvas          | The workspace's shapes surface: its own room, joined with a short-lived token.                                                                          | `lib/canvas`     |
+| snapshot        | A read-only view of a live surface: workspace, surface, revision marker, content. Never raw Yjs bytes.                                                  | `lib/collab`     |
+| mutation        | One semantic intent such as adding a shape, applied in a single Yjs transaction. Never a whole-document replacement, so concurrent human edits survive. | `lib/collab`     |
+| canvas revision | The integer on the canvas row, used only as the optimistic check on a snapshot write. It is not a version of the document.                              | `lib/workspace`  |
+| stale edit      | A snapshot write naming a revision the row has already moved past. It is refused, and the room re-sends its state on the revision the app reported.     | `lib/canvas`     |
+| room            | The canvas service's in-memory owner of one canvas: the live document and its only writer. Evicted when its last session leaves.                        | `canvas-service` |
+
+## Media
+
+| Term          | Definition                                                                                                                                                                               | Owner       |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| media         | A stored file: its row in Postgres plus its bytes in object storage. Scoped to the account it was uploaded into, which is what decides who may read it; only its uploader may delete it. | `lib/media` |
+| media account | The organization a media row belongs to, taken from the board the file was uploaded from. A null account is the uploader's own file.                                                     | `lib/media` |
+| storage key   | The name a media object is stored under in the bucket. Never shown to a browser; a reader asks the app for the file by its media id instead.                                             | `lib/media` |
 
 ## Media
 

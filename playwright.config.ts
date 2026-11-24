@@ -23,6 +23,14 @@ const broadcastSinkUrl = `http://127.0.0.1:${broadcastSinkPort}`;
 // stack's broadcast endpoint while uploads still land in a bucket.
 const mediaBucketPort = process.env.MEDIA_STORAGE_PORT ?? "3313";
 const mediaBucketUrl = `http://127.0.0.1:${mediaBucketPort}`;
+// The canvas is a second process. The suite starts its own on a port the dev
+// service does not use, with its own secret, so neither `pnpm canvas:dev` nor
+// the compose service started by `pnpm db:up` answers these specs. A dedicated
+// variable matters because `.env.local` sets CANVAS_SERVICE_PORT for the app.
+const canvasServicePort = process.env.E2E_CANVAS_SERVICE_PORT ?? "4101";
+const canvasServiceUrl = `ws://127.0.0.1:${canvasServicePort}`;
+const canvasServiceSecret =
+  process.env.CANVAS_SERVICE_SECRET ?? "e2e-canvas-service-secret-0123456789abcdef";
 
 // The main suite records what the app publishes in a sink, so it can assert the
 // publication without a stack. `REALTIME_E2E=1` runs the other half instead: the
@@ -90,6 +98,24 @@ export default defineConfig({
           ? []
           : [
               {
+                // One authoritative room per canvas, in its own process: the
+                // canvas cannot open without it, and a spec proving the
+                // drawing survives needs the real sync path.
+                command: "pnpm canvas:dev",
+                env: {
+                  CANVAS_SERVICE_PORT: canvasServicePort,
+                  CANVAS_SERVICE_SECRET: canvasServiceSecret,
+                  CANVAS_APP_INTERNAL_URL: baseURL,
+                },
+                url: `http://127.0.0.1:${canvasServicePort}/health`,
+                reuseExistingServer: false,
+                timeout: 60_000,
+              },
+            ]),
+        ...(realtime
+          ? []
+          : [
+              {
                 // An in-memory stand-in for the stack's storage service, so a
                 // spec proves upload, read and delete through the app without
                 // a Supabase stack on this machine.
@@ -147,6 +173,14 @@ export default defineConfig({
             // enough because the scripted endpoint never leaves the machine.
             AI_TOOL_APPROVAL_SECRET:
               process.env.AI_TOOL_APPROVAL_SECRET ?? "e2e-tool-approval-secret-0123456789abcdef",
+            // The canvas service the app mints connection tokens for, and the
+            // secret that service authenticates with.
+            ...(realtime
+              ? {}
+              : {
+                  NEXT_PUBLIC_CANVAS_SERVICE_URL: canvasServiceUrl,
+                  CANVAS_SERVICE_SECRET: canvasServiceSecret,
+                }),
           },
           url: baseURL,
           // Never reuse: a server someone already has open runs whatever

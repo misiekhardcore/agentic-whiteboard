@@ -1,7 +1,8 @@
 # AI and realtime collaboration architecture
 
-Status: accepted for the foundation slice
+Status: accepted for the foundation slice; superseded for the canvas
 Date: 2026-11-11
+Revised: 2026-11-23
 
 ## Context
 
@@ -86,9 +87,12 @@ Canvas root:
 
 Rules:
 
-- `doc.yjsState` / `canvas.yjsState` are the source of truth.
-- `doc.content` / `canvas.content` are materialized projections written in the
-  same store transaction. If they ever disagree, rebuild from Yjs.
+- `doc.yjsState` is the source of truth; `doc.content` is its projection,
+  written in the same store transaction. If they ever disagree, rebuild from
+  Yjs.
+- The canvas is not a Yjs document. Its engine owns the records, one room per
+  canvas is the source of truth, and `canvas.content` is that room's snapshot
+  ([canvas-surface](canvas-surface.md)).
 - Agent edits are semantic operations (`addShape`, `updateBlock`, ...), never a
   regenerated document.
 - Per-user `UndoManager` tracks `user:<id>` origins only. Agent transactions use
@@ -96,7 +100,7 @@ Rules:
 - Attribution is block/shape-level for now. Character-level attribution is
   deferred.
 
-`canvas.yjsState` does not exist yet; it is added in Phase 1.
+The canvas keeps no Yjs state: see [canvas-surface](canvas-surface.md).
 
 ### Prompts and messages
 
@@ -193,9 +197,11 @@ rewrite document history; an explicit "undo this prompt" feature is future work.
 
 1. **Foundation (this slice):** env-driven provider registry, agent factory,
    collaboration contracts, run/message schema, architecture record.
-2. **Collaboration substrate:** Hocuspocus service, `canvas.yjsState`, token
-   endpoint, persistence hooks, two-client integration test.
-3. **Surfaces and Realtime:** doc/canvas editors, Hocuspocus awareness, restore
+2. **Collaboration substrate:** Hocuspocus service for the document, token
+   endpoint, persistence hooks, two-client integration test. The canvas shipped
+   ahead of this step on its own engine and service
+   ([canvas-surface](canvas-surface.md)).
+3. **Surfaces and Realtime:** the document editor, Hocuspocus awareness, restore
    self-hosted Supabase Realtime, private channels/JWT/RLS, shared chat history.
 4. **Agent tools and UI:** the dashboard prompt thread, the workspace tool
    catalog (create, list, read, update, restore), `useChat` streaming,
@@ -207,9 +213,7 @@ rewrite document history; an explicit "undo this prompt" feature is future work.
 
 ## Deferred decisions
 
-- Block editor and canvas rendering libraries.
-- Whether the canvas is a custom Yjs model or adapts an editor library's sync
-  model.
+- Block editor library.
 - Read-only versus editable share links.
 - Per-workspace model selection (the `createAgent({ model })` override is the
   extension point).

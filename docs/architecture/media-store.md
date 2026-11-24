@@ -51,9 +51,9 @@ browser                     app (Next)                        stack
   │◄──── 204 ──────────────────┤ then the row                    │
 ```
 
-A canvas will use the same route for its assets: its store uploads on paste and
-resolves a record's `src`, so the document keeps an address and a snapshot stays
-a description of the drawing.
+The canvas uses the same route for its assets: `createCanvasAssetStore` uploads
+on paste and resolves a record's `src`, so the document keeps an address and the
+snapshot stays a description of the drawing.
 
 ## Consequences
 

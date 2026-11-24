@@ -1,3 +1,4 @@
+import type { CanvasSnapshot } from "@/lib/canvas/contracts";
 import type { WorkspaceSurface } from "@/lib/collab/contracts";
 
 /**
@@ -13,4 +14,13 @@ export type ContentSurface = {
   workspaceId: string;
   surface: WorkspaceSurface;
   updatedAt: Date;
+};
+
+/**
+ * A canvas as its room reads it: the stored projection and the revision a
+ * snapshot write names as the check it expects.
+ */
+export type StoredCanvas = {
+  revision: number;
+  snapshot: CanvasSnapshot | null;
 };

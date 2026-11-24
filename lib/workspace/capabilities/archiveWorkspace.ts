@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { revokeCanvasSessions } from "@/lib/canvas/service";
 import { defineCapability } from "@/lib/capabilities/define";
 import { CHANGE_KEYS, workspaceChangeKey } from "@/lib/shared/changes";
 
@@ -27,6 +28,12 @@ export const archiveWorkspace = defineCapability({
   authorize: async (ctx, input) => authorizeWorkspace(ctx.actor, input.workspaceId, "edit"),
   handler: async (ctx, _input, access, { signal }) => {
     const result = await archiveWorkspaceWith(access, workspaceRequesterFor(ctx), { signal });
+
+    // An already-open board must stop accepting writes now, not at its next
+    // connection: closing its sessions makes the client reconnect, and that
+    // connection's token is minted read-only.
+    if (result.ok) await revokeCanvasSessions({ workspaceId: access.workspace.id });
+
     return linked(result, NOT_FOUND);
   },
 });
