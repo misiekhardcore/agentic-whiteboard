@@ -3,8 +3,7 @@ import { canvasConnectionUri } from "@/lib/canvas/room";
 import { probeCanvasService } from "@/lib/canvas/service";
 import { mintCanvasToken } from "@/lib/canvas/tokens";
 import { getSessionAccount } from "@/lib/identity/account";
-import { getWorkspaceForUser, workspacePermission } from "@/lib/workspace/access";
-import { workspaceReadOnly } from "@/lib/workspace/rules";
+import { getWorkspaceForUser, workspaceWriteDecision } from "@/lib/workspace/access";
 
 /**
  * The one connection attempt a browser is about to make. The workspace and the
@@ -36,11 +35,7 @@ export async function GET(
     );
   }
 
-  const permission = workspacePermission(access);
-  const readOnly = workspaceReadOnly({
-    permission,
-    archived: access.workspace.archivedAt !== null,
-  });
+  const { permission, readOnly } = workspaceWriteDecision(access);
 
   const token = mintCanvasToken({
     userId: account.session.user.id,

@@ -1,19 +1,17 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type UploadState = {
   account: unknown;
   workspaceAccess: unknown;
-  config: unknown;
-  stored: Record<string, unknown>[];
-  storage: { put: unknown; get: unknown; remove: unknown };
+  inserted: Record<string, unknown>[];
+  requests: { method: string; url: string }[];
 };
 
 const state = vi.hoisted((): UploadState => ({
   account: null,
   workspaceAccess: null,
-  config: null,
-  stored: [],
-  storage: { put: vi.fn(), get: vi.fn(), remove: vi.fn() },
+  inserted: [],
+  requests: [],
 }));
 
 vi.mock("@/lib/identity/account", () => ({
@@ -25,20 +23,17 @@ vi.mock("@/lib/workspace/access", async (importOriginal) => ({
   getWorkspaceForUser: () => Promise.resolve(state.workspaceAccess),
 }));
 
-vi.mock("@/lib/media/config", () => ({
-  resolveMediaConfig: () => state.config,
-}));
-
-vi.mock("@/lib/media/storage", () => ({
-  createSupabaseMediaStorage: () => state.storage,
-}));
-
-vi.mock("@/lib/media/service", () => ({
-  createMedia: (input: Record<string, unknown>) => {
-    state.stored.push(input);
-    return Promise.resolve({ id: "media_1" });
+// The row write is the one thing a unit test cannot do; everything else in the
+// upload - the store, the adapter, the rules - runs for real.
+vi.mock("@/lib/db", () => ({
+  db: {
+    insert: () => ({
+      values: (row: Record<string, unknown>) => {
+        state.inserted.push(row);
+        return Promise.resolve();
+      },
+    }),
   },
-  findMediaById: () => Promise.resolve(null),
 }));
 
 import type * as accessModule from "@/lib/workspace/access";
@@ -46,12 +41,6 @@ import type * as accessModule from "@/lib/workspace/access";
 import { POST } from "./route";
 
 const session = { session: { user: { id: "user_1" } }, activeOrganizationId: "org_acme" };
-
-const config = {
-  storageUrl: "http://localhost:8000",
-  serviceRoleKey: "service-role",
-  bucket: "media",
-};
 
 const personalBoard = {
   workspace: { id: "ws_1", orgId: null, archivedAt: null },
@@ -64,6 +53,18 @@ const teamBoard = {
   ...personalBoard,
   workspace: { id: "ws_1", orgId: "org_acme", archivedAt: null },
 };
+
+const fakeFetch = vi.fn((url: string | URL, init?: RequestInit) => {
+  state.requests.push({ method: init?.method ?? "GET", url: String(url) });
+
+  return Promise.resolve(new Response(null, { status: 200 }));
+});
+
+/** The two settings a deployment needs before it stores anything. */
+function storeMedia() {
+  vi.stubEnv("MEDIA_STORAGE_URL", "http://storage.test");
+  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-role");
+}
 
 function upload(body: FormData) {
   return POST(new Request("http://localhost/api/media", { method: "POST", body }));
@@ -79,18 +80,20 @@ function form({
   return data;
 }
 
-const storedMedia = {
-  uploadedByUserId: "user_1",
-  contentType: "image/png",
-  byteSize: 3,
-  storage: state.storage,
-};
+beforeEach(() => {
+  vi.stubEnv("MEDIA_STORAGE_URL", "");
+  vi.stubEnv("SUPABASE_URL", "");
+  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+  vi.stubGlobal("fetch", fakeFetch);
+});
 
 afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   state.account = null;
   state.workspaceAccess = null;
-  state.config = null;
-  state.stored = [];
+  state.inserted = [];
+  state.requests = [];
   vi.clearAllMocks();
 });
 
@@ -99,23 +102,22 @@ describe("the media upload route", () => {
     const response = await upload(form());
 
     expect(response.status).toBe(401);
-    expect(state.stored).toEqual([]);
+    expect(state.inserted).toEqual([]);
   });
 
   it("refuses an upload that names no workspace", async () => {
     state.account = session;
-    state.config = config;
 
     const response = await upload(form({ workspaceId: null }));
 
     expect(response.status).toBe(400);
-    expect(state.stored).toEqual([]);
+    expect(state.inserted).toEqual([]);
   });
 
   it("refuses an upload with an invalid file type", async () => {
     state.account = session;
     state.workspaceAccess = personalBoard;
-    state.config = config;
+    storeMedia();
 
     const response = await upload(
       form({ file: new File([new Uint8Array([1])], "notes.pdf", { type: "application/pdf" }) }),
@@ -123,15 +125,15 @@ describe("the media upload route", () => {
 
     expect(response.status).toBe(400);
     expect(await response.text()).toContain("image");
-    expect(state.stored).toEqual([]);
+    expect(state.inserted).toEqual([]);
+    expect(state.requests).toEqual([]);
   });
 
   it("answers 404 for a workspace the caller cannot reach", async () => {
     state.account = session;
-    state.config = config;
 
     expect((await upload(form())).status).toBe(404);
-    expect(state.stored).toEqual([]);
+    expect(state.inserted).toEqual([]);
   });
 
   it("refuses an upload into an archived workspace", async () => {
@@ -140,10 +142,10 @@ describe("the media upload route", () => {
       ...teamBoard,
       workspace: { id: "ws_1", orgId: "org_acme", archivedAt: new Date() },
     };
-    state.config = config;
 
     expect((await upload(form())).status).toBe(403);
-    expect(state.stored).toEqual([]);
+    expect(state.inserted).toEqual([]);
+    expect(state.requests).toEqual([]);
   });
 
   it("refuses an upload on a deployment that stores no media", async () => {
@@ -153,28 +155,42 @@ describe("the media upload route", () => {
     const response = await upload(form());
 
     expect(response.status).toBe(503);
-    expect(state.stored).toEqual([]);
+    expect(await response.text()).toContain("does not store media");
+    expect(state.inserted).toEqual([]);
+    expect(state.requests).toEqual([]);
   });
 
-  it("stores the file under the board's account and answers with its address", async () => {
+  it("writes the object through the storage API and answers with its address", async () => {
     state.account = session;
     state.workspaceAccess = teamBoard;
-    state.config = config;
+    storeMedia();
 
     const response = await upload(form());
 
+    const created = (await response.json()) as { id: string; url: string };
+
     expect(response.status).toBe(201);
-    expect(await response.json()).toEqual({ id: "media_1", url: "/api/media/media_1" });
-    expect(state.stored[0]).toMatchObject({ ...storedMedia, organizationId: "org_acme" });
-    expect(state.stored[0]?.body).toBeInstanceOf(ArrayBuffer);
+    expect(created.url).toBe(`/api/media/${created.id}`);
+    expect(created.id).toBe(state.inserted[0]?.id);
+    expect(state.requests).toHaveLength(1);
+    expect(state.requests[0]?.method).toBe("POST");
+    expect(state.requests[0]?.url.startsWith("http://storage.test/storage/v1/object/media/")).toBe(
+      true,
+    );
+    expect(state.inserted[0]).toMatchObject({
+      uploadedByUserId: "user_1",
+      orgId: "org_acme",
+      mimeType: "image/png",
+      byteSize: 3,
+    });
   });
 
   it("scopes a personal board's file to its uploader alone", async () => {
     state.account = session;
     state.workspaceAccess = personalBoard;
-    state.config = config;
+    storeMedia();
 
     expect((await upload(form())).status).toBe(201);
-    expect(state.stored[0]).toMatchObject({ organizationId: null });
+    expect(state.inserted[0]).toMatchObject({ orgId: null });
   });
 });
