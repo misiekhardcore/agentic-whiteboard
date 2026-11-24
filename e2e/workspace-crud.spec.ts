@@ -333,12 +333,14 @@ test("workspace CRUD is scoped to the account and archives reversibly", async ({
     await test.step("the dashboard lists workspaces, docs and canvases together", async () => {
       if (!workspaceId) throw new Error("The workspace id is missing");
 
-      // The canvas already exists: it is created with its workspace. Only the
-      // document needs seeding for the list to hold both surfaces.
+      // Both rows are seeded rather than drawn: the list treats a canvas as a
+      // surface once its room has stored a revision, and a board nobody drew on
+      // has none, so the revision is written here instead of through a drawing.
       await db.query('insert into doc (id, "workspaceId") values ($1, $2)', [
         randomUUID(),
         workspaceId,
       ]);
+      await db.query('update canvas set revision = 1 where "workspaceId" = $1', [workspaceId]);
 
       await page.reload();
 
