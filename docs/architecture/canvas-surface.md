@@ -53,8 +53,11 @@ through the app's snapshot route, authenticated with the shared service secret.
 ## Boundaries
 
 - `lib/canvas` owns the canvas's own rules and contracts: the connection token,
-  the connection address, the read-only rule, the configuration, the snapshot
-  contract, and the app's calls into the service (health, revoke).
+  the connection address, the configuration, the snapshot contract, and the app's
+  calls into the service (health, revoke).
+- The read-only rule is the workspace's, not the canvas's: a canvas token and a
+  media upload refuse a write for the same reason, so
+  `workspaceWriteDecision(access)` answers both ([media-store](media-store.md)).
 - `lib/workspace` owns the canvas row: creating it with its workspace, reading
   the snapshot a room starts from, and the revisioned write.
 - `canvas-service/` is the process: rooms, snapshot writer and the HTTP doors.

@@ -49,6 +49,7 @@ is a defect.
 | column           | One status on the board. Fixed and always shown, so an empty stage is information rather than absence.                                                                                                        | `lib/workspace` |
 | position         | A workspace's place inside its column, ascending. Only a move writes it, and a value means something only relative to its neighbours.                                                                         | `lib/workspace` |
 | workspace access | A workspace and the person's relationship to it: personal or organization, the organization, and their role there.                                                                                            | `lib/workspace` |
+| write decision   | What a person may write in a workspace they can reach: the permission the workspace gives them and whether the write is refused because the workspace is archived. Every writer asks this one question.       | `lib/workspace` |
 | archive          | The reversible removal: hides a workspace from the dashboard, frees its plan slot, and keeps its content and history for a restore.                                                                           | `lib/workspace` |
 | restore          | Clearing the archive, undoing the person's own archive. The agent may restore.                                                                                                                                | `lib/workspace` |
 | delete           | Permanent removal of an archived workspace and everything under it. Only an archived workspace can be deleted, so one request cannot erase live work.                                                         | `lib/workspace` |
@@ -74,19 +75,12 @@ is a defect.
 
 ## Media
 
-| Term          | Definition                                                                                                                                                                               | Owner       |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| media         | A stored file: its row in Postgres plus its bytes in object storage. Scoped to the account it was uploaded into, which is what decides who may read it; only its uploader may delete it. | `lib/media` |
-| media account | The organization a media row belongs to, taken from the board the file was uploaded from. A null account is the uploader's own file.                                                     | `lib/media` |
-| storage key   | The name a media object is stored under in the bucket. Never shown to a browser; a reader asks the app for the file by its media id instead.                                             | `lib/media` |
-
-## Media
-
-| Term          | Definition                                                                                                                                                                               | Owner       |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| media         | A stored file: its row in Postgres plus its bytes in object storage. Scoped to the account it was uploaded into, which is what decides who may read it; only its uploader may delete it. | `lib/media` |
-| media account | The organization a media row belongs to, taken from the board the file was uploaded from. A null account is the uploader's own file.                                                     | `lib/media` |
-| storage key   | The name a media object is stored under in the bucket. Never shown to a browser; a reader asks the app for the file by its media id instead.                                             | `lib/media` |
+| Term          | Definition                                                                                                                                                                                                             | Owner       |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| media         | A stored file: its row in Postgres plus its bytes in object storage. Scoped to the account it was uploaded into, which is what decides who may read it; only its uploader may delete it.                               | `lib/media` |
+| media account | The organization a media row belongs to, taken from the board the file was uploaded from. A null account is the uploader's own file.                                                                                   | `lib/media` |
+| storage key   | The name a media object is stored under in the bucket. Never shown to a browser; a reader asks the app for the file by its media id instead.                                                                           | `lib/media` |
+| media store   | The deployment's object storage and the credential the app writes it with. A deployment configured without one has no store, which every media route reports instead of failing on a request it could not have served. | `lib/media` |
 
 ## Billing and plans
 
