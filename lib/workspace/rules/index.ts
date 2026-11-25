@@ -13,6 +13,7 @@ export type { PositionPlacement } from "./positionBetween";
 export { positionBetween } from "./positionBetween";
 export type { RenumberedPosition } from "./renumberPositions";
 export { renumberPositions } from "./renumberPositions";
+export { workspaceReadOnly } from "./workspaceReadOnly";
 export { workspaceIdSchema } from "./workspaceId";
 export { normalizeWorkspaceDraft } from "./normalizeWorkspaceDraft";
 export { hasFieldErrors } from "./hasFieldErrors";
