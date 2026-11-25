@@ -7,6 +7,8 @@ import {
   type CanvasSnapshotWriteResult,
 } from "@/lib/canvas/contracts";
 
+import { CanvasSnapshotMissingError } from "./CanvasSnapshotMissingError";
+
 export type CanvasAppClient = {
   load(workspaceId: string): Promise<CanvasSnapshotLoad>;
   save(workspaceId: string, input: CanvasSnapshotWrite): Promise<CanvasSnapshotWriteResult>;
@@ -37,6 +39,10 @@ export function createCanvasAppClient({
   return {
     async load(workspaceId) {
       const response = await fetch(url(workspaceId), { headers, cache: "no-store" });
+
+      // A canvas that does not exist is an answer, not an outage: the sweep
+      // drops its working store, and a failing app must never be mistaken for it.
+      if (response.status === 404) throw new CanvasSnapshotMissingError(workspaceId);
       if (!response.ok) {
         throw new Error(`canvas snapshot load failed with status ${response.status}`);
       }

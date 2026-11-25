@@ -8,7 +8,7 @@
   "scripts": {
     "prepare": "husky",
     "dev": "next dev",
-    "canvas:dev": "tsx canvas-service/index.ts",
+    "canvas:dev": "tsx canvas-service/main.ts",
     "build": "next build",
     "start": "next start",
     "lint": "next typegen && eslint . --max-warnings=0",

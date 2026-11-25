@@ -71,7 +71,8 @@ is a defect.
 | mutation           | One semantic intent such as adding a shape, applied in a single Yjs transaction. Never a whole-document replacement, so concurrent human edits survive.                        | `lib/collab`     |
 | canvas revision    | The integer on the canvas row, used only as the optimistic check on a snapshot write. It is not a version of the document.                                                     | `lib/workspace`  |
 | stale edit         | A snapshot write naming a revision the row has already moved past. It is refused, and the room re-sends its state on the revision the app reported.                            | `lib/canvas`     |
-| room               | The canvas service's in-memory owner of one canvas: the live document and its only writer. Evicted when its last session leaves.                                               | `canvas-service` |
+| room               | The canvas service's owner of one canvas: the live document and its only writer. Evicted when its last session leaves; the row stays the durable copy.                         | `canvas-service` |
+| working store      | One canvas's SQLite file inside the canvas service, holding its room between visits. Disposable: the row seeds it, and a lost file costs only the edits since the last write.  | `canvas-service` |
 | service credential | The one secret the app and the canvas service compare on every call between them, in either direction. Never reaches a browser, and neither process may weaken the comparison. | `lib/canvas`     |
 
 ## Media

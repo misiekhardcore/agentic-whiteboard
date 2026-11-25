@@ -1,4 +1,5 @@
-import type { WebSocketMinimal } from "@tldraw/sync-core";
+import { InMemorySyncStorage, type WebSocketMinimal } from "@tldraw/sync-core";
+import type { TLRecord } from "@tldraw/tlschema";
 import { describe, expect, it, vi } from "vitest";
 
 import { createCanvasRooms } from "./canvasRooms";
@@ -11,18 +12,31 @@ function socket(): WebSocketMinimal & { close: () => void } {
   return { send: () => undefined, close: vi.fn(), readyState: 1 };
 }
 
+function inMemoryStore() {
+  return { storage: new InMemorySyncStorage<TLRecord>(), close: () => undefined };
+}
+
 function roomsRecordingLoads() {
   const loads: string[] = [];
+  const forgotten: string[] = [];
+  const saves: string[] = [];
   const rooms = createCanvasRooms({
     load: (id) => {
       loads.push(id);
       return Promise.resolve({ revision: 0, snapshot: null });
     },
-    save: () => Promise.resolve({ ok: true, revision: 1 }),
+    save: (id) => {
+      saves.push(id);
+      return Promise.resolve({ ok: true, revision: 1 });
+    },
     log: () => undefined,
+    openStorage: () => inMemoryStore(),
+    forgetStorage: (id) => {
+      forgotten.push(id);
+    },
   });
 
-  return { loads, rooms };
+  return { loads, forgotten, saves, rooms };
 }
 
 describe("the canvas room registry", () => {
@@ -72,6 +86,31 @@ describe("the canvas room registry", () => {
     await rooms.shutdown();
   });
 
+  it("closes the sessions and forgets the store when the workspace is deleted", async () => {
+    const { forgotten, rooms, saves } = roomsRecordingLoads();
+    const session = socket();
+
+    const room = await rooms.open(workspaceId);
+    room.join({ sessionId: "tab_one", socket: session, readOnly: false });
+
+    await rooms.forget(workspaceId);
+
+    expect(session.close).toHaveBeenCalled();
+    expect(forgotten).toEqual([workspaceId]);
+    // The row the snapshot would be written to is already gone.
+    expect(saves).toEqual([]);
+    await rooms.shutdown();
+  });
+
+  it("forgets a canvas that was never opened", async () => {
+    const { forgotten, rooms } = roomsRecordingLoads();
+
+    await rooms.forget(workspaceId);
+
+    expect(forgotten).toEqual([workspaceId]);
+    await rooms.shutdown();
+  });
+
   it("keeps no half-open room when the snapshot cannot be loaded", async () => {
     const loads: string[] = [];
     let fail = true;
@@ -83,6 +122,8 @@ describe("the canvas room registry", () => {
       },
       save: () => Promise.resolve({ ok: true, revision: 1 }),
       log: () => undefined,
+      openStorage: () => inMemoryStore(),
+      forgetStorage: () => undefined,
     });
 
     await expect(rooms.open(workspaceId)).rejects.toThrow("the app is unreachable");

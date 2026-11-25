@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { CanvasSnapshot } from "@/lib/canvas/contracts";
 
 import { createCanvasAppClient } from "./canvasAppClient";
+import { CanvasSnapshotMissingError } from "./CanvasSnapshotMissingError";
 
 const snapshot: CanvasSnapshot = {
   clock: 4,
@@ -71,6 +72,14 @@ describe("the canvas app client", () => {
       ok: false,
       currentRevision: 7,
     });
+  });
+
+  it("names a canvas the app does not have, apart from an app that failed", async () => {
+    const { fetch } = recordingFetch([
+      Response.json({ error: "That workspace has no canvas." }, { status: 404 }),
+    ]);
+
+    await expect(client(fetch).load("ws_1")).rejects.toBeInstanceOf(CanvasSnapshotMissingError);
   });
 
   it("fails loudly when the app cannot take the call", async () => {

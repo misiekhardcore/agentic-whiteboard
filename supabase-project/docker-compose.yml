@@ -366,7 +366,7 @@ services:
     container_name: workspaice-canvas
     image: node:22-bookworm-slim
     working_dir: /app
-    command: ["./node_modules/.bin/tsx", "canvas-service/index.ts"]
+    command: ["./node_modules/.bin/tsx", "canvas-service/main.ts"]
     # The app is a host process, not a service in this network.
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -374,6 +374,9 @@ services:
       # The published port the browser dials from NEXT_PUBLIC_CANVAS_SERVICE_URL.
       CANVAS_SERVICE_PORT: "4100"
       CANVAS_APP_INTERNAL_URL: http://host.docker.internal:3000
+      # Each canvas's SQLite working store, on a named volume: the checkout is
+      # bind-mounted, and database files do not belong in it.
+      CANVAS_ROOMS_DIR: /app/.rooms
     # The same files the app reads, so the shared secret is not duplicated here.
     # Later files win; both are optional so a fresh checkout still starts the
     # other services and fails only this one with a named missing setting.
@@ -398,6 +401,7 @@ services:
       start_period: 5s
     volumes:
       - ../:/app:z
+      - canvas-rooms:/app/.rooms
 
   # Optional local SMTP catcher for app email (Better Auth). Not started by
   # default: `docker compose --profile mail up -d` -> SMTP on :2500, UI on :9002.
@@ -413,3 +417,4 @@ services:
 volumes:
   db-config:
   storage-data:
+  canvas-rooms:

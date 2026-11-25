@@ -36,6 +36,12 @@ shared `CANVAS_SERVICE_SECRET`. The app itself stays on the host with `pnpm dev`
 the container reaches it at `host.docker.internal:3000`. `pnpm canvas:dev` runs
 the same service without compose.
 
+Each canvas keeps its SQLite working store at `/app/.rooms`, on the
+`canvas-rooms` volume: the checkout is bind-mounted, so the files stay out of it.
+They are a cache of the live document, not the source of truth - the row in
+Postgres is, and a deleted volume only costs the edits since the last snapshot
+write.
+
 All configuration is in `.env` in this directory. Existing database files live
 in `volumes/db/data`; storage objects live in the `supabase_storage-data`
 Docker volume (the file backend needs extended attributes, which Docker

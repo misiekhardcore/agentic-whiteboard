@@ -5,9 +5,14 @@ export type CanvasServiceConfig = {
   serviceSecret: string;
   /** The app's own origin, which serves the snapshot route. */
   appUrl: string;
+  /** Where each canvas keeps its SQLite working store. */
+  roomsDirectory: string;
 };
 
-export type CanvasServiceEnvironment = Pick<
-  typeof process.env,
-  "CANVAS_SERVICE_PORT" | "CANVAS_SERVICE_SECRET" | "CANVAS_APP_INTERNAL_URL"
->;
+/** The settings this process reads, all optional so a test can leave one out. */
+export type CanvasServiceEnvironment = {
+  CANVAS_SERVICE_PORT?: string;
+  CANVAS_SERVICE_SECRET?: string;
+  CANVAS_APP_INTERNAL_URL?: string;
+  CANVAS_ROOMS_DIR?: string;
+};

@@ -4,6 +4,7 @@ import type { CanvasServiceConfig, CanvasServiceEnvironment } from "./types";
 
 const DEFAULT_PORT = 4100;
 const DEFAULT_APP_URL = "http://localhost:3000";
+const DEFAULT_ROOMS_DIRECTORY = ".rooms";
 
 /**
  * The service has no safe defaults for its secret: without one it cannot tell
@@ -25,5 +26,6 @@ export function resolveServiceConfig(
     port: read.port("CANVAS_SERVICE_PORT", DEFAULT_PORT),
     serviceSecret,
     appUrl: read.origin("CANVAS_APP_INTERNAL_URL") ?? DEFAULT_APP_URL,
+    roomsDirectory: read.value("CANVAS_ROOMS_DIR") ?? DEFAULT_ROOMS_DIRECTORY,
   };
 }

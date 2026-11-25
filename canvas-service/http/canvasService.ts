@@ -7,13 +7,14 @@ import type { CanvasRooms } from "../rooms/canvasRooms";
 
 import { authorizeCanvasUpgrade } from "./authorizeUpgrade";
 
-const REVOKE_PATH = /^\/revoke\/([A-Za-z0-9_-]{1,64})$/;
+const ROOM_PATH = /^\/(revoke|forget)\/([A-Za-z0-9_-]{1,64})$/;
 
 /**
- * The process's doors: a health read for a deployer or the end-to-end suite, an
- * authenticated revoke the app calls when a workspace becomes read-only, and
- * the WebSocket upgrades browsers join a canvas through. Every other request is
- * a 404 — this service serves no pages.
+ * The process's doors: a health read for a deployer or the end-to-end suite, two
+ * authenticated calls from the app — revoke, for a workspace that became
+ * read-only, and forget, for one that was deleted — and the WebSocket upgrades
+ * browsers join a canvas through. Every other request is a 404: this service
+ * serves no pages.
  */
 export function createCanvasService({
   serviceSecret,
@@ -31,8 +32,10 @@ export function createCanvasService({
       return;
     }
 
-    const revoke = request.method === "POST" ? REVOKE_PATH.exec(request.url ?? "") : null;
-    if (revoke?.[1]) {
+    const roomCall = request.method === "POST" ? ROOM_PATH.exec(request.url ?? "") : null;
+    const action = roomCall?.[1];
+    const workspaceId = roomCall?.[2];
+    if ((action === "revoke" || action === "forget") && workspaceId) {
       if (
         !authorizeCanvasServiceRequest({
           authorization: request.headers.authorization ?? null,
@@ -44,20 +47,28 @@ export function createCanvasService({
         return;
       }
 
-      void rooms
-        .revoke(revoke[1])
+      const closing = action === "revoke" ? rooms.revoke(workspaceId) : rooms.forget(workspaceId);
+
+      void closing
         .then(() => {
           response.writeHead(204);
           response.end();
         })
         .catch((error: unknown) => {
           log(
-            `revoking ${revoke[1]} failed: ${
+            `${action} of ${workspaceId} failed: ${
               error instanceof Error ? error.message : "unknown error"
             }`,
           );
           response.writeHead(500, { "content-type": "application/json" });
-          response.end(JSON.stringify({ error: "The canvas could not be closed." }));
+          response.end(
+            JSON.stringify({
+              error:
+                action === "revoke"
+                  ? "The canvas could not be closed."
+                  : "The canvas could not be forgotten.",
+            }),
+          );
         });
       return;
     }
