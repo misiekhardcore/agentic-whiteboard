@@ -1,9 +1,10 @@
-import type { RoomOwnerPort, UserActor } from "@v2/contracts";
-import { createInMemoryRoomOwner } from "@v2/contracts/testing";
+import type { UserActor } from "@v2/contracts";
 import { createWorkspaceStore } from "@v2/db";
 import type { WorkspaceStore } from "@v2/db";
 import { DEMO_WORKSPACE } from "@v2/db/demo";
 
+import { createDocRoomOwner } from "./doc-room-owner";
+import { resolveDocService } from "./doc-service";
 import type { AppDependencies } from "./workspace-view";
 
 /**
@@ -15,22 +16,6 @@ export const demoActor: UserActor = {
   userId: "user_demo",
   accountId: DEMO_WORKSPACE.accountId,
 };
-
-const DEMO_DOCUMENT_TITLE = "Product brief";
-
-/**
- * The in-memory room owner is the reference implementation this slice ships.
- * A later slice replaces it with the document service behind the same port.
- */
-export const demoRoomOwner: RoomOwnerPort = createInMemoryRoomOwner({
-  rooms: [
-    {
-      room: { kind: "doc", id: DEMO_WORKSPACE.docRoomId, accountId: DEMO_WORKSPACE.accountId },
-      content: { title: DEMO_DOCUMENT_TITLE },
-      revision: "rev-1",
-    },
-  ],
-});
 
 let store: WorkspaceStore | null = null;
 let cached: AppDependencies | null = null;
@@ -47,6 +32,7 @@ export function getDependencies(): AppDependencies {
       if (row === null) return null;
       return {
         id: row.id,
+        name: row.name,
         accountId: row.accountId,
         docRoomId: row.docRoomId,
         archived: row.archivedAt !== null,
@@ -54,7 +40,7 @@ export function getDependencies(): AppDependencies {
     },
   };
 
-  cached = { workspaces, rooms: demoRoomOwner };
+  cached = { workspaces, rooms: createDocRoomOwner(resolveDocService()) };
   return cached;
 }
 

@@ -1,5 +1,5 @@
 import { createDatabase } from "./database";
-import { DEMO_WORKSPACE } from "./demo";
+import { DEMO_WORKSPACES } from "./demo";
 import { workspace } from "./schema";
 
 const url = process.env.DATABASE_URL;
@@ -11,8 +11,10 @@ if (url === undefined || url.length === 0) {
 const { database, pool } = createDatabase(url);
 
 try {
-  await database.insert(workspace).values(DEMO_WORKSPACE).onConflictDoNothing();
-  console.log(`[db] demo workspace ${DEMO_WORKSPACE.id} is present`);
+  await database.insert(workspace).values(DEMO_WORKSPACES).onConflictDoNothing();
+  console.log(
+    `[db] demo workspaces ${DEMO_WORKSPACES.map((demo) => demo.id).join(", ")} are present`,
+  );
 } finally {
   await pool.end();
 }

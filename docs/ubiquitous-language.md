@@ -128,6 +128,7 @@ is a defect.
 | capability | One semantic operation: a name, a description, an effect, the callers it is exposed to, input and output schemas, an `authorize` step that returns the row it authorized, a handler and the datasets it changes. A person's click and an agent's proposal invoke the same record.                        | `packages/capabilities` |
 | effect     | `read` or `write`. A read runs during reasoning; a write is collected, gated and committed. The effect decides the approval path, not a separate "risk" flag.                                                                                                                                            | `packages/capabilities` |
 | room token | A short-lived claim minted by the app naming the actor, room, account and permission. The room owner verifies it and re-checks membership at apply time, because a run outlives a membership.                                                                                                             | `apps/web`             |
+| room lease | The exclusive claim an instance of a room owner holds on one room, with an expiry. A second instance refuses the room and names the holder; an expired lease is the only way to take it over.                                                                                                             | `apps/collab`          |
 
 ## Distinctions that carry rules
 

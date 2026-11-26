@@ -166,6 +166,26 @@ describe("the workspace skeleton", () => {
     }
   });
 
+  it("keeps document snapshot writes in the document room owner", async () => {
+    const packages = await loadPackages();
+
+    for (const pkg of packages) {
+      if (pkg.name === "@v2/db" || pkg.name === "@v2/collab") continue;
+
+      for (const file of await listFiles(pkg.directory)) {
+        if (!SOURCE_EXTENSIONS.some((extension) => file.endsWith(extension))) continue;
+        const source = await readText(file);
+
+        for (const specifier of importsIn(source)) {
+          expect(
+            matchesPackage(specifier, ["@v2/db/doc-room"]),
+            `${relative(repoRoot, file)} imports the document body store`,
+          ).toBe(false);
+        }
+      }
+    }
+  });
+
   it("keeps DDL and SQL inside the database package", async () => {
     const database = (await loadPackages()).find((pkg) => pkg.name === "@v2/db");
     if (database === undefined) throw new Error("The database package is missing");

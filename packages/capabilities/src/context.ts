@@ -3,6 +3,7 @@ import type { Actor, RoomOwnerPort } from "@v2/contracts";
 /** The workspace fields authorization needs. The database row is mapped to this. */
 export type WorkspaceRecord = {
   id: string;
+  name: string;
   accountId: string;
   docRoomId: string;
   archived: boolean;

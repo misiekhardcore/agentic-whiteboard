@@ -11,12 +11,17 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@hocuspocus/provider": "^4.9.0",
+    "@tiptap/extension-collaboration": "^3.35.0",
+    "@tiptap/react": "^3.35.0",
+    "@tiptap/starter-kit": "^3.35.0",
     "@v2/capabilities": "workspace:*",
     "@v2/contracts": "workspace:*",
     "@v2/db": "workspace:*",
     "next": "16.4.6",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "yjs": "^13.6.33"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
