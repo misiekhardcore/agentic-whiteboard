@@ -34,33 +34,31 @@ export function DocRoom({
   );
   const [, setRevisionTick] = useState(0);
 
-  const provider = useMemo(
-    () =>
-      new HocuspocusProvider({
-        url: initialConnection.url,
-        name: initialConnection.documentName,
-        document: ydoc,
-        // Every attempt, including the first, asks for a fresh token, so an
-        // expired one never travels and an archived workspace is re-answered
-        // read-only after the room closes its live sessions.
-        token: async () => {
-          const connection = await requestDocConnection(workspaceId);
-          setConnectionReadOnly(connection.readOnly);
-          return connection.token;
-        },
-        onStatus: ({ status: next }) => setStatus(next),
-        onAuthenticationFailed: () => setStatus("disconnected"),
-      }),
-    [initialConnection, workspaceId, ydoc],
-  );
+  // The provider owns a socket, so it is created and destroyed with the
+  // effect. The Y.Doc outlives it: StrictMode mounts effects twice in
+  // development, and destroying the shared document would leave the editor
+  // typing into a document no provider is listening to.
+  useEffect(() => {
+    const provider = new HocuspocusProvider({
+      url: initialConnection.url,
+      name: initialConnection.documentName,
+      document: ydoc,
+      // Every attempt, including the first, asks for a fresh token, so an
+      // expired one never travels and an archived workspace is re-answered
+      // read-only after the room closes its live sessions.
+      token: async () => {
+        const connection = await requestDocConnection(workspaceId);
+        setConnectionReadOnly(connection.readOnly);
+        return connection.token;
+      },
+      onStatus: ({ status: next }) => setStatus(next),
+      onAuthenticationFailed: () => setStatus("disconnected"),
+    });
 
-  useEffect(
-    () => () => {
+    return () => {
       provider.destroy();
-      ydoc.destroy();
-    },
-    [provider, ydoc],
-  );
+    };
+  }, [initialConnection, workspaceId, ydoc]);
 
   const editor = useEditor(
     {
