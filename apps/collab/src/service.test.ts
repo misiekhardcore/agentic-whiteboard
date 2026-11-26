@@ -1,11 +1,12 @@
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import { mintRoomToken } from "@v2/contracts";
-import type { DocSnapshotStore, LeaseClaim, RoomLeaseStore } from "@v2/db/doc-room";
 import { afterEach, describe, expect, it } from "vitest";
 import * as Y from "yjs";
 
+import { DOC_BLOCKS_FIELD } from "./doc-blocks";
 import { createDocService } from "./service";
 import type { DocService } from "./service";
+import { memoryStores } from "./test-support/memory-stores";
 
 const secret = "doc-secret";
 const services: DocService[] = [];
@@ -15,53 +16,6 @@ afterEach(async () => {
   for (const provider of providers.splice(0)) provider.destroy();
   for (const service of services.splice(0)) await service.destroy();
 });
-
-function memoryStores(): {
-  snapshots: DocSnapshotStore;
-  leaseStore: RoomLeaseStore;
-  state: Map<string, Uint8Array>;
-  holders: Map<string, string>;
-} {
-  const state = new Map<string, Uint8Array>();
-  const revisions = new Map<string, number>();
-  const holders = new Map<string, string>();
-
-  return {
-    state,
-    holders,
-    snapshots: {
-      load(roomId) {
-        return Promise.resolve({
-          state: state.get(roomId) ?? null,
-          revision: revisions.get(roomId) ?? 0,
-        });
-      },
-      save(roomId, update) {
-        state.set(roomId, Uint8Array.from(update));
-        const revision = (revisions.get(roomId) ?? 0) + 1;
-        revisions.set(roomId, revision);
-        return Promise.resolve(revision);
-      },
-    },
-    leaseStore: {
-      acquire({ roomId, holder }): Promise<LeaseClaim> {
-        const current = holders.get(roomId);
-        if (current !== undefined && current !== holder) {
-          return Promise.resolve({ ok: false, holder: current });
-        }
-        holders.set(roomId, holder);
-        return Promise.resolve({ ok: true });
-      },
-      renew({ roomId, holder }) {
-        return Promise.resolve(holders.get(roomId) === holder);
-      },
-      release({ roomId, holder }) {
-        if (holders.get(roomId) === holder) holders.delete(roomId);
-        return Promise.resolve();
-      },
-    },
-  };
-}
 
 function serviceWith(stores: ReturnType<typeof memoryStores>, instanceId: string): DocService {
   const service = createDocService({
@@ -119,6 +73,33 @@ function textOf(document: Y.Doc): string {
     .join("");
 }
 
+function textOfElement(element: Y.XmlElement): string {
+  return element
+    .toArray()
+    .map((child) => {
+      if (child instanceof Y.XmlText) return String(child.toString());
+      if (child instanceof Y.XmlElement) return textOfElement(child);
+      return "";
+    })
+    .join("");
+}
+
+function xmlOf(document: Y.Doc): string {
+  return document
+    .getXmlFragment(DOC_BLOCKS_FIELD)
+    .toArray()
+    .map((node) => {
+      if (node instanceof Y.XmlText) return String(node.toString());
+      if (node instanceof Y.XmlElement) return textOfElement(node);
+      return "";
+    })
+    .join(" ");
+}
+
+function occurrences(haystack: string, needle: string): number {
+  return haystack.split(needle).length - 1;
+}
+
 async function until(check: () => boolean, timeoutMs = 3_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
 
@@ -129,6 +110,19 @@ async function until(check: () => boolean, timeoutMs = 3_000): Promise<void> {
 
   throw new Error("condition was not met in time");
 }
+
+function applyBody(idempotencyKey: string, ops: unknown[]): string {
+  return JSON.stringify({
+    actor: { type: "user", userId: "user-1", accountId: "account-1" },
+    idempotencyKey,
+    ops,
+  });
+}
+
+const appendBlock = (id: string, text: string) => ({
+  kind: "append-block",
+  payload: { block: { id, kind: "paragraph", level: null, text } },
+});
 
 describe("the document room owner", () => {
   it("syncs two sessions and restores the stored snapshot in a fresh one", async () => {
@@ -185,6 +179,7 @@ describe("the document room owner", () => {
 
   it("serves health, guards its service doors and revokes a live session", async () => {
     const stores = memoryStores();
+    await stores.snapshots.ensure("doc-1");
     const service = serviceWith(stores, "instance-a");
     const port = await service.listen(0);
     const base = `http://127.0.0.1:${port}`;
@@ -199,7 +194,11 @@ describe("the document room owner", () => {
 
     const snapshot = await fetch(`${base}/snapshot/doc-1`, { headers: authorization });
     expect(snapshot.status).toBe(200);
-    await expect(snapshot.json()).resolves.toMatchObject({ roomId: "doc-1", revision: 0 });
+    await expect(snapshot.json()).resolves.toMatchObject({
+      roomId: "doc-1",
+      revision: 0,
+      content: { blocks: [] },
+    });
 
     let closed = false;
     const client = connect(port, "doc-1", { onClose: () => (closed = true) });
@@ -212,6 +211,89 @@ describe("the document room owner", () => {
     expect(revoke.status).toBe(204);
 
     await until(() => closed);
+  });
+
+  it("applies a server write to every open editor once per request key", async () => {
+    const stores = memoryStores();
+    await stores.snapshots.ensure("doc-1");
+    const service = serviceWith(stores, "instance-a");
+    const port = await service.listen(0);
+    const base = `http://127.0.0.1:${port}`;
+    const headers = {
+      authorization: `Bearer ${secret}`,
+      "content-type": "application/json",
+    };
+
+    const first = connect(port, "doc-1");
+    const second = connect(port, "doc-1");
+    await until(() => first.provider.synced && second.provider.synced);
+
+    // A browser origin without the service credential cannot reach the door.
+    const browserAttempt = await fetch(`${base}/apply/doc-1`, {
+      method: "POST",
+      headers: { origin: "http://localhost:3000", "content-type": "application/json" },
+      body: applyBody("op-browser", [appendBlock("block-browser", "Must not land")]),
+    });
+    expect(browserAttempt.status).toBe(401);
+
+    const body = applyBody("op-1", [appendBlock("block-2", "Inserted from the server")]);
+    const applied = await fetch(`${base}/apply/doc-1`, { method: "POST", headers, body });
+    expect(applied.status).toBe(200);
+    await expect(applied.json()).resolves.toMatchObject({ applied: 1, revision: 1 });
+
+    await until(
+      () =>
+        xmlOf(first.document).includes("Inserted from the server") &&
+        xmlOf(second.document).includes("Inserted from the server"),
+    );
+
+    const replay = await fetch(`${base}/apply/doc-1`, { method: "POST", headers, body });
+    expect(replay.status).toBe(200);
+    await expect(replay.json()).resolves.toMatchObject({ applied: 0, revision: 1 });
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(occurrences(xmlOf(second.document), "Inserted from the server")).toBe(1);
+  });
+
+  it("applies neither operation when the second is invalid", async () => {
+    const stores = memoryStores();
+    await stores.snapshots.ensure("doc-1");
+    const service = serviceWith(stores, "instance-a");
+    const port = await service.listen(0);
+    const base = `http://127.0.0.1:${port}`;
+    const headers = {
+      authorization: `Bearer ${secret}`,
+      "content-type": "application/json",
+    };
+
+    const client = connect(port, "doc-1");
+    await until(() => client.provider.synced);
+
+    const body = applyBody("op-invalid", [
+      appendBlock("block-3", "Must not land"),
+      {
+        kind: "replace-block",
+        payload: {
+          blockId: "block-missing",
+          block: { id: "block-missing", kind: "paragraph", level: null, text: "No target" },
+        },
+      },
+    ]);
+
+    const response = await fetch(`${base}/apply/doc-1`, { method: "POST", headers, body });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ code: "invalid-ops" });
+
+    const snapshot = await fetch(`${base}/snapshot/doc-1`, {
+      headers: { authorization: `Bearer ${secret}` },
+    });
+    await expect(snapshot.json()).resolves.toMatchObject({
+      revision: 0,
+      content: { blocks: [] },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(xmlOf(client.document)).not.toContain("Must not land");
   });
 
   it("refuses a second instance and names the holder", async () => {

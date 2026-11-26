@@ -2,6 +2,7 @@ import type { Actor } from "@v2/contracts";
 import { describe, expect, it } from "vitest";
 
 import { can } from "../src";
+import type { WorkspaceAction } from "../src";
 
 const person = (accountId: string): Actor => ({
   type: "user",
@@ -19,7 +20,7 @@ const agent = (accountId: string): Actor => ({
 const matrix: {
   name: string;
   actor: Actor;
-  action: "workspace.read";
+  action: WorkspaceAction;
   accountId: string;
   archived: boolean;
   allowed: boolean;
@@ -60,6 +61,46 @@ const matrix: {
     name: "an archived workspace stays readable",
     actor: person("account-1"),
     action: "workspace.read",
+    accountId: "account-1",
+    archived: true,
+    allowed: true,
+  },
+  {
+    name: "a person writes a workspace in their account",
+    actor: person("account-1"),
+    action: "workspace.write",
+    accountId: "account-1",
+    archived: false,
+    allowed: true,
+  },
+  {
+    name: "a person cannot write another account's workspace",
+    actor: person("account-2"),
+    action: "workspace.write",
+    accountId: "account-1",
+    archived: false,
+    allowed: false,
+  },
+  {
+    name: "an agent writes in the account it acts for",
+    actor: agent("account-1"),
+    action: "workspace.write",
+    accountId: "account-1",
+    archived: false,
+    allowed: true,
+  },
+  {
+    name: "an agent cannot write another account's workspace",
+    actor: agent("account-2"),
+    action: "workspace.write",
+    accountId: "account-1",
+    archived: false,
+    allowed: false,
+  },
+  {
+    name: "the lifecycle, not can(), makes an archived write read-only",
+    actor: person("account-1"),
+    action: "workspace.write",
     accountId: "account-1",
     archived: true,
     allowed: true,

@@ -12,6 +12,24 @@ export type {
   Success,
 } from "./capability";
 export type { Change } from "./changes";
+export {
+  actorReference,
+  BLOCK_ID_PATTERN,
+  IDEMPOTENCY_KEY_PATTERN,
+  isActor,
+  isDocProjection,
+  normalizeDocBlockWrite,
+  readDocContentOp,
+} from "./doc-content";
+export type {
+  AppendBlockOp,
+  DocBlock,
+  DocBlockKind,
+  DocBlockWrite,
+  DocContentOp,
+  DocProjection,
+  ReplaceBlockOp,
+} from "./doc-content";
 export type { JsonValue } from "./json";
 export { RoomOwnerError } from "./room-owner";
 export type {

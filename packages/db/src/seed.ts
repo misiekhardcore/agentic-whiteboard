@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 
 import { createDatabase } from "./database";
 import { DEMO_WORKSPACES } from "./demo";
-import { workspace } from "./schema";
+import { docRoom, workspace } from "./schema";
 
 // See `migrate.ts`: the seed runs from the same root command and needs the
 // repository's `.env` when the shell has not exported the settings.
@@ -22,6 +22,10 @@ const { database, pool } = createDatabase(url);
 
 try {
   await database.insert(workspace).values(DEMO_WORKSPACES).onConflictDoNothing();
+  await database
+    .insert(docRoom)
+    .values(DEMO_WORKSPACES.map((demo) => ({ roomId: demo.docRoomId })))
+    .onConflictDoNothing();
   console.log(
     `[db] demo workspaces ${DEMO_WORKSPACES.map((demo) => demo.id).join(", ")} are present`,
   );

@@ -1,6 +1,6 @@
 import type { Actor, Caller } from "@v2/contracts";
 
-export const WORKSPACE_ACTIONS = ["workspace.read"] as const;
+export const WORKSPACE_ACTIONS = ["workspace.read", "workspace.write"] as const;
 
 export type WorkspaceAction = (typeof WORKSPACE_ACTIONS)[number];
 
@@ -18,6 +18,10 @@ type Policy = (actor: Actor, resource: WorkspaceResource) => boolean;
  */
 const POLICY: Record<WorkspaceAction, Record<Caller, Policy>> = {
   "workspace.read": {
+    human: (actor, resource) => actor.accountId === resource.accountId,
+    agent: (actor, resource) => actor.accountId === resource.accountId,
+  },
+  "workspace.write": {
     human: (actor, resource) => actor.accountId === resource.accountId,
     agent: (actor, resource) => actor.accountId === resource.accountId,
   },

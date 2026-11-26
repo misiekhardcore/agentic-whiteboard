@@ -1,9 +1,12 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { Server } from "@hocuspocus/server";
+import { IDEMPOTENCY_KEY_PATTERN, isActor, RoomOwnerError } from "@v2/contracts";
+import type { Actor, ContentOp, JsonValue } from "@v2/contracts";
 import type { DocSnapshotStore, RoomLeaseStore } from "@v2/db/doc-room";
 import * as Y from "yjs";
 
+import { applyDocOps, projectDocContent, revisionOf, revokeDoc } from "./doc-blocks";
 import { createRoomLeases } from "./lease";
 import type { RoomLeases } from "./lease";
 import { authorizeServiceRequest } from "./service-secret";
@@ -24,8 +27,28 @@ export type DocService = {
 
 const HEALTH_PATH = "/health";
 const SNAPSHOT_PATH = /^\/snapshot\/([A-Za-z0-9_-]{1,128})$/;
+const APPLY_PATH = /^\/apply\/([A-Za-z0-9_-]{1,128})$/;
 const REVOKE_PATH = /^\/revoke\/([A-Za-z0-9_-]{1,128})$/;
 const DEFAULT_RENEW_MS = 10_000;
+const MAX_BODY_BYTES = 256 * 1024;
+const SERVICE_ACTOR: DocContext = { userId: "service", readOnly: false };
+
+type OpenedRoom = {
+  document: Y.Doc | null;
+  transact(callback: (document: Y.Doc) => void): Promise<void>;
+  disconnect(): Promise<void>;
+};
+
+type RoomInstance = {
+  closeConnections(documentName?: string): void;
+  openDirectConnection(documentName: string, context?: DocContext): Promise<OpenedRoom>;
+};
+
+type ApplyBody = {
+  actor: Actor;
+  idempotencyKey: string;
+  ops: ContentOp[];
+};
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
   const payload = JSON.stringify(body);
@@ -34,6 +57,57 @@ function sendJson(response: ServerResponse, status: number, body: unknown): void
     "content-length": Buffer.byteLength(payload),
   });
   response.end(payload);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+async function readJson(request: IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array);
+    size += buffer.length;
+    if (size > MAX_BODY_BYTES) throw new Error("The request body is too large.");
+    chunks.push(buffer);
+  }
+
+  if (size === 0) return null;
+  return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+}
+
+function readApplyBody(value: unknown): ApplyBody | null {
+  if (!isRecord(value)) return null;
+  if (!isActor(value.actor)) return null;
+  if (
+    typeof value.idempotencyKey !== "string" ||
+    !IDEMPOTENCY_KEY_PATTERN.test(value.idempotencyKey)
+  ) {
+    return null;
+  }
+  if (!Array.isArray(value.ops)) return null;
+
+  const ops: ContentOp[] = [];
+  for (const op of value.ops) {
+    if (!isRecord(op) || typeof op.kind !== "string") return null;
+    ops.push({ kind: op.kind, payload: op.payload as JsonValue });
+  }
+
+  return { actor: value.actor, idempotencyKey: value.idempotencyKey, ops };
+}
+
+function statusOf(error: RoomOwnerError): number {
+  switch (error.code) {
+    case "invalid-ops":
+      return 400;
+    case "room-not-found":
+      return 404;
+    case "room-revoked":
+    case "apply-refused":
+      return 409;
+  }
 }
 
 /**
@@ -120,6 +194,7 @@ export function createDocService({
 
       try {
         const snapshot = await snapshots.load(documentName);
+        if (!snapshot.exists) await snapshots.ensure(documentName);
         return snapshot.state;
       } catch (error) {
         await leases.release(documentName);
@@ -180,7 +255,7 @@ async function handleRequest({
 }: {
   request: IncomingMessage;
   response: ServerResponse;
-  instance: { closeConnections: (documentName?: string) => void };
+  instance: RoomInstance;
   snapshots: DocSnapshotStore;
   secret: string;
   log: (message: string) => void;
@@ -192,39 +267,173 @@ async function handleRequest({
     return;
   }
 
-  const snapshot = request.method === "GET" ? SNAPSHOT_PATH.exec(path) : null;
-  const roomId = snapshot?.[1];
-  if (roomId !== undefined) {
-    if (
-      !authorizeServiceRequest({ authorization: request.headers.authorization ?? null, secret })
-    ) {
+  const snapshotMatch = request.method === "GET" ? SNAPSHOT_PATH.exec(path) : null;
+  const snapshotRoomId = snapshotMatch?.[1];
+  if (snapshotRoomId !== undefined) {
+    if (!isServiceRequest(request, secret)) {
       sendJson(response, 401, { error: "Not the document app." });
       return;
     }
 
-    const stored = await snapshots.load(roomId);
-    sendJson(response, 200, { roomId, revision: stored.revision });
+    const stored = await snapshots.load(snapshotRoomId);
+    if (!stored.exists) {
+      sendJson(response, 404, {
+        error: "That document room does not exist.",
+        code: "room-not-found",
+      });
+      return;
+    }
+
+    await withRoom(instance, snapshotRoomId, response, (room) => {
+      sendJson(response, 200, {
+        roomId: snapshotRoomId,
+        revision: revisionOf(room.document),
+        content: projectDocContent(room.document),
+      });
+    });
     return;
   }
 
-  const revoke = request.method === "POST" ? REVOKE_PATH.exec(path) : null;
-  const revokedRoomId = revoke?.[1];
-  if (revokedRoomId !== undefined) {
-    if (
-      !authorizeServiceRequest({ authorization: request.headers.authorization ?? null, secret })
-    ) {
+  const applyMatch = request.method === "POST" ? APPLY_PATH.exec(path) : null;
+  const applyRoomId = applyMatch?.[1];
+  if (applyRoomId !== undefined) {
+    if (!isServiceRequest(request, secret)) {
       sendJson(response, 401, { error: "Not the document app." });
       return;
     }
 
-    // A live session is closed so it reconnects and asks for a new token. The
-    // token it gets back is read-only once the workspace is archived.
-    instance.closeConnections(revokedRoomId);
-    log(`revoked live sessions for ${revokedRoomId}`);
-    response.writeHead(204);
-    response.end();
+    let raw: unknown;
+    try {
+      raw = await readJson(request);
+    } catch {
+      sendJson(response, 400, { error: "Expected a JSON apply request.", code: "invalid-ops" });
+      return;
+    }
+
+    const body = readApplyBody(raw);
+    if (body === null) {
+      sendJson(response, 400, { error: "That apply request is malformed.", code: "invalid-ops" });
+      return;
+    }
+
+    const stored = await snapshots.load(applyRoomId);
+    if (!stored.exists) {
+      sendJson(response, 404, {
+        error: "That document room does not exist.",
+        code: "room-not-found",
+      });
+      return;
+    }
+
+    await withRoom(instance, applyRoomId, response, async (room) => {
+      const box: { outcome?: { revision: number; applied: number } } = {};
+
+      try {
+        await room.transact((document) => {
+          box.outcome = applyDocOps(document, body);
+        });
+      } catch (error) {
+        if (error instanceof RoomOwnerError) {
+          sendJson(response, statusOf(error), { error: error.message, code: error.code });
+          return;
+        }
+        throw error;
+      }
+
+      const outcome = box.outcome;
+      if (outcome === undefined) throw new Error("The apply transaction did not produce a result.");
+
+      await snapshots.save(applyRoomId, Y.encodeStateAsUpdate(room.document));
+      log(`applied ${outcome.applied} operation(s) to ${applyRoomId}`);
+      sendJson(response, 200, outcome);
+    });
+    return;
+  }
+
+  const revokeMatch = request.method === "POST" ? REVOKE_PATH.exec(path) : null;
+  const revokedRoomId = revokeMatch?.[1];
+  if (revokedRoomId !== undefined) {
+    if (!isServiceRequest(request, secret)) {
+      sendJson(response, 401, { error: "Not the document app." });
+      return;
+    }
+
+    const stored = await snapshots.load(revokedRoomId);
+    if (!stored.exists) {
+      sendJson(response, 404, {
+        error: "That document room does not exist.",
+        code: "room-not-found",
+      });
+      return;
+    }
+
+    await withRoom(instance, revokedRoomId, response, async (room) => {
+      await room.transact((document) => {
+        revokeDoc(document);
+      });
+      await snapshots.save(revokedRoomId, Y.encodeStateAsUpdate(room.document));
+
+      // A live session is closed so it reconnects and asks for a new token. The
+      // token it gets back is read-only once the workspace is archived, and the
+      // durable revocation refuses a write even if the browser ignores both.
+      instance.closeConnections(revokedRoomId);
+      log(`revoked live sessions for ${revokedRoomId}`);
+      response.writeHead(204);
+      response.end();
+    });
     return;
   }
 
   sendJson(response, 404, { error: "Not found." });
+}
+
+function isServiceRequest(request: IncomingMessage, secret: string): boolean {
+  return authorizeServiceRequest({ authorization: request.headers.authorization ?? null, secret });
+}
+
+type RoomConnection = {
+  document: Y.Doc;
+  transact(callback: (document: Y.Doc) => void): Promise<void>;
+  disconnect(): Promise<void>;
+};
+
+/** Opens one direct connection, runs the work, and always releases the room. */
+async function withRoom(
+  instance: RoomInstance,
+  roomId: string,
+  response: ServerResponse,
+  run: (room: RoomConnection) => Promise<void> | void,
+): Promise<void> {
+  let opened: OpenedRoom;
+
+  try {
+    opened = await instance.openDirectConnection(roomId, SERVICE_ACTOR);
+  } catch (error) {
+    sendJson(response, 409, {
+      error: error instanceof Error ? error.message : "That document room is held elsewhere.",
+      code: "apply-refused",
+    });
+    return;
+  }
+
+  if (opened.document === null) {
+    await opened.disconnect();
+    sendJson(response, 409, {
+      error: "That document room is no longer available.",
+      code: "apply-refused",
+    });
+    return;
+  }
+
+  const room: RoomConnection = {
+    document: opened.document,
+    transact: (callback) => opened.transact(callback),
+    disconnect: () => opened.disconnect(),
+  };
+
+  try {
+    await run(room);
+  } finally {
+    await room.disconnect();
+  }
 }

@@ -64,6 +64,24 @@ export function describeRoomOwnerContract(
       expect(after.revision).toBe(result.revision);
     });
 
+    it("records the actor that wrote the block", async () => {
+      const fixture = createFixture();
+
+      await fixture.owner.apply({
+        room: fixture.room,
+        actor: fixture.actor,
+        idempotencyKey: "op-attribution",
+        ops: fixture.applyOps,
+      });
+
+      const after = await fixture.owner.snapshot(fixture.room);
+      expect(JSON.stringify(after.content)).toContain(
+        fixture.actor.type === "user"
+          ? `user:${fixture.actor.userId}`
+          : `agent:${fixture.actor.runId}`,
+      );
+    });
+
     it("applies a replayed key zero times", async () => {
       const fixture = createFixture();
       const input = {

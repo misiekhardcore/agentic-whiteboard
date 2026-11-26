@@ -7,11 +7,13 @@ import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useMemo, useState } from "react";
 import * as Y from "yjs";
 
+import { BlockIdentity } from "./BlockIdentity";
 import { requestDocConnection } from "./doc-connection";
 import type { DocConnection } from "./doc-connection";
 import { DocConnectionLine } from "./DocConnectionLine";
 import type { DocConnectionStatus } from "./DocConnectionLine";
 import { DocToolbar } from "./DocToolbar";
+import { InsertFromTemplate } from "./InsertFromTemplate";
 
 /**
  * The editor itself, mounted only in the browser. The room decides read-only
@@ -64,6 +66,7 @@ export function DocRoom({
     {
       extensions: [
         StarterKit.configure({ undoRedo: false }),
+        BlockIdentity,
         Collaboration.configure({ document: ydoc }),
       ],
       editable: !connectionReadOnly,
@@ -98,7 +101,13 @@ export function DocRoom({
     <div className="flex flex-col">
       <div className="doc-bar flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/40 px-3 py-2">
         <DocToolbar editor={editor} readOnly={connectionReadOnly} />
-        <DocConnectionLine status={status} readOnly={connectionReadOnly} />
+        <div className="doc-bar-side">
+          <InsertFromTemplate
+            workspaceId={workspaceId}
+            disabled={connectionReadOnly || status !== "connected"}
+          />
+          <DocConnectionLine status={status} readOnly={connectionReadOnly} />
+        </div>
       </div>
       <div className="doc-editor flex-1">
         <EditorContent editor={editor} />

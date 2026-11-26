@@ -1,3 +1,5 @@
+import { actorReference, isDocProjection, readDocContentOp } from "../doc-content";
+import type { DocProjection } from "../doc-content";
 import type { JsonValue } from "../json";
 import { RoomOwnerError } from "../room-owner";
 import type {
@@ -28,11 +30,54 @@ export type InMemoryRoomOwner = RoomOwnerPort;
 
 const roomKey = (room: RoomRef): string => `${room.kind}:${room.id}`;
 
-const isReplaceOp = (op: ContentOp): boolean => op.kind === "replace";
-
 function nextRevision(revision: string): string {
   const match = /^rev-(\d+)$/.exec(revision);
   return match === null ? `${revision}+1` : `rev-${Number(match[1]) + 1}`;
+}
+
+function projectionOf(content: JsonValue): DocProjection {
+  return isDocProjection(content) ? structuredClone(content) : { blocks: [] };
+}
+
+/**
+ * Plans a batch against a copy of the projection. Every operation is validated
+ * before anything reaches the room, so an invalid second operation applies
+ * neither it nor the first.
+ */
+function projectOps(
+  content: DocProjection,
+  ops: readonly ContentOp[],
+  writtenBy: string,
+): DocProjection {
+  const draft = structuredClone(content);
+
+  for (const op of ops) {
+    const parsed = readDocContentOp(op);
+    if (parsed === null) {
+      throw new RoomOwnerError(
+        "invalid-ops",
+        "The batch contains an operation this room cannot apply",
+      );
+    }
+
+    if (parsed.kind === "append-block") {
+      if (draft.blocks.some((block) => block.id === parsed.payload.block.id)) {
+        throw new RoomOwnerError("invalid-ops", `Block ${parsed.payload.block.id} already exists`);
+      }
+
+      draft.blocks.push({ ...parsed.payload.block, updatedBy: writtenBy });
+      continue;
+    }
+
+    const index = draft.blocks.findIndex((block) => block.id === parsed.payload.blockId);
+    if (index === -1) {
+      throw new RoomOwnerError("invalid-ops", `Block ${parsed.payload.blockId} does not exist`);
+    }
+
+    draft.blocks[index] = { ...parsed.payload.block, updatedBy: writtenBy };
+  }
+
+  return draft;
 }
 
 /** Runs synchronous room logic and turns a thrown refusal into a rejection. */
@@ -101,19 +146,17 @@ export function createInMemoryRoomOwner(
           return { revision: stored.revision, applied: 0 };
         }
 
-        if (!input.ops.every(isReplaceOp)) {
-          throw new RoomOwnerError(
-            "invalid-ops",
-            "The batch contains an operation this room cannot apply",
-          );
-        }
+        const nextContent = projectOps(
+          projectionOf(stored.content),
+          input.ops,
+          actorReference(input.actor),
+        );
+        const revision = nextRevision(stored.revision);
 
-        for (const op of input.ops) {
-          stored.content = structuredClone(op.payload);
-        }
-        stored.revision = nextRevision(stored.revision);
+        stored.content = nextContent;
+        stored.revision = revision;
 
-        const result: ApplyResult = { revision: stored.revision, applied: input.ops.length };
+        const result: ApplyResult = { revision, applied: input.ops.length };
         stored.applied.set(input.idempotencyKey, result);
         return result;
       });

@@ -11,6 +11,11 @@ import { docRoom } from "./schema";
 export type DocRoomDatabase = NodePgDatabase<Record<string, never>>;
 
 export type DocSnapshot = {
+  /**
+   * Whether the room's row exists. A row with `state: null` is an empty
+   * document; no row at all is a room this owner does not hold.
+   */
+  exists: boolean;
   /** `null` until the room has written its first debounced snapshot. */
   state: Uint8Array | null;
   revision: number;
@@ -18,6 +23,8 @@ export type DocSnapshot = {
 
 export type DocSnapshotStore = {
   load(roomId: string): Promise<DocSnapshot>;
+  /** Provisions an empty room for a document that has not been opened yet. */
+  ensure(roomId: string): Promise<void>;
   /** Returns the revision the write advanced the row to. */
   save(roomId: string, state: Uint8Array): Promise<number>;
 };
@@ -58,12 +65,21 @@ function createSnapshotStore(database: DocRoomDatabase): DocSnapshotStore {
       `);
       const row = result.rows.at(0);
 
-      if (row === undefined) return { state: null, revision: 0 };
+      if (row === undefined) return { exists: false, state: null, revision: 0 };
 
       return {
+        exists: true,
         state: row.state === null ? null : Uint8Array.from(Buffer.from(row.state, "base64")),
         revision: row.revision,
       };
+    },
+
+    async ensure(roomId) {
+      await database.execute(sql`
+        insert into "doc_room" ("room_id")
+        values (${roomId})
+        on conflict ("room_id") do nothing
+      `);
     },
 
     async save(roomId, state) {
