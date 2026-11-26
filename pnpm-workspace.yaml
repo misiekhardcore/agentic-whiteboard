@@ -1,6 +1,7 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# esbuild ships a native binary and its install script must run.
 allowBuilds:
   esbuild: true
-  unrs-resolver: true
-  workerd: true
-minimumReleaseAgeExclude:
-  - "@konopskidev/ui@0.3.0 || 0.7.0"
