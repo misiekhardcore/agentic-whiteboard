@@ -58,29 +58,20 @@ Two consequences, stated plainly:
 
 ## 4. Architecture
 
-```
-┌─────────────────────────── L4  UI ───────────────────────────┐
-│ board page · agent panel · proposal/approval cards · usage    │
-└──────────────────────────────┬───────────────────────────────┘
-                               │ fetch + SSE (same origin, session cookie)
-┌─────────────────────────── L3  runtime ──────────────────────┐
-│ route handlers · RunBus · checkpointer · budget guard · audit │
-└──────────────────────────────┬───────────────────────────────┘
-                               │ graph.streamEvents / Command(resume)
-┌─────────────────────────── L2  graph ────────────────────────┐
-│ ingest → guard → supervisor → specialists → propose →         │
-│ approval → commit → verify → respond                          │
-└──────────────────────────────┬───────────────────────────────┘
-                               │ tool calls (read) / tool commits (writes)
-┌─────────────────────────── L1  tool registry ───────────────┐
-│ name · schema · risk · capability · preview() · commit()      │
-└──────────────────────────────┬───────────────────────────────┘
-                               │ the only functions that touch data
-┌─────────────────────────── L0  domain ───────────────────────┐
-│ ActorContext · can() · boards · docs · canvas · teams         │
-└──────────────────────────────┬───────────────────────────────┘
-                               │ drizzle
-                          Postgres
+```mermaid
+flowchart TD
+    L4["L4 · UI<br/>board page · agent panel · proposal and approval cards · usage"]
+    L3["L3 · runtime<br/>route handlers · RunBus · checkpointer · budget guard · audit"]
+    L2["L2 · graph<br/>ingest → guard → supervisor → specialists → propose → approval → commit → verify → respond"]
+    L1["L1 · tool registry<br/>name · schema · risk · capability · preview() · commit()"]
+    L0["L0 · domain<br/>ActorContext · can() · boards · docs · canvas · teams"]
+    DB[("Postgres")]
+
+    L4 -->|"fetch + SSE, same origin, session cookie"| L3
+    L3 -->|"graph.streamEvents / Command(resume)"| L2
+    L2 -->|"tool calls (read) / tool commits (writes)"| L1
+    L1 -->|"the only functions that touch data"| L0
+    L0 -->|drizzle| DB
 ```
 
 The one rule that makes the whole thing safe: **model output is data, never a call.** A read tool runs immediately. A write tool returns a *proposed operation*; only the commit node, after the capability check and (when required) a human approval, calls the L0 function that actually writes. There is no code path in which a language model's tool call mutates a row by itself.
@@ -260,46 +251,33 @@ export const AgentState = Annotation.Root({
 
 ### 7.2 Top-level graph
 
-```
-                 ┌─────────┐
-   user turn ───▶│ ingest  │
-                 └────┬────┘
-                      ▼
-                 ┌─────────┐   over budget   ┌──────────────┐
-                 │  guard  ├────────────────▶│ reply_budget │──┐
-                 └────┬────┘                 └──────────────┘  │
-        out_of_scope  │  do / question                         │
-             ┌────────┴────────┐                                 │
-             ▼                 ▼                                 │
-      ┌─────────────┐   ┌────────────┐                           │
-      │ plan_writer │   │ supervisor │◀──────────┐               │
-      └──────┬──────┘   └──┬───┬───┬─┘           │               │
-             │             │   │   │             │               │
-             │      ┌──────┘   │   └──────┐      │               │
-             │      ▼          ▼          ▼      │               │
-             │ ┌────────┐ ┌────────┐ ┌─────────┐ │               │
-             │ │ board  │ │  doc   │ │ canvas  │ │               │
-             │ │ agent  │ │ agent  │ │  agent  │ │               │
-             │ └───┬────┘ └───┬────┘ └────┬────┘ │               │
-             │     └──────────┴───────────┘      │               │
-             │                ▼                  │               │
-             │           ┌─────────┐             │               │
-             │           │ propose │             │               │
-             │           └────┬────┘             │               │
-             │      needs approval? no           │               │
-             │        ┌───────┴────────┐          │               │
-             │        ▼                ▼          │               │
-             │  ┌───────────┐    ┌─────────┐      │               │
-             │  │ approval  │    │ commit  │◀─────┼───────────────┘
-             │  │(interrupt)│    └────┬────┘      │  (approved)
-             │  └─────┬─────┘         ▼           │
-             │        │          ┌─────────┐      │
-             │        └─────────▶│ verify  │──────┘ mismatch → replan
-             │                   └────┬────┘
-             ▼                        ▼
-        ┌─────────┐              ┌──────────┐
-        │ respond │◀─────────────│  respond │
-        └─────────┘              └──────────┘
+```mermaid
+flowchart TD
+    start([user turn]) --> ingest
+    ingest --> guard
+    guard -->|over budget| reply_budget
+    guard -->|out_of_scope| plan_writer
+    guard -->|do / question| supervisor
+    guard -->|answer directly| respond
+    supervisor -->|board| board_agent
+    supervisor -->|doc| doc_agent
+    supervisor -->|canvas| canvas_agent
+    supervisor -->|answer or done| respond
+    board_agent --> propose
+    doc_agent --> propose
+    canvas_agent --> propose
+    propose -->|nothing to commit| supervisor
+    propose -->|needs approval| approval
+    propose -->|no approval needed| commit
+    approval -->|approved| commit
+    approval -->|revise| supervisor
+    approval -->|rejected| respond
+    commit --> verify
+    verify -->|ok| respond
+    verify -->|mismatch, one replan| supervisor
+    plan_writer --> respond
+    respond --> done([end])
+    reply_budget --> done
 ```
 
 | Node | Uses a model | Writes | Responsibility |
