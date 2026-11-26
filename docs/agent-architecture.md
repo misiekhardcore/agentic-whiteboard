@@ -484,8 +484,8 @@ agentThread    id, userId (fk), organizationId (nullable), workspaceId (nullable
                title, titleGeneratedAt, lastActivityAt, turnCount,
                activeRunId (nullable), parentThreadId (nullable), branchedFromCheckpointId (nullable),
                archivedAt, createdAt, updatedAt
-               index (userId, organizationId, lastActivityAt)
-               unique (id, userId, organizationId)              -- ownership in one predicate
+               index (userId, organizationId, lastActivityAt)    -- the switcher
+               index (userId, organizationId, id)                -- the ownership predicate
 
 agentRun       id, threadId (fk), turnId, kind 'user'|'approval'|'retry'|'resume'|'branch',
                status 'running'|'parked'|'completed'|'failed'|'cancelled'|'interrupted',
@@ -494,7 +494,8 @@ agentRun       id, threadId (fk), turnId, kind 'user'|'approval'|'retry'|'resume
                inputCheckpointId, lastCheckpointId,
                leaseOwner, leaseExpiresAt, heartbeatAt, cancelRequestedAt,
                error, startedAt, endedAt
-               unique (threadId, turnId, kind)                   -- one run per turn attempt
+               index (threadId, startedAt)                       -- newest run for a thread
+               index (turnId)                                    -- a turn's runs (retry, resume)
                index (status, leaseExpiresAt)                    -- the reaper
 
 agentRunEvent  id bigserial, runId (fk), seq, kind, payload jsonb, createdAt
@@ -524,17 +525,18 @@ agentUsage     id, ownerType, ownerId, period, runId, threadId, userId, model,
 
 `agentThread.id` **is** the LangGraph `thread_id`. It is generated server-side for a branch and client-side only for an empty new thread whose id is URL state (the pattern the current conversation switcher already uses, and the one place a client-chosen id is safe because the first write creates the row).
 
+A turn may have several runs — a retry, a resume — so there is no one-run-per-turn constraint. The turn endpoint resolves `(threadId, turnId)` to a live run first and returns its stream; only when none is live does it insert a new run. The thread slot, not a unique index, is what makes concurrent sends impossible.
+
 There is no `agentMessage`. There is no `agentPrompt`. A read that needs messages reads the checkpoint.
 
 ### 9.3 One transcript, one read path
 
-```
-GET /api/agent/threads/[id]
-  ├─ authorize thread: (id, userId, organizationId) → agentThread
-  ├─ graph.getState({ configurable: { thread_id } })            ← messages, pending interrupt
-  ├─ agentProposal where threadId = id and status = 'pending'    ← the card
-  └─ agentRun where threadId = id order by startedAt desc limit 1 ← busy / interrupted / credits
-```
+`GET /api/agent/threads/[id]` composes four reads, in this order:
+
+1. **Authorize the thread** — `(id, userId, organizationId)` must return an `agentThread` row, or the route answers 404.
+2. **Read the transcript** — `graph.getState({ configurable: { thread_id } })` gives the messages and any pending interrupt.
+3. **Read the card** — the `agentProposal` with `status = 'pending'` for this thread, if there is one.
+4. **Read the run** — the newest `agentRun`, which says busy, interrupted, parked, or finished, and what it cost.
 
 - `agentThread.turnCount`, `lastActivityAt` and `title` are a **read model** written by `respond` in the same transaction as the run's terminal state. They exist so the switcher does not deserialize 40 checkpoints per thread; a `pnpm agent:reindex` rebuilds them from `agentRun` if they ever disagree. A read model is allowed to be derivable; it is not allowed to be authoritative.
 - Pagination reads `getStateHistory` for an older window; the first screen reads the head state only.
