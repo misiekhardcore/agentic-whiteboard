@@ -3,6 +3,11 @@
 Status: accepted
 Date: 2026-11-16
 
+> **Superseded.** Retry, rewind and branch are checkpoint operations on an
+> `agentThread`, not copied prompt and message rows; the table and the rules in
+> this record are replaced by [agent-architecture](../agent-architecture.md).
+> The product requirements it captured still hold.
+
 Supersedes the "one conversation per person" consequences of
 [agent-prompt-thread](agent-prompt-thread.md); the turn, approval and liveness
 decisions there still hold.

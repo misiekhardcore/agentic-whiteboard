@@ -3,6 +3,11 @@
 Status: accepted
 Date: 2026-11-13
 
+> **Superseded.** The prompt row as billing and execution unit, the in-process
+> liveness registry and the signed approval answer are replaced by
+> [agent-architecture](../agent-architecture.md). This record is kept for the
+> reasoning that produced the capability kernel, not as current design.
+>
 > The paths in this record are the ones that existed when it was written. The
 > modules have since moved into per-context folders; see
 > [module-boundaries](module-boundaries.md) for where they live now.

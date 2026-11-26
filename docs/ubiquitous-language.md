@@ -82,32 +82,36 @@ is a defect.
 | Term            | Definition                                                                                                                                                                                 | Owner         |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
 | plan            | A catalog entry: name, price, audience, features and limits. `team` is the name of a plan, never a second word for an organization.                                                        | `lib/billing` |
-| plan limit      | A counted number a plan allows, where unlimited is spelled `null`: workspaces, and agent prompts per month.                                                                                | `lib/billing` |
+| plan limit      | A counted number a plan allows, where unlimited is spelled `null`: workspaces, and agent credits per month.                                                                                | `lib/billing` |
 | plan capability | A feature a plan switches on: live collaboration, voice input, share links, PDF export.                                                                                                    | `lib/billing` |
 | entitlements    | What an account may do right now, resolved from its plan and subscription, and the free entitlements when there is no paid one.                                                            | `lib/billing` |
 | subscription    | Our mirror of one Stripe subscription, one row per billing owner. Active, trialing and past due grant the plan; a canceled one keeps its row.                                              | `lib/billing` |
 | billing owner   | Who pays: a person or an organization, by that owner's id.                                                                                                                                 | `lib/billing` |
 | usage window    | The period a count belongs to: a subscriber's Stripe period, otherwise the UTC calendar month.                                                                                             | `lib/billing` |
-| allowance       | The per-member prompt quota inside the paying account. It counts prompts created in the window, skips branched copies and still counts superseded ones; a refused request is not a prompt. | `lib/ai`      |
+| credit          | The metered agent unit: 1 credit = 1,000 tokens. Reserved when a run starts and settled when it exits, so the hard stop is checked before the work, not measured after it.                 | `lib/ai`      |
+| allowance       | The credits a billing owner may spend in a period. A run reserves its ceiling, a parked or interrupted run still settles what it consumed, and a downgrade can leave the next run blocked. | `lib/ai`      |
 | plan change     | Repricing the existing subscription instead of opening a second one, prorated onto the next invoice.                                                                                       | `lib/billing` |
 
 ## Agent thread
 
-| Term               | Definition                                                                                                                                                                                                                                                                                                    | Owner    |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| agent              | The model participant. It acts as its own actor on behalf of the requester and never chooses the person, account or workspace it writes to.                                                                                                                                                                   | `lib/ai` |
-| prompt             | One accepted request to the agent: the billing unit and the execution unit in one row, from queued through running and awaiting approval to completed, failed or cancelled. A refused request records nothing. The architecture records still call this execution a run; it is this row, not a second record. | `lib/ai` |
-| turn               | A prompt together with the messages it produced, as the thread reads it. The tip is a conversation's newest live prompt, and only a failed tip can be retried.                                                                                                                                                | `lib/ai` |
-| conversation       | The stored container a person's prompts belong to, in one account: personal or organization, and never shared with a teammate. Chosen before the first prompt and kept in the URL.                                                                                                                            | `lib/ai` |
-| agent panel        | The resizable right column holding the conversation on every page of the workspaces section. Same conversation as the dashboard composer, not a second one.                                                                                                                                                   | `lib/ai` |
-| conversation title | The name a conversation carries: derived from its first prompt when the row is created, then replaced once by a generated one. Never empty, never a route or an id.                                                                                                                                           | `lib/ai` |
-| thread             | The live messages of one conversation, with superseded prompts filtered out. A view over stored rows, never a table of its own.                                                                                                                                                                               | `lib/ai` |
-| message            | One stored chat row: system, user or assistant. Tool calls and results are parts of an assistant message, so there is no tool role.                                                                                                                                                                           | `lib/ai` |
-| approval           | A tool call parked for a person's decision, which also parks its prompt in `AWAITING_APPROVAL`. The browser carries the answer, signed at issuance, and the parked row of that person's conversation decides whether it resumes; the tool call is authorized again when it runs.                              | `lib/ai` |
-| superseded         | Marked, never deleted, on a prompt or a message: invisible to the thread and the model, still counted by the allowance, still readable to an operator.                                                                                                                                                        | `lib/ai` |
-| retry              | Re-running a conversation's newest prompt when it failed and its text is unchanged. The row is reused, so a broken turn is not charged twice.                                                                                                                                                                 | `lib/ai` |
-| rewind             | An edited or re-sent prompt that replaces the branch point and everything after it. The new prompt is counted; the replaced turns are superseded.                                                                                                                                                             | `lib/ai` |
-| branch             | A new conversation holding a copy of another's live turns through a chosen reply. Copies are history: they are skipped by the allowance, and only a finished turn can be branched.                                                                                                                            | `lib/ai` |
+| Term               | Definition                                                                                                                                                                    | Owner    |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| agent              | The model participant. It acts as its own actor on behalf of the requester and never chooses the person, account or workspace it writes to.                                   | `lib/ai` |
+| agent thread       | One durable conversation, per person per account. Its id is also the LangGraph `thread_id`; it is never shared with a teammate and never addressed by a share token.          | `lib/ai` |
+| turn               | One user message and everything the agent did in response, identified by the message id. Posting the same turn id twice is the same turn, not a second run.                   | `lib/ai` |
+| run                | One execution of the graph for a turn: running, parked on an approval, completed, failed, cancelled or interrupted. A retry or a resume is a new run of the same turn.        | `lib/ai` |
+| transcript         | The messages of a thread, stored once in the graph's checkpoint and read through `getState`. Never a table of its own.                                                        | `lib/ai` |
+| message            | One chat message in the transcript: user, assistant or system. Tool calls and results are parts of an assistant message, so there is no tool role.                            | `lib/ai` |
+| proposal           | A batch of validated writes the agent wants to make, with a diff per operation. It commits only after authorization and, when any operation requires it, a person's approval. | `lib/ai` |
+| operation          | One capability call inside a proposal: tool, target, arguments, expected version and result. Idempotent by turn id and operation key, so a retry cannot apply it twice.       | `lib/ai` |
+| approval           | A person's decision on a parked proposal. The graph is suspended at the approval node, the decision resumes it, and the approver's own rights are what authorize the commit.  | `lib/ai` |
+| parked             | Suspended on an approval. The run releases the thread's single-flight slot and may wait indefinitely; it is not an interruption.                                              | `lib/ai` |
+| interrupted        | A run whose lease expired because the process owning it went away. The next turn may resume it from its last checkpoint; nothing was lost except the step in flight.          | `lib/ai` |
+| retry              | A new run of the same turn from the checkpoint where it started. The same turn id means committed operations are not applied twice, and the person is not charged twice.      | `lib/ai` |
+| branch             | A new thread seeded from another thread's checkpoint, with a parent pointer. It copies state, not work, is not billed, and leaves the original untouched.                     | `lib/ai` |
+| lease              | A run's claim on a thread, with a heartbeat and an expiry. It is what makes "is this still running?" a database fact instead of a process's memory.                           | `lib/ai` |
+| agent panel        | The resizable right column holding the thread on every page of the workspaces section. The same thread as the dashboard composer, not a second one.                           | `lib/ai` |
+| conversation title | The name a thread carries: derived from its first message when the row is created, then replaced once by a generated one. Never empty, never a route or an id.                | `lib/ai` |
 
 ## Live updates
 
@@ -125,11 +129,13 @@ is a defect.
 - **Person, account, organization.** A person is a human. An account is the
   tenancy and paying scope. An organization is the shared account; the personal
   account is the other kind of account.
-- **Prompt, turn, message.** A prompt is one accepted request and one billed
-  unit. A turn is that prompt with the messages it produced, as the person reads
-  it. A message is one stored chat row.
-- **Conversation, thread.** A conversation is a stored container. A thread is
-  the live view of its messages; there is no thread row to write.
+- **Thread, turn, run, message.** A thread is the durable conversation. A turn
+  is one user message with everything it caused. A run is one execution of a
+  turn, and a turn may have several (a retry, a resume). A message is one row of
+  the transcript, which is the checkpoint.
+- **Proposal, operation, approval.** A proposal is a batch of writes with a
+  diff. An operation is one call inside it. An approval is a person's decision
+  to let the batch commit — not a permission, and not a separate write path.
 - **Archive, restore, delete.** Archive is reversible and frees the plan slot.
   Restore undoes it. Delete is permanent, and only possible after archiving.
 - **Plan, subscription, entitlements.** The plan is catalog data, the
