@@ -1,1 +1,0 @@
-export { organizationErrorMessage } from "./organizationErrorMessage";

@@ -1,5 +1,0 @@
-volumes/db/data
-volumes/snippets
-backups
-.env
-docker-compose.override.yml

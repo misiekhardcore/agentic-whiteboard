@@ -1,1 +1,0 @@
-ALTER TABLE "userSettings" ADD COLUMN "read_aloud_voice" text DEFAULT '' NOT NULL;

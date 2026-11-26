@@ -24,7 +24,7 @@ is a defect.
 | Term             | Definition                                                                                                                                                 | Owner          |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
 | person           | A signed-in human, the row the schema calls `user`. The agent acts on a person's behalf but is never that person.                                          | `lib/identity` |
-| account          | The tenancy and paying scope a request acts in: an organization, or the person's own. Read from the session, never from a body, a form field or the model. | `lib/identity` |
+| account          | The tenancy and paying scope a request acts in: an organization, or the person's own. Read from the session, never from a body, a form field or the model. | `apps/web` |
 | personal account | The account when no organization is active. Its id is the person's, and it holds the workspaces they created outside any organization.                     | `lib/identity` |
 | active account   | The account the session is acting as. Switching it changes the session only; no row moves between accounts.                                                | `lib/identity` |
 
@@ -119,6 +119,15 @@ is a defect.
 | change topic   | The Realtime channel a change travels on: `app:user:<id>` or `app:org:<id>`. A browser may read only the topics its session owns.                                                      | `lib/shared`       |
 | broadcast      | The at-most-once delivery of a change over a private Realtime channel. A hint to re-read, so a lost message costs freshness and never truth.                                           | `lib/capabilities` |
 | realtime token | The short-lived JWT the browser shows Realtime, minted from the session and signed with the stack's secret. It carries the person as `sub`, and RLS decides what that person may read. | `lib/identity`     |
+
+## Platform layers
+
+| Term       | Definition                                                                                                                                                                                                                                                                                                | Owner                  |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| room owner | The one process allowed to hold a content surface's CRDT and to apply writes to it. Everything reads and writes content through `RoomOwnerPort`; no query updates a body. A second instance holding the same room is a defect, not a race to resolve.                                                     | `packages/contracts`   |
+| capability | One semantic operation: a name, a description, an effect, the callers it is exposed to, input and output schemas, an `authorize` step that returns the row it authorized, a handler and the datasets it changes. A person's click and an agent's proposal invoke the same record.                        | `packages/capabilities` |
+| effect     | `read` or `write`. A read runs during reasoning; a write is collected, gated and committed. The effect decides the approval path, not a separate "risk" flag.                                                                                                                                            | `packages/capabilities` |
+| room token | A short-lived claim minted by the app naming the actor, room, account and permission. The room owner verifies it and re-checks membership at apply time, because a run outlives a membership.                                                                                                             | `apps/web`             |
 
 ## Distinctions that carry rules
 

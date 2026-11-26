@@ -1,195 +1,63 @@
-<!-- BEGIN:nextjs-agent-rules -->
+# Agentic Whiteboard — agent guide (v2)
 
-## This is NOT the Next.js you know
+v2 rebuilds the product as a pnpm workspace: `packages/contracts`,
+`packages/capabilities`, `packages/db`, `packages/config`, `apps/web` and
+`apps/agent`. The design of record is
+[docs/architecture/platform-layers.md](docs/architecture/platform-layers.md),
+and the vocabulary is [docs/ubiquitous-language.md](docs/ubiquitous-language.md).
+Read the relevant record before changing a boundary.
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+## Working agreement
 
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+1. **Research.** Read the package that owns the area and the architecture
+   record behind it. For anything Next.js-specific, read the guides in
+   `apps/web/node_modules/next/dist/docs/` first — this version differs from
+   older releases.
+2. **Model the domain.** Name the capability, its effect, its callers and the
+   row its `authorize` step returns. A behaviour change is a capability change.
+3. **Implement test-first.** Red, green, refactor. The room owner's conformance
+   suite is the example: the fake passes it, and every real owner must too.
+4. **Verify.** Run `pnpm verify` and report what passed, failed or could not run.
 
-<!-- END:nextjs-agent-rules -->
+## Invariants
 
-# WorkspAIce — agent guide
-
-Multi-tenant whiteboard + docs workspace with an LLM agent that edits alongside
-people. Next.js App Router, Better Auth (organizations), Drizzle/Postgres on a
-self-hosted Supabase stack, Stripe billing, AI SDK with an OpenAI-compatible
-provider, Vitest for units, Playwright for end-to-end flows.
-
-## Working agreement (read before you touch code)
-
-Every task, no matter how small, runs through four phases. Do not skip ahead to
-editing.
-
-1. **Research.** Read the code that already owns the area, the schema, the
-   relevant architecture record in [docs/architecture](docs/architecture), and
-   the upstream docs for anything version-sensitive (Next.js guides in
-   `node_modules/next/dist/docs/`, Drizzle, Better Auth, Stripe, AI SDK). State
-   what exists today before proposing what should exist. Look up current
-   external/API behaviour instead of relying on memory.
-2. **Model the domain and plan.** Name the bounded context the change belongs
-   to, write down the ubiquitous language (entities, value objects, invariants,
-   domain events), and decide where the new behaviour lives. Record the plan as
-   a short written design — an ADR under `docs/architecture/` when the decision
-   is architectural — and get it agreed before implementing.
-3. **Implement test-first.** Red → green → refactor. See TDD below.
-4. **Verify.** Run the gates at the bottom of this file and report what passed,
-   what failed, and what could not run.
-
-For a one-line typo or a pure docs edit, the research and plan phases collapse
-into "confirm the change is what was asked" — never into "skip the tests".
-
-## Domain-driven design
-
-- **Bounded contexts** already present: `identity` (actor, session, roles) and
-  `organizations` (membership, invitations), `billing` (plans, subscriptions,
-  entitlements, usage), `collab` (Yjs/Hocuspocus contracts and realtime topics),
-  `ai` (providers, runtime, thread, tools), `workspace` (content),
-  `notifications` (outbound email). New features belong inside one of them, not
-  in a new top-level grab bag.
-- **Layout.** One folder per context under `lib/<context>/` with the domain
-  types, pure rules and the persistence/API adapters beside them, e.g.
-  [lib/billing/entitlements](lib/billing/entitlements/index.ts) and
-  [lib/billing/subscriptions](lib/billing/subscriptions/index.ts).
-- **Layers are folders**, in this order: `status`/`forms`/`contracts`/`presentation` (client-safe) → `rules` → `queries`/`access`/`service` → `capabilities` → `actions`. A module imports only leftwards; `lib/capabilities` imports no context. Enforced by lint zones and [lib/architecture.test.ts](lib/architecture.test.ts) — see [docs/architecture/module-boundaries.md](docs/architecture/module-boundaries.md) and [docs/architecture/module-layout.md](docs/architecture/module-layout.md).
-- **One behaviour, one module.** One exported function per file, named for it (`lib/workspace/capabilities/createWorkspace.ts`); its private helpers and its own constants stay in that file. Types and constants are not one per file: they bundle by concept, in the folder's `types.ts`/`constants.ts` or the module that owns them. Only an `index.ts` re-exports the folder, and it names every export (`export { a } from "./a"`) - never `export *`, so the public surface is one readable list and a dropped export breaks the build. Never a `thing.ts` shim kept alive to preserve an old import path; update the import instead. A sibling imports the concrete module rather than its own barrel.
-- **A user-facing mutation is a capability.** That includes operations the agent must never call: declare `callers: ["human"]` instead of writing a bespoke action. Pre-auth flows (sign-in, reset, OAuth) are the documented exception, because there is no actor yet.
-- **One rule, one module.** Quota copy, roles, slugs and lifecycle invariants are imported, never re-derived in a page, action or tool. A context may use another context's published functions and contracts, never its `actions.ts`, schema or SQL.
-- **Domain first.** Money, quotas, entitlements, roles and permissions,
-  collaboration contracts and agent tool semantics are domain rules. They live
-  in `lib/` as small, pure, exported functions and types. Server actions, route
-  handlers, React components and `lib/db` must not re-derive them.
-- **Ubiquitous language.** Use the words the domain already uses (`owner`,
-  `member`, `entitlement`, `plan`, `seat`, `workspace`, `run`, `prompt`,
-  `invitation`, `surface`). Do not invent synonyms in code for concepts the
-  schema or UI already names. The definitions and the context that owns each
-  one are in
-  [docs/ubiquitous-language.md](docs/ubiquitous-language.md); add a term there
-  before using it in code.
-- **Ports and adapters.** Keep the domain independent of frameworks: the domain
-  module takes plain inputs and returns plain results; Stripe, Better Auth,
-  Drizzle, SMTP and the AI provider sit behind adapter modules. Dependencies
-  point inward — `lib/<context>` never imports from `app/` or `components/`.
-- **Persistence follows the model.** Schema changes belong in the Drizzle schema
-  with a generated migration (`pnpm db:generate`); migrations are never
-  hand-edited after being applied, and a schema change that alters a domain
-  invariant is a domain change first.
-
-## Test-driven development (mandatory)
-
-Write the failing test before the production code, for every behaviour change.
-
-- **Red.** Add or change a test that expresses the new rule and watch it fail for
-  the right reason. Unit tests are colocated: `lib/billing/plans/upgradeOffer.test.ts`
-  beside `lib/billing/plans/upgradeOffer.ts`, matching `**/*.test.ts` from
-  [vitest.config.mts](vitest.config.mts).
-- **Green.** Write the smallest implementation that satisfies the test. No dead
-  options, no speculative branches.
-- **Refactor.** Remove duplication and tighten names with the suite green.
-- **Test the domain directly.** Prefer testing the pure rule (entitlements,
-  plan changes, usage, contracts, agent config) over testing the framework glue.
-  Mock only at the module boundary, with `vi.mock` + `vi.hoisted`, the way
-  [lib/billing/entitlements.test.ts](lib/billing/entitlements.test.ts) does.
-- **E2E for user-visible flows.** Sign-up/sign-in, account scope, billing and
-  upgrade live in [e2e](e2e) and run against a real Postgres and (in CI) the
-  real Stripe test account via the webhook. Do not replace those with mocks.
-- Tests are part of the contract: never delete an assertion, loosen an
-  expectation, or add a lint/type suppression to make a check pass. If the
-  requested behaviour genuinely invalidates a test, change the test in the same
-  commit and say why.
-- Bug work starts with a regression test that reproduces the report.
-
-## Modularity, SOLID, DRY
-
-- **Modular and extensible.** One module, one responsibility. Extend through
-  explicit seams (a provider registry, a `createAgent({ model })` override, a
-  capability object) instead of conditionals spread across call sites.
-- **Single responsibility / open-closed.** A module changes for one reason. Add
-  a new provider, plan or invite rule by adding a module or a registry entry,
-  not by editing every caller.
-- **Liskov & interface segregation.** Adapters implement the shape their domain
-  port describes and no more; callers depend on the narrow slice they use
-  (e.g. `Entitlements` exposes limits and capabilities, not raw Stripe rows).
-- **Dependency inversion.** High-level policy (domain rules) does not import
-  Stripe/DB/auth clients directly; pass collaborators in or hide them behind
-  the adapter module.
-- **DRY, without pre-emptive abstraction.** A business rule exists once. Two
-  independent call sites is not yet a reason to abstract; three copies of a rule
-  is a defect. Prefer clear, local code over a premature generic helper.
-- **Files stay small and named for the domain.** Target 150 lines per module
-  (200 for a rule or service) and one exported React component per file. Split a
-  module when it grows two responsibilities; do not create a `utils.ts` dumping
-  ground (`lib/utils.ts` is for UI helpers only). Reuse the existing UI
-  primitives in [components/ui](components/ui) and the `@konopskidev/ui` package
-  rather than forking markup.
-- **Presentation is shared or sectional.** Reusable UI lives under
-  `components/<Area>/`; `app/**/_components/` holds page sections only. See
-  [docs/architecture/module-layout.md](docs/architecture/module-layout.md).
-
-## Project map
-
-| Path                 | Contents                                                                                                        |
-| -------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `app/`               | App Router routes, layouts, server actions, route handlers (`app/api`).                                         |
-| `lib/`               | One folder per bounded context; layers are folders inside a context. See below.                                 |
-| `lib/capabilities/`  | The capability kernel: `define`, `invoke`, the human/route entry points, registry and thread presentations.     |
-| `lib/identity/`      | Actor, session → active account, roles, better-auth adapter, pre-auth actions.                                  |
-| `lib/organizations/` | Membership, slug rule, invitations, organization settings and their capabilities.                               |
-| `lib/workspace/`     | The reference context: status/contracts/forms, rules, access, queries, surfaces, recent, capabilities, actions. |
-| `lib/ai/`            | Providers, runtime (agent + instructions), thread (rules, store, allowance, turn, composer), tools adapter.     |     | `lib/billing/` | Plans, entitlements, usage rules (pure), subscriptions, checkout, Stripe adapter. |
-| `lib/media/`         | Stored files: upload rules, who may read a media row, the storage adapter, the create/read services.            |
-| `lib/shared/`        | Routes, form-data reading and date formatting — the only genuinely shared primitives.                           |
-| `components/`        | Shared client UI grouped by area; `components/ui` are shadcn-style primitives.                                  |
-| `lib/db/`            | Drizzle schema, connection, column helpers.                                                                     |
-| `drizzle/`           | Generated migrations — never hand-edit applied files.                                                           |
-| `e2e/`               | Playwright specs.                                                                                               |
-| `docs/architecture/` | Architecture records and decisions.                                                                             |
-| `scripts/`           | Local tooling (SMTP sink, etc.).                                                                                |
-| `.agents/skills/`    | Vendored skill docs for Supabase, Stripe, etc. Read the relevant `SKILL.md` before using that service.          |
+- **One owner per fact.** Content lives in a room owner behind `RoomOwnerPort`;
+  metadata lives in Postgres. Nothing updates a document body in SQL, and no
+  page holds a second copy of content.
+- **One invocation path.** Every caller goes through `invoke`. `authorize`
+  loads and returns the row the handler uses; `null` means not found. Refusals
+  are values, not exceptions.
+- **One authorization function.** `can(actor, action, resource)` is
+  table-driven for people and agents alike. A capability never checks policy
+  itself, and a route never re-implements it.
+- **Effects, not risk flags.** `effect: "read"` runs during reasoning;
+  `effect: "write"` is collected and committed through the approval path.
+- **The kernel stays pure.** `packages/capabilities` imports no framework, no
+  database client and no app. `packages/db` alone may name a database client or
+  contain DDL/SQL.
+- **Shared tooling.** Every package extends `@v2/config/tsconfig.base.json` and
+  uses the shared ESLint and Vitest presets. Copying a preset fails the
+  boundary suite.
 
 ## Commands
 
 ```bash
-pnpm install            # pnpm@12, Node >= 22 (see package.json engines)
-pnpm dev                # Next dev server on :3000
-pnpm lint               # ESLint (type-aware, zero warnings)
-pnpm lint:fix           # ESLint with automatic fixes
-pnpm format             # Prettier write
-pnpm format:check       # Prettier check (CI gate)
-pnpm tsc                # Typecheck without emitting
-pnpm test               # Vitest unit suite
-pnpm test:ai            # Live model check (needs AI_LIVE=1 + a reachable provider)
-pnpm build              # Production build
-pnpm db:up              # Local Supabase/Postgres + migrations prerequisites
-pnpm db:generate        # Generate a Drizzle migration after schema changes
-pnpm db:migrate         # Apply migrations
-pnpm test:e2e           # Playwright on :3100 with the scripted provider; needs a DB, and `pnpm dev` stopped
-pnpm test:e2e:realtime  # The socket spec only; needs `pnpm db:up` and `realtime-rls.sql` applied
-pnpm test:e2e:smtp      # Local SMTP sink used by the invitation flows
-pnpm test:e2e:brand     # Capture the dashboard screenshots the manifest lists
-pnpm brand:assets       # Regenerate favicon, apple icon and manifest icons from the mark
+pnpm verify        # format:check, lint, typecheck, test, build
+pnpm format        # Prettier write
+pnpm lint          # ESLint in every package
+pnpm typecheck     # tsc in every package (web runs next typegen first)
+pnpm test          # Vitest in every package
+pnpm build         # Next build and the agent bundle
+pnpm db:up         # Postgres via compose (:54322)
+pnpm db:setup      # migrate + seed the demo workspace
+pnpm dev           # migrate + seed, then web and agent
 ```
-
-## Conventions
-
-- TypeScript strict; `@/` maps to the repo root ([tsconfig.json](tsconfig.json)).
-  No `any`, no non-null assertion to silence the compiler.
-- `"use server"` files are thin adapters: authenticate, validate, delegate to
-  `lib/<context>`, revalidate/redirect. No domain arithmetic in them.
-- Load configuration through the existing env helpers; never read secrets at
-  module scope in client code. `.env.local` holds developer config, `.env.example`
-  documents the required keys — do not commit real values.
-- Log with the existing `[context] message` prefix; never log secrets, tokens or
-  raw provider payloads.
-- Comments explain _why_ a non-obvious decision was made, not what the next line
-  does. Match the surrounding style.
 
 ## Definition of done
 
-- The behaviour is described as a domain rule with a name, and that rule lives in
-  `lib/<context>`.
-- A test failed first, then passed; new rules and edge cases have coverage.
-- `pnpm format:check`, `pnpm lint`, `pnpm tsc`, `pnpm test` and `pnpm build` pass
-  (plus `pnpm test:e2e` when a user-visible flow changed). Report anything that
-  could not run.
-- Architecture-level decisions are written down in `docs/architecture/`.
-- No duplicated business rules, no unused options, no skipped or weakened tests.
+- The behaviour lives in a capability with a named effect and a tested
+  authorization rule.
+- A test failed first, then passed; no assertion was weakened.
+- `pnpm verify` passes.
+- Architecture-level decisions are recorded in `docs/architecture/`, and new
+  vocabulary is added to the glossary before it appears in code.
