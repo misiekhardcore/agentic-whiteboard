@@ -3,6 +3,11 @@
 Status: accepted
 Date: 2026-11-13
 
+> **Partly superseded.** The kernel described here still stands. The approval
+> transport (`toolApproval` + `toolApprovalSecret`) and the prompt-accounting
+> rule are replaced by the checkpointed interrupt in
+> [agent-architecture](../agent-architecture.md) §7.6 and §12.
+>
 > The paths in this record are the ones that existed when it was written. The
 > modules have since moved into per-context folders; see
 > [module-boundaries](module-boundaries.md) for where they live now.
