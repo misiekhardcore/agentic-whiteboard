@@ -118,7 +118,7 @@ into every app:
 | `packages/capabilities` | `define`, `invoke`, `registry`, `can`, presentations                         | `contracts`                       |
 | `packages/db`           | Drizzle schema, connection, migrations for every metadata table              | `contracts`                       |
 | `packages/config`       | base tsconfig, ESLint config, Vitest preset                                  | nothing in the repo               |
-| `apps/web`              | Next.js routes, server actions, adapters, UI                                 | all four packages                 |
+| `apps/web`              | Next.js routes, server actions, adapters, UI                                 | every package                     |
 | `apps/agent`            | LangGraph graph, model configuration, tools generated from the registry      | `contracts`, `capabilities`, `db` |
 
 **`apps/collab` is a workspace package that happens to ship as a container.** It
@@ -398,7 +398,7 @@ writes and idempotency are not, and they decide the shape of the agent's tools.
 
 | #   | Slice                                                                                   | Proves                                                     |
 | --- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| 1   | Branch, workspaces, `contracts`, compose, CI                                            | the boundaries compile and the port has a fake             |
+| 1   | Branch, workspaces, `contracts`, `db`, `config`, compose, CI                            | the boundaries compile and the port has a fake             |
 | 2   | One workspace, one doc: Hocuspocus, `can()`, three doc capabilities, both actors tested | a person and the agent write the same doc through one path |
 | 3   | `canvas-service` from #53 plus a service-authenticated `apply`                          | an agent can edit a canvas without a socket (the spike)    |
 | 4   | `apps/agent`: graph, `reason`/`act`, one read + one write with approval, restart resume | durability, the gate, and the transcript as the only copy  |
