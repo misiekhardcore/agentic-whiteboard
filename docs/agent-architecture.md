@@ -2,6 +2,13 @@
 
 **Status:** proposed · **Date:** 2026-11-26 · **Scope:** every agent surface — the dashboard conversion agent, boards, docs and canvas
 
+> **Layer 6 detail.** This document is the agent service of the v2 platform in
+> [platform-layers](architecture/platform-layers.md). Two rows below are superseded
+> for that service: the model call is LangChain's `ChatOpenAI` inside `apps/agent`
+> with the `@ai-sdk/langchain` adapter at the edge, and `approve` gates every write
+> rather than a declared subset. Everything else — the capability kernel, checkpoint
+> ownership, leases, commit mechanics and credit reservation — stands.
+
 The agent performs every operation a member can perform — on a board, its doc, its canvas, and the dashboard account itself — through the same code path the UI uses, with the same permissions, and never with a side effect the model can trigger by itself.
 
 This is the design of record for that layer. It is written as a **target architecture, not a port**: the app is not deployed, so nothing in this document is shaped by the need to keep the current agent runtime, thread store or tables alive. Where the existing code already is the right thing — the capability kernel, the actor, the provider configuration, the composer — it is kept and named as kept. Everything else is replaced, and the replacement is the smallest design that is correct on its own terms.
