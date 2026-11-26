@@ -108,28 +108,54 @@ Three trust boundaries, and each has exactly one enforcement point:
 
 ### L0 — Workspaces
 
-pnpm workspaces, strict TypeScript, Vitest, Playwright, ESLint. Four packages at
-the start, because four is what the boundaries need:
+pnpm workspaces, strict TypeScript, Vitest, Playwright, ESLint. Six packages to
+start — the four the boundaries need, plus the two that would otherwise be copied
+into every app:
 
-| Package                 | Contains                                                                     | May import          |
-| ----------------------- | ---------------------------------------------------------------------------- | ------------------- |
-| `packages/contracts`    | actor, capability types, `RoomOwnerPort`, change keys, realtime event shapes | nothing in the repo |
-| `packages/capabilities` | `define`, `invoke`, `registry`, `can`, presentations                         | `contracts`         |
-| `apps/web`              | Next.js routes, server actions, adapters, UI                                 | both packages       |
-| `apps/agent`            | LangGraph graph, model configuration, tools generated from the registry      | both packages       |
+| Package                 | Contains                                                                     | May import                        |
+| ----------------------- | ---------------------------------------------------------------------------- | --------------------------------- |
+| `packages/contracts`    | actor, capability types, `RoomOwnerPort`, change keys, realtime event shapes | nothing in the repo               |
+| `packages/capabilities` | `define`, `invoke`, `registry`, `can`, presentations                         | `contracts`                       |
+| `packages/db`           | Drizzle schema, connection, migrations for every metadata table              | `contracts`                       |
+| `packages/config`       | base tsconfig, ESLint config, Vitest preset                                  | nothing in the repo               |
+| `apps/web`              | Next.js routes, server actions, adapters, UI                                 | all four packages                 |
+| `apps/agent`            | LangGraph graph, model configuration, tools generated from the registry      | `contracts`, `capabilities`, `db` |
 
-`apps/collab` and `canvas-service` are processes, and `canvas-service` is not
-even our package — it is vendored infrastructure with config and tests. Model it
-as such: a container, not a workspace.
+**`apps/collab` is a workspace package that happens to ship as a container.** It
+is our code, with its own types, tests and build, so it is treated like the other
+apps: typechecked, tested and linted by the same root commands, added by the doc
+slice. `canvas-service` is the opposite case and stays the opposite shape: not our
+package, vendored infrastructure with config and tests, a container and never a
+workspace. The distinction is ownership — a package we maintain gets a build
+target; a container we configure does not.
 
-Turborepo is deferred until the fourth build target exists and build time is
-measured. A root script that fans out with `pnpm -r` is enough until then, and
-adding it later is an afternoon.
+**`packages/db` owns the schema.** Web and the doc service both import it; neither
+opens its own connection, writes its own SQL or runs its own migrations. The
+agent's checkpoint tables are the deliberate exception: LangGraph's checkpointer
+creates and migrates them in its own schema, so `packages/db` never models them and
+one owner stays one owner. Everything else is one migration runner, executed as a
+job before any long-running process starts. The package holds the schema; the
+service that writes rows still owns those facts.
+
+**`packages/config` owns the tool defaults.** One TypeScript base every package
+extends, one ESLint config, one Vitest preset. A package that copies the base
+instead of extending it fails the skeleton's check, because four copies of a
+tsconfig diverge by the second app and nobody notices until the build does.
 
 **The one rule that matters:** `packages/capabilities` imports no framework, no
 database client and no `next`. It declares the port; `apps/*` implement it. That
 is what keeps `can()` identical for a click and a tool call, and it is the only
-boundary a reviewer can't accidentally erode.
+boundary a reviewer can't accidentally erode. `packages/db` is the only package
+allowed a database client, and `contracts` is the only package allowed no
+dependencies at all.
+
+Turborepo is deferred, with a trigger that can be measured rather than argued:
+it is adopted when the **warm `pnpm -r build` on CI exceeds 90 seconds on three
+consecutive runs**. Until then a root script fans out with `pnpm -r`, which already
+orders packages topologically, and `--filter` covers rebuilding only what a
+change touched. The trigger is a build-time threshold, not a package count, so
+adding the doc service or the database package cannot fire it, and the skeleton's
+warm build is a few seconds.
 
 ### L1 — Identity and accounts
 
