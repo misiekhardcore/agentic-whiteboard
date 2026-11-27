@@ -8,12 +8,14 @@ export type AppDependencies = {
 };
 
 export type WorkspaceView =
-  | { state: "ready"; title: string; revision: string }
+  | { state: "ready"; title: string; revision: string | null; readOnly: boolean }
   | { state: "refused"; code: RefusalCode; message: string };
 
 /**
- * The page's only source of a title and revision. There is no second read and
- * no fallback constant: if the capability refuses, the page says so.
+ * The page's only source of a title, revision and read-only state. There is no
+ * second read and no fallback constant: if the capability refuses, the page says
+ * so. A `null` revision means the room owner is unreachable, which the editor
+ * reports as its own unavailable state.
  */
 export async function loadWorkspaceView(
   workspaceId: string,
@@ -26,5 +28,10 @@ export async function loadWorkspaceView(
     return { state: "refused", code: result.code, message: result.error };
   }
 
-  return { state: "ready", title: result.title, revision: result.revision };
+  return {
+    state: "ready",
+    title: result.title,
+    revision: result.revision,
+    readOnly: result.readOnly,
+  };
 }

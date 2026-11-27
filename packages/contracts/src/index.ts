@@ -24,3 +24,5 @@ export type {
   RoomRef,
   Snapshot,
 } from "./room-owner";
+export { mintRoomToken, ROOM_TOKEN_TTL_SECONDS, verifyRoomToken } from "./room-token";
+export type { RoomAudience, RoomPermission, RoomTokenClaims } from "./room-token";

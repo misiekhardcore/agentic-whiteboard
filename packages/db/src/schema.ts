@@ -1,4 +1,11 @@
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { customType, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+
+/** Raw Yjs updates and other binary projections. */
+const bytea = customType<{ data: Buffer; notNull: false; default: false }>({
+  dataType() {
+    return "bytea";
+  },
+});
 
 /**
  * The skeleton's metadata row. It is what `workspace.read` authorizes against;
@@ -15,6 +22,33 @@ export const workspace = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("workspace_account_id_idx").on(table.accountId)],
+);
+
+/**
+ * The durable copy of a document room: the Yjs state a room loads when it
+ * opens and the revision its debounced writes advance. Only the document room
+ * owner writes this table; nothing else may update a document body.
+ */
+export const docRoom = pgTable("doc_room", {
+  roomId: text("room_id").primaryKey(),
+  yjsState: bytea("yjs_state"),
+  revision: integer("revision").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Which document service instance holds a room. A live lease is exclusive, so a
+ * second instance refuses the room instead of letting two owners overwrite each
+ * other; an expired lease can be taken over by the next instance.
+ */
+export const docRoomLease = pgTable(
+  "doc_room_lease",
+  {
+    roomId: text("room_id").primaryKey(),
+    holder: text("holder").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [index("doc_room_lease_expires_at_idx").on(table.expiresAt)],
 );
 
 export type WorkspaceRow = typeof workspace.$inferSelect;

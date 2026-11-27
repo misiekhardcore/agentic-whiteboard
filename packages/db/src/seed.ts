@@ -1,6 +1,16 @@
+import { fileURLToPath } from "node:url";
+
 import { createDatabase } from "./database";
-import { DEMO_WORKSPACE } from "./demo";
+import { DEMO_WORKSPACES } from "./demo";
 import { workspace } from "./schema";
+
+// See `migrate.ts`: the seed runs from the same root command and needs the
+// repository's `.env` when the shell has not exported the settings.
+try {
+  process.loadEnvFile(fileURLToPath(new URL("../../../.env", import.meta.url)));
+} catch {
+  // A deployment that injects its environment has no file to load.
+}
 
 const url = process.env.DATABASE_URL;
 
@@ -11,8 +21,10 @@ if (url === undefined || url.length === 0) {
 const { database, pool } = createDatabase(url);
 
 try {
-  await database.insert(workspace).values(DEMO_WORKSPACE).onConflictDoNothing();
-  console.log(`[db] demo workspace ${DEMO_WORKSPACE.id} is present`);
+  await database.insert(workspace).values(DEMO_WORKSPACES).onConflictDoNothing();
+  console.log(
+    `[db] demo workspaces ${DEMO_WORKSPACES.map((demo) => demo.id).join(", ")} are present`,
+  );
 } finally {
   await pool.end();
 }

@@ -1,115 +1,42 @@
-:root {
-  color-scheme: light dark;
-  --background: #f6f5f2;
-  --foreground: #1d1c1a;
-  --muted: #64605a;
-  --border: #dcd8d0;
-  --up: #1f7a45;
-  --down: #a33a2a;
-}
+@import "tailwindcss";
+@import "@konopskidev/ui/styles.css";
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #161513;
-    --foreground: #f2efe9;
-    --muted: #a8a29a;
-    --border: #35322d;
-    --up: #6fd39a;
-    --down: #ef8a78;
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased;
   }
 }
 
-* {
-  box-sizing: border-box;
-}
+@layer components {
+  .doc-body {
+    @apply min-h-80 px-5 py-5 outline-none sm:px-7 sm:py-6;
+  }
 
-html,
-body {
-  margin: 0;
-  min-height: 100%;
-}
+  .doc-body > *:first-child {
+    @apply mt-0;
+  }
 
-body {
-  display: grid;
-  place-items: center;
-  padding: 3rem 1.5rem;
-  background: var(--background);
-  color: var(--foreground);
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    sans-serif;
-  line-height: 1.5;
-}
+  .doc-body > *:last-child {
+    @apply mb-0;
+  }
 
-.page {
-  width: min(40rem, 100%);
-  padding: 2.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: color-mix(in srgb, var(--background) 92%, var(--foreground));
-}
+  .doc-body h1 {
+    @apply mt-0 mb-4;
+  }
 
-.eyebrow {
-  margin: 0 0 0.5rem;
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
+  .doc-body h2 {
+    @apply mt-7 mb-3;
+  }
 
-h1 {
-  margin: 0 0 0.75rem;
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
+  .doc-body h3 {
+    @apply mt-5 mb-2;
+  }
 
-.meta,
-.muted {
-  color: var(--muted);
-}
+  .doc-body p {
+    @apply my-3;
+  }
 
-.meta {
-  margin: 0 0 1rem;
-}
-
-.muted {
-  margin: 0;
-  font-size: 0.9375rem;
-}
-
-code {
-  padding: 0.1rem 0.35rem;
-  border-radius: 0.25rem;
-  background: color-mix(in srgb, var(--foreground) 8%, transparent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.875em;
-}
-
-.footer {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: 2.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 0.8125rem;
-}
-
-.status {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
-.status.up {
-  color: var(--up);
-}
-
-.status.down {
-  color: var(--down);
+  .doc-body li > p {
+    @apply my-0;
+  }
 }

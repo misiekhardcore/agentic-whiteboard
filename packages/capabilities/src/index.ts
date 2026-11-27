@@ -1,5 +1,6 @@
-export { can, WORKSPACE_ACTIONS } from "./can";
+export { can, WORKSPACE_ACTIONS, workspaceReadOnly } from "./can";
 export type { WorkspaceAction, WorkspaceResource } from "./can";
+export { docConnection } from "./capabilities/doc-connection";
 export { readWorkspace } from "./capabilities/read-workspace";
 export type { CapabilityContext, WorkspaceReader, WorkspaceRecord } from "./context";
 export { defineCapability } from "./define";

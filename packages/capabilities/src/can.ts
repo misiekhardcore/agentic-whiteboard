@@ -27,3 +27,13 @@ export function can(actor: Actor, action: WorkspaceAction, resource: WorkspaceRe
   const caller: Caller = actor.type === "user" ? "human" : "agent";
   return POLICY[action][caller](actor, resource);
 }
+
+/**
+ * The workspace's lifecycle, not the caller's role, decides whether a content
+ * room accepts writes. Archiving is reversible and keeps the content readable,
+ * so the same answer serves every surface: the token says read-only, and the
+ * room owner enforces it even when the browser ignores what it was told.
+ */
+export function workspaceReadOnly(resource: WorkspaceResource): boolean {
+  return resource.archived;
+}
