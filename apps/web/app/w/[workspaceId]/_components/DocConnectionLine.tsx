@@ -1,3 +1,5 @@
+import { Badge } from "@konopskidev/ui/components/badge";
+
 export type DocConnectionStatus = "connecting" | "connected" | "disconnected";
 
 /**
@@ -14,23 +16,30 @@ export function DocConnectionLine({
 }) {
   if (readOnly) {
     return (
-      <p className="doc-status read-only" role="status">
+      <Badge variant="outline" role="status" className="doc-status read-only text-muted-foreground">
+        <span aria-hidden="true" className="size-1.5 rounded-full bg-muted-foreground" />
         Read-only — this workspace is archived
-      </p>
+      </Badge>
     );
   }
 
   if (status === "connected") {
     return (
-      <p className="doc-status live" role="status">
+      <Badge
+        variant="outline"
+        role="status"
+        className="doc-status live border-success/30 bg-success/10 text-success"
+      >
+        <span aria-hidden="true" className="size-1.5 rounded-full bg-success" />
         Live
-      </p>
+      </Badge>
     );
   }
 
   return (
-    <p className="doc-status pending" role="status">
+    <Badge variant="outline" role="status" className="doc-status pending text-muted-foreground">
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-muted-foreground" />
       {status === "connecting" ? "Connecting…" : "Reconnecting…"}
-    </p>
+    </Badge>
   );
 }

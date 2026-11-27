@@ -69,7 +69,7 @@ export function DocRoom({
       editable: !connectionReadOnly,
       immediatelyRender: false,
       editorProps: {
-        attributes: { class: "doc-body", "aria-label": "Document" },
+        attributes: { class: "doc-body prose-article", "aria-label": "Document" },
       },
     },
     [ydoc],
@@ -95,12 +95,12 @@ export function DocRoom({
   }, [editor]);
 
   return (
-    <div className="doc-shell">
-      <div className="doc-bar">
+    <div className="flex flex-col">
+      <div className="doc-bar flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/40 px-3 py-2">
         <DocToolbar editor={editor} readOnly={connectionReadOnly} />
         <DocConnectionLine status={status} readOnly={connectionReadOnly} />
       </div>
-      <div className="doc-editor">
+      <div className="doc-editor flex-1">
         <EditorContent editor={editor} />
       </div>
     </div>

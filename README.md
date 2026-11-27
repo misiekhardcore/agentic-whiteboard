@@ -82,6 +82,22 @@ pnpm verify   # format:check, lint, typecheck, test, build
 already orders packages topologically; there is deliberately no build
 orchestrator until a measured build-time trigger says otherwise.
 
+## End-to-end tests
+
+The browser suite starts the real document service and the Next dev server on
+`3100` and `3103`, so stop `pnpm dev` first; Next allows one dev server per
+project directory. Postgres must be running, and the root command applies the
+migrations and seed before Playwright starts.
+
+```bash
+pnpm --filter @v2/web exec playwright install chromium   # once per machine
+pnpm test:e2e
+```
+
+The specs cover two tabs syncing, a reload keeping the text, an archived
+workspace staying read-only, and a failed token request leaving the rest of the
+workspace usable. CI runs the same command against its own Postgres.
+
 ## What is temporary in this slice
 
 - The demo actor and the seeded demo workspaces stand in for sessions and

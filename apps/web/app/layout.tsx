@@ -1,7 +1,9 @@
+import "./globals.css";
+
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import "./globals.css";
+import { FONT_CLASSNAMES } from "./fonts";
 
 export const metadata: Metadata = {
   title: "Agentic Whiteboard v2",
@@ -10,8 +12,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" className={FONT_CLASSNAMES}>
+      <body className="min-h-svh bg-background font-sans text-foreground antialiased">
+        {children}
+      </body>
     </html>
   );
 }

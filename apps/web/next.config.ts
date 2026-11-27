@@ -19,6 +19,14 @@ const allowedDevOrigins = process.env.ALLOWED_DEV_ORIGINS?.split(",")
 const nextConfig: NextConfig = {
   transpilePackages: ["@v2/capabilities", "@v2/contracts", "@v2/db"],
   serverExternalPackages: ["pg"],
+  turbopack: {
+    rules: {
+      "*.css": {
+        loaders: ["@tailwindcss/turbopack"],
+        as: "*.css",
+      },
+    },
+  },
   ...(allowedDevOrigins === undefined ? {} : { allowedDevOrigins }),
 };
 

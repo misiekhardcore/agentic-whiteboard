@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@konopskidev/ui/components/button";
 import type { Editor } from "@tiptap/react";
 
 /**
@@ -11,8 +12,10 @@ export function DocToolbar({ editor, readOnly }: { editor: Editor | null; readOn
   const disabled = readOnly || editor === null;
 
   const button = (label: string, active: boolean, run: () => void) => (
-    <button
+    <Button
       type="button"
+      variant={active ? "secondary" : "ghost"}
+      size="sm"
       className={active ? "doc-tool active" : "doc-tool"}
       aria-pressed={active}
       disabled={disabled}
@@ -21,11 +24,16 @@ export function DocToolbar({ editor, readOnly }: { editor: Editor | null; readOn
       }}
     >
       {label}
-    </button>
+    </Button>
   );
 
   return (
-    <div className="doc-toolbar" role="toolbar" aria-label="Formatting" aria-disabled={disabled}>
+    <div
+      className="doc-toolbar flex flex-wrap items-center gap-1"
+      role="toolbar"
+      aria-label="Formatting"
+      aria-disabled={disabled}
+    >
       {button("Bold", editor?.isActive("bold") ?? false, () =>
         editor?.chain().focus().toggleBold().run(),
       )}
