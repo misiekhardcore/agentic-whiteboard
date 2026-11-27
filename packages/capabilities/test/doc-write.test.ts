@@ -68,6 +68,7 @@ async function blocksOf(rooms: RoomOwnerPort): Promise<DocProjection["blocks"]> 
 }
 
 const template = { kind: "paragraph" as const, level: null, text: "Inserted from template" };
+const replacement = { kind: "heading" as const, level: 2, text: "Replaced from template" };
 
 describe("doc.append", () => {
   it("appends a block and records the person who wrote it", async () => {
@@ -204,6 +205,51 @@ describe("doc.replace", () => {
       text: "Replaced from template",
       updatedBy: "user:user-1",
     });
+  });
+
+  it("applies a replayed request zero times and returns the first revision", async () => {
+    const rooms = roomOwner();
+    const input = {
+      workspaceId: "ws-1",
+      idempotencyKey: "tpl-2",
+      blockId: seedBlock.id,
+      block: replacement,
+    };
+
+    const first = await invoke(docReplace, context(person, rooms), input);
+    const replay = await invoke(docReplace, context(person, rooms), input);
+
+    if (!first.ok || !replay.ok) throw new Error("expected both calls to succeed");
+
+    expect(first.applied).toBe(1);
+    expect(replay.applied).toBe(0);
+    expect(replay.revision).toBe(first.revision);
+
+    const blocks = await blocksOf(rooms);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]).toMatchObject({ id: seedBlock.id, text: "Replaced from template" });
+  });
+
+  it("behaves the same for a person and an agent, except for the recorded actor", async () => {
+    const personRooms = roomOwner();
+    const agentRooms = roomOwner();
+    const input = {
+      workspaceId: "ws-1",
+      idempotencyKey: "tpl-2",
+      blockId: seedBlock.id,
+      block: replacement,
+    };
+
+    const asPerson = await invoke(docReplace, context(person, personRooms), input);
+    const asAgent = await invoke(docReplace, context(agent, agentRooms), input);
+
+    expect(asPerson).toEqual(asAgent);
+
+    const [personBlock] = await blocksOf(personRooms);
+    const [agentBlock] = await blocksOf(agentRooms);
+
+    expect(personBlock).toEqual({ ...agentBlock, updatedBy: "user:user-1" });
+    expect(agentBlock?.updatedBy).toBe("agent:run-1");
   });
 
   it("refuses an archived workspace before the room is asked to write", async () => {
