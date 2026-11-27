@@ -27,7 +27,8 @@ export type OutputSchema<Output> = {
  * Why an operation did not happen. A refusal is a value, not an exception: the
  * model has to be able to read it and a person has to see it in the interface.
  */
-export type RefusalCode = "not-found" | "invalid-input" | "not-a-caller";
+export type RefusalCode =
+  "not-found" | "invalid-input" | "not-a-caller" | "read-only" | "unavailable";
 
 export type Refusal = {
   ok: false;

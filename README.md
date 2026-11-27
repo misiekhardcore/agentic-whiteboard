@@ -29,6 +29,22 @@ the reason is shown, and the room refuses a write even if the browser ignores
 both. The seeded `ws_demo_archived` workspace is there to try it from the demo
 page.
 
+A server can write into that document too. The "Insert from template" control
+beside the editor calls `doc.append` through the app; the block appears in every
+open editor without a reload, and activating it twice with the same request key
+leaves one block. The room owner's authenticated apply door validates the whole
+batch, records the key inside the document in the same transaction as the
+blocks, broadcasts the update and saves the snapshot. A retry returns the
+current revision with zero operations applied.
+
+Typing advances the document's revision once the room has been quiet for a
+moment, and the badge in the editor bar follows it over the same socket, so no
+reload and no second delivery channel are needed. `Ctrl+S` (or `Cmd+S`) saves
+immediately through the `doc.save` capability: the room counts the pending burst
+and writes the snapshot before it answers, so the revision it returns is the one
+already stored. The revision is part of the Yjs state, so the `doc_room`
+snapshot is the only place it is persisted.
+
 A deployment without the document service is supported: the workspace header,
 the agent status and the rest of the page render, and only the document area
 reports itself as unavailable.
@@ -38,15 +54,15 @@ The workspace also reports the agent service's health. The agent process answers
 
 ## Layout
 
-| Path                    | Owns                                                                                                     |
-| ----------------------- | -------------------------------------------------------------------------------------------------------- |
-| `packages/contracts`    | The actor, capability, change and room token types, `RoomOwnerPort`, and the port's conformance suite.   |
-| `packages/capabilities` | `define`, `invoke`, the registry, `can()`, and the `workspace.read` and `doc.connection` capabilities.   |
-| `packages/db`           | Drizzle schema, the Postgres client, the migrations, the document snapshot and room lease stores.        |
-| `packages/config`       | The shared TypeScript base, ESLint preset and Vitest preset.                                             |
-| `apps/web`              | Next.js routes, the adapters that implement the kernel's ports, the token route and the document editor. |
-| `apps/collab`           | The document room owner: Hocuspocus, token verification, the room lease and debounced snapshots.         |
-| `apps/agent`            | The agent service. This slice ships its health endpoint only.                                            |
+| Path                    | Owns                                                                                                                                            |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/contracts`    | The actor, capability, change and room token types, `RoomOwnerPort`, and the port's conformance suite.                                          |
+| `packages/capabilities` | `define`, `invoke`, the registry, `can()`, and the `workspace.read`, `doc.connection`, `doc.read`, `doc.append` and `doc.replace` capabilities. |
+| `packages/db`           | Drizzle schema, the Postgres client, the migrations, the document snapshot and room lease stores.                                               |
+| `packages/config`       | The shared TypeScript base, ESLint preset and Vitest preset.                                                                                    |
+| `apps/web`              | Next.js routes, the adapters that implement the kernel's ports, the token route and the document editor.                                        |
+| `apps/collab`           | The document room owner: Hocuspocus, token verification, the room lease and debounced snapshots.                                                |
+| `apps/agent`            | The agent service. This slice ships its health endpoint only.                                                                                   |
 
 Content only ever moves through a room owner. Metadata lives in Postgres.
 `packages/capabilities` imports no framework, no database client and no app;
@@ -98,14 +114,15 @@ pnpm test:e2e
 ```
 
 The specs cover two tabs syncing, a reload keeping the text, an archived
-workspace staying read-only, and a failed token request leaving the rest of the
-workspace usable. CI runs the same command against its own Postgres.
+workspace staying read-only, a failed token request leaving the rest of the
+workspace usable, and a server insert landing once, replaying, and surviving a
+reload. CI runs the same command against its own Postgres.
 
 ## What is temporary in this slice
 
 - The demo actor and the seeded demo workspaces stand in for sessions and
   accounts, which arrive in a later slice.
-- The server-side document write path (the apply batch and its idempotent
-  replay) arrives with the next slice; the room owner's write port currently
-  refuses it rather than pretending to write.
+- The insert-from-template control exists so a person can observe the server
+  write path before the agent does. The proposal slice replaces it and deletes
+  it.
 - The page is the document slice's surface, not the final workspace interface.

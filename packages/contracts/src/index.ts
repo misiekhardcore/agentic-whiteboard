@@ -12,6 +12,28 @@ export type {
   Success,
 } from "./capability";
 export type { Change } from "./changes";
+export {
+  actorReference,
+  BLOCK_ID_PATTERN,
+  DOC_META_FIELD,
+  DOC_REVISION_FIELD,
+  IDEMPOTENCY_KEY_PATTERN,
+  isActor,
+  isDocProjection,
+  normalizeDocBlockWrite,
+  planDocBatch,
+  readDocContentOp,
+} from "./doc-content";
+export type {
+  AppendBlockOp,
+  DocBlock,
+  DocBlockKind,
+  DocBlockWrite,
+  DocContentOp,
+  DocPlanStep,
+  DocProjection,
+  ReplaceBlockOp,
+} from "./doc-content";
 export type { JsonValue } from "./json";
 export { RoomOwnerError } from "./room-owner";
 export type {
@@ -22,6 +44,7 @@ export type {
   RoomOwnerErrorCode,
   RoomOwnerPort,
   RoomRef,
+  SaveResult,
   Snapshot,
 } from "./room-owner";
 export { mintRoomToken, ROOM_TOKEN_TTL_SECONDS, verifyRoomToken } from "./room-token";

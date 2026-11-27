@@ -22,18 +22,25 @@ surface copies its token and read-only rule rather than inventing a second one.
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Engine       | Tiptap/ProseMirror in the browser, Yjs and Hocuspocus in `apps/collab`                                                                                                                  | The editor model and the CRDT have one authoritative implementation; the document service never re-encodes content into a second model.                                                                      |
 | Authority    | One Hocuspocus room per document, in a separate long-running process                                                                                                                    | Concurrent edits need one owner that orders them. Two processes holding the same room would let two browsers overwrite each other.                                                                          |
-| Durability   | `doc_room.yjs_state` is the row a room loads; every change is written back after a debounce and flushed before unload                                                                   | The live document cannot be rebuilt from a row on every edit, but the row must be good enough to restart a room and to survive both tabs closing.                                                            |
+| Durability   | `doc_room.yjs_state` is the row a room loads; every change is written back after a debounce and flushed before unload                                                                   | The live document cannot be rebuilt from a row on every edit, but the row must be good enough to restart a room and to survive both tabs closing. The row stores bytes only; it keeps no second revision. |
 | Snapshot     | The stored value is the encoded Yjs update, not a JSON or HTML projection                                                                                                               | Re-encoding a document as JSON loses collaborative history and duplicates content on the next connection.                                                                                                   |
 | Token        | The app mints `{ aud: "doc", sub, roomId, accountId, permission, readOnly, iat, exp }`, signed HS256, valid for one minute                                                             | A browser cannot set headers on a WebSocket handshake, a standing key in a URL is a leak, and the room claim is what keeps a token for one document from joining another.                                   |
 | Audience     | The token names `doc`; the room verifies that audience and compares `roomId` with the document being joined                                                                             | A valid canvas token, or a document token minted for another room, is refused before any content is read.                                                                                                   |
 | Read-only    | The token carries it; the room sets `connection.readOnly` from the signed claim and the editor follows the room's answer                                                              | Enforced server-side, so a patched client gains nothing. A read permission is read-only even if the flag is forgotten.                                                                                      |
 | Lifecycle    | Read-only comes from the workspace's lifecycle (`archived`), decided in one capability and repeated by the room                                                                          | Archiving is the workspace's rule, not the editor's. The room does not ask the browser whether the workspace is archived.                                                                                   |
-| Revocation   | Archiving calls the service's authenticated `revoke` door, which closes the room's live sessions                                                                                         | The person is looking at a document that just became read-only; closing the session makes the client reconnect, and the new token is minted read-only.                                                      |
+| Revocation   | Archiving calls the service's authenticated `revoke` door, which closes the room's live sessions; the first caller arrives with the workspace lifecycle slice                       | The person is looking at a document that just became read-only; closing the session makes the client reconnect, and the new token is minted read-only.                                                      |
 | Lease        | `doc_room_lease` holds `room_id`, `holder` and `expires_at`; acquiring is one atomic upsert, renewed while held, released on unload and shutdown                                          | A second instance refuses the room and names the holder instead of silently creating a second owner. An expired lease is the only way to take a room over.                                                  |
 | Not found    | A document with no stored snapshot opens as an empty room at revision 0                                                                                                                 | The workspace row is what makes a room exist; the first edit creates the snapshot rather than requiring a pre-created row.                                                                                  |
 | Availability | The app probes the service's health before minting, and the page renders an unavailable notice while the rest of the workspace keeps working                                            | A dead service reads as "this surface is down", never as a page that hangs or a broken product.                                                                                                             |
 | Island       | The editor is the only client-only part of the workspace page                                                                                                                           | The engine touches the DOM and ships a stylesheet; the workspace header and footer must render without it.                                                                                                  |
-| Database     | `packages/db` owns `doc_room` and `doc_room_lease`; only `apps/collab` imports the document store                                                                                       | One package writes a document body, and the boundary is a test rather than a review comment.                                                                                                                |
+| Database     | `packages/db` owns `doc_room` and `doc_room_lease`; only `apps/collab` imports the document store                                                       | One package writes a document body, and the boundary is a test rather than a review comment.                                                                                                                |
+| Apply        | `POST /apply/:roomId` accepts `{ actor, idempotencyKey, ops }` behind the service credential and applies a block batch inside one Yjs transaction     | A server must be able to write without impersonating a socket, and the capability layer must never speak Yjs.                                                                                               |
+| Apply trust  | The apply door authenticates the app with the service secret and validates the actor's shape; membership is answered once, by the capability's `authorize`, not again in the room | The room owns content, not accounts: it cannot read a membership, so a second check would be a second policy that can disagree with the first. Revisit when a run token exists and the write can carry the run's signed claim. |
+| Identity     | Every block carries an explicit `blockId`. The editor assigns one when a person creates a block; the room assigns ids once on load for a document that predates the attribute | Comment anchors and replays need the same property: an edit above a block cannot change what the operation or anchor means. Reading a private Yjs item would make that identity an implementation detail. |
+| Idempotency  | The request key is stored in the document's `appliedOps` map in the same transaction as the operations                                                | Yjs operations are not idempotent; a retried append would duplicate without a key recorded beside the content.                                                                                              |
+| Revision     | The document's `meta.revision` is the only revision: it advances once per quiet period of content changes and immediately on a save, and travels with the Yjs state | One number covers whatever changed the content, a person's typing or an apply. Counting a debounce window instead of a keystroke keeps it meaningful, and no second counter can drift from the state it describes. Only the block fragment counts: writing `meta`, or a client syncing state the room already holds, is not an edit. |
+| Save         | `POST /save/:roomId` counts a pending burst now and writes the snapshot before it answers; Ctrl+S invokes it through the `doc.save` capability | A person expects their keystrokes on disk when they ask, not when the next debounce fires, and the revision the door returns is already durable.                                                              |
+| Revocation   | `revoke` records a durable `meta.revoked` flag before it closes live sessions                                                                          | The conformance suite's revoked room must keep refusing writes across an unload and a restart, not only for the sockets that were open.                                                                      |
 
 ## Shape
 
@@ -46,29 +53,62 @@ browser                      app (Next)                         document service
   │◄════ Hocuspocus sync ═══════════════════════════════════════════►│ one room per document
   │                             │                                    ├─ lease: holder or refusal
   │                             │◄── GET /snapshot/:id (secret) ─────┤ load doc_room.yjs_state
-  │                             ├── POST /revoke/:id (secret) ───────►│ close live sessions
+  │                             ├── POST /apply/:id (secret) ────────►│ validate, transact, record key
+  │                             │                                    ├─ broadcast + save snapshot
+  │                             ├── POST /save/:id (secret) ─────────►│ count the burst, store now
+  │                             ├── POST /revoke/:id (secret) ───────►│ record revoked, close sessions
   │                             │                                    └─ debounced save of yjs_state
 ```
 
-The service has four doors: a public health read, an authenticated snapshot read
-for the app's revision, an authenticated revoke for a workspace that became
-read-only, and the WebSocket upgrades browsers join a document through. It
-serves no pages, and it holds no content outside the room it is the one owner
-of.
+The service has six doors: a public health read, an authenticated snapshot read
+for the app's revision, an authenticated apply for a server-side block batch, an
+authenticated save for a person's Ctrl+S, an authenticated revoke for a
+workspace that became read-only, and the WebSocket upgrades browsers join a
+document through. It serves no pages, and it holds no
+content outside the room it is the one owner of.
+
+## Server-side apply
+
+A capability never imports Yjs. It sends `{ actor, idempotencyKey, ops }` to
+`POST /apply/:roomId`, where `ops` is a batch of `append-block` and
+`replace-block` operations naming block identities. The door does not re-read
+membership: the app's `authorize` step already answered it, and the service
+credential is the room's proof that this is the app speaking. A request key is
+one string — an agent composes it from its run id and operation key
+(`runId_opKey`), a person sends a request id — because the port's key and the
+document's `appliedOps` map hold one value, not a pair. The shared plan in
+`packages/contracts` validates the whole batch before the room owner opens a
+transaction, so a second invalid operation leaves the first unapplied. Inside the transaction it writes the blocks and
+records both the new revision (`meta.revision`) and the request key
+(`appliedOps`) in the document itself. A replay therefore applies zero
+operations and returns the current revision. The resulting Yjs update is
+broadcast to every open editor and saved before the door answers.
+
+The apply door is authenticated with the same service secret the app uses for
+snapshot and revoke. A browser never sees that secret, and a request from a
+browser origin without it is refused before the body is read.
+
+The temporary "insert from template" control calls the same `doc.append`
+capability an agent will call. Its request key is stable for the editor session,
+so activating it twice leaves one block. The proposal slice replaces the control
+and deletes it.
 
 ## Boundaries
 
 - `apps/collab` owns the room: the Hocuspocus server, document loading and
-  storing, token verification, the lease and the revoke door.
-- `packages/contracts` owns the token shape and its verification, because the
-  app and the room owner must agree on it.
-- `packages/capabilities` owns authorization and the lifecycle answer
-  (`workspace.readOnly`); the app turns them into claims and never re-decides
-  them per route.
+  storing, token verification, the lease, the apply door, block identity and
+  idempotency, and the revoke door.
+- `packages/contracts` owns the token shape, the block vocabulary and its
+  verification, and the pure batch plan both room owners apply, because the app
+  and the room owner must agree on them.
+- `packages/capabilities` owns authorization, the lifecycle answer
+  (`workspace.readOnly`) and the three document capabilities; the app turns
+  them into claims and never re-decides them per route.
 - `packages/db` owns `doc_room`, `doc_room_lease` and the only statements that
   read or write a document body.
-- `apps/web` owns the editor island, the token route and the presentation of
-  live, reconnecting, read-only and unavailable states.
+- `apps/web` owns the editor island, the token route, the temporary insert
+  control and the presentation of live, reconnecting, read-only and unavailable
+  states.
 
 ## Consequences
 
@@ -82,10 +122,30 @@ of.
   the agent status; the document area says it is unavailable.
 - The revision in `workspace.read` is `null` when the service is unreachable,
   which is a degraded read rather than a failed page.
+- A server-side append appears in every open editor without a reload, and the
+  saved Yjs state means it is still there in a fresh browser session.
+- A replayed request returns the current revision with `applied: 0`; it does not
+  write a second block and it does not return a stale revision.
+- A snapshot save does not invent a revision. The only revision is the one
+  inside the Yjs state, so a restart cannot expose a different number than the
+  one the last apply returned.
+- Typing advances the revision once the room has been quiet for the debounce
+  window, and every open editor shows the new number over the socket it already
+  holds; the page needs no reload and no second delivery channel.
+- Ctrl+S counts a pending burst and writes the snapshot before it answers, so
+  the revision the interface shows is the one already stored.
+- An invalid batch writes nothing, because every operation is validated before
+  the room opens its transaction.
 
 ## Deferred
 
-- The service-authenticated apply batch (block operations and idempotent replay)
-  arrives with the server write slice; this record covers the human edit path.
+- The proposal interface that replaces the temporary insert-from-template
+  control, and the approval path that precedes an agent write.
+- Clearing a durable revocation when an archived workspace is restored; this
+  slice only archives, so revocation is permanent for the room today.
+- The archive capability that calls `revoke`: the door, the durable flag and the
+  conformance case exist, but the workspace lifecycle slice is the first caller.
+- A ranged or paginated snapshot: `doc.read` slices the full projection the
+  snapshot door returns, so a range or a search transfers the whole document.
 - Presence polish and agent cursors.
 - Snapshot compaction and multi-region room owners.

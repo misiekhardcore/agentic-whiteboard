@@ -5,8 +5,8 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { docRoomStores } from "../src/doc-room";
-import type { DocRoomDatabase } from "../src/doc-room";
+import { docRoomStores } from "./doc-room";
+import type { DocRoomDatabase } from "./doc-room";
 
 const clients: PGlite[] = [];
 
@@ -27,27 +27,37 @@ async function stores() {
 }
 
 describe("the document room store", () => {
-  it("starts empty and advances the revision on every saved snapshot", async () => {
+  it("starts missing, then empty once the room is provisioned", async () => {
     const { snapshots } = await stores();
 
-    expect(await snapshots.load("doc-1")).toEqual({ state: null, revision: 0 });
+    expect(await snapshots.load("doc-1")).toEqual({ exists: false, state: null });
 
-    const first = await snapshots.save("doc-1", Uint8Array.from([1, 2, 3]));
-    expect(first).toBe(1);
+    await snapshots.ensure("doc-1");
+    expect(await snapshots.load("doc-1")).toEqual({ exists: true, state: null });
+  });
+
+  it("stores the encoded state without a second revision", async () => {
+    const { snapshots } = await stores();
+
+    await snapshots.ensure("doc-1");
+
+    expect(await snapshots.save("doc-1", Uint8Array.from([1, 2, 3]))).toBeUndefined();
 
     const stored = await snapshots.load("doc-1");
-    expect(stored.revision).toBe(1);
+    expect(stored).toMatchObject({ exists: true });
     expect(Array.from(stored.state ?? [])).toEqual([1, 2, 3]);
 
-    expect(await snapshots.save("doc-1", Uint8Array.from([4, 5]))).toBe(2);
+    await snapshots.save("doc-1", Uint8Array.from([4, 5]));
+    expect(Array.from((await snapshots.load("doc-1")).state ?? [])).toEqual([4, 5]);
   });
 
   it("keeps rooms apart", async () => {
     const { snapshots } = await stores();
 
+    await snapshots.ensure("doc-1");
     await snapshots.save("doc-1", Uint8Array.from([1]));
 
-    expect(await snapshots.load("doc-2")).toEqual({ state: null, revision: 0 });
+    expect(await snapshots.load("doc-2")).toEqual({ exists: false, state: null });
   });
 });
 

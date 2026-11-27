@@ -40,6 +40,11 @@ export type ApplyResult = {
   applied: number;
 };
 
+/** What a room holds after it persisted its state. */
+export type SaveResult = {
+  revision: string;
+};
+
 /**
  * The one way anything reads or writes content. The real implementation is a
  * remote room owner; tests use the in-memory fake, and both are held to the
@@ -48,6 +53,8 @@ export type ApplyResult = {
 export type RoomOwnerPort = {
   snapshot(room: RoomRef): Promise<Snapshot>;
   apply(input: ApplyInput): Promise<ApplyResult>;
+  /** Persists the room now, counting any change the debounce has not yet counted. */
+  save(room: RoomRef): Promise<SaveResult>;
   revoke(room: RoomRef): Promise<void>;
 };
 

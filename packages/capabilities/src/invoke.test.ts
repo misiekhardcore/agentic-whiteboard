@@ -3,8 +3,8 @@ import { createInMemoryRoomOwner } from "@v2/contracts/testing";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { defineCapability, invoke, success } from "../src";
-import type { CapabilityContext } from "../src";
+import { defineCapability, invoke, success } from "./index";
+import type { CapabilityContext } from "./index";
 
 const person: Actor = { type: "user", userId: "user-1", accountId: "account-1" };
 

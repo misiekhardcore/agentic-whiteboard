@@ -45,11 +45,7 @@ export default async function WorkspacePage(props: PageProps<"/w/[workspaceId]">
 
             {view.revision === null ? (
               <Badge variant="destructive">Document service unavailable</Badge>
-            ) : (
-              <Badge variant="outline" className="font-mono">
-                Snapshot revision <span className="text-muted-foreground">{view.revision}</span>
-              </Badge>
-            )}
+            ) : null}
           </header>
 
           <div className="flex flex-1 flex-col gap-5 pt-6">

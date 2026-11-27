@@ -1,17 +1,17 @@
 "use client";
 
 import { HocuspocusProvider } from "@hocuspocus/provider";
-import Collaboration from "@tiptap/extension-collaboration";
-import { EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import { useEffect, useMemo, useState } from "react";
+import { DOC_META_FIELD, DOC_REVISION_FIELD } from "@v2/contracts";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import * as Y from "yjs";
 
 import { requestDocConnection } from "./doc-connection";
 import type { DocConnection } from "./doc-connection";
 import { DocConnectionLine } from "./DocConnectionLine";
 import type { DocConnectionStatus } from "./DocConnectionLine";
+import { DocSurface } from "./DocSurface";
 import { DocToolbar } from "./DocToolbar";
+import { InsertFromTemplate } from "./InsertFromTemplate";
 
 /**
  * The editor itself, mounted only in the browser. The room decides read-only
@@ -32,7 +32,10 @@ export function DocRoom({
   const [connectionReadOnly, setConnectionReadOnly] = useState(
     readOnly || initialConnection.readOnly,
   );
-  const [, setRevisionTick] = useState(0);
+  const [revision, setRevision] = useState<number | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "refused">("idle");
+  const [savedRevision, setSavedRevision] = useState<number | null>(null);
+  const [synced, setSynced] = useState(false);
 
   // The provider owns a socket, so it is created and destroyed with the
   // effect. The Y.Doc outlives it: StrictMode mounts effects twice in
@@ -52,6 +55,7 @@ export function DocRoom({
         return connection.token;
       },
       onStatus: ({ status: next }) => setStatus(next),
+      onSynced: () => setSynced(true),
       onAuthenticationFailed: () => setStatus("disconnected"),
     });
 
@@ -60,49 +64,108 @@ export function DocRoom({
     };
   }, [initialConnection, workspaceId, ydoc]);
 
-  const editor = useEditor(
-    {
-      extensions: [
-        StarterKit.configure({ undoRedo: false }),
-        Collaboration.configure({ document: ydoc }),
-      ],
-      editable: !connectionReadOnly,
-      immediatelyRender: false,
-      editorProps: {
-        attributes: { class: "doc-body prose-article", "aria-label": "Document" },
-      },
-    },
-    [ydoc],
-  );
-
+  // The revision travels inside the document, so the socket that delivers a
+  // change also delivers the number: no second channel and no reload.
   useEffect(() => {
-    editor?.setEditable(!connectionReadOnly);
-  }, [editor, connectionReadOnly]);
+    const read = () => {
+      const value = ydoc.getMap(DOC_META_FIELD).get(DOC_REVISION_FIELD);
+      setRevision(typeof value === "number" ? value : 0);
+    };
 
-  // Tiptap does not re-render on a transaction on its own; the toolbar reads
-  // the active marks from the editor, so the page asks it to re-read them.
-  useEffect(() => {
-    if (editor === null) return;
-
-    const update = () => setRevisionTick((tick) => tick + 1);
-    editor.on("transaction", update);
-    editor.on("selectionUpdate", update);
+    ydoc.on("update", read);
+    read();
 
     return () => {
-      editor.off("transaction", update);
-      editor.off("selectionUpdate", update);
+      ydoc.off("update", read);
     };
-  }, [editor]);
+  }, [ydoc]);
+
+  const save = useCallback(async () => {
+    setSaveState("saving");
+
+    try {
+      const response = await fetch(`/api/doc/${encodeURIComponent(workspaceId)}/save`, {
+        method: "POST",
+        cache: "no-store",
+      });
+      const body = (await response.json()) as { revision?: unknown };
+
+      if (!response.ok || typeof body.revision !== "string") {
+        setSaveState("refused");
+        return;
+      }
+
+      const number = /^rev-(\d+)$/.exec(body.revision)?.[1];
+      setSavedRevision(number === undefined ? null : Number(number));
+      setSaveState("saved");
+    } catch {
+      setSaveState("refused");
+    }
+  }, [workspaceId]);
+
+  // Ctrl+S (and Cmd+S) save through the same capability an agent will use; a
+  // read-only room refuses before the room owner is asked.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "s") return;
+
+      event.preventDefault();
+      if (connectionReadOnly || status !== "connected") return;
+      void save();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [connectionReadOnly, save, status]);
+
+  const barSide = (
+    <>
+      <p className="doc-revision text-sm text-muted-foreground" data-testid="doc-revision">
+        revision <span className="font-mono text-foreground">{revision ?? "—"}</span>
+      </p>
+      {saveState === "saving" ? (
+        <p className="text-sm text-muted-foreground" role="status">
+          Saving…
+        </p>
+      ) : null}
+      {saveState === "saved" && savedRevision !== null ? (
+        <p className="text-sm text-muted-foreground" role="status">
+          Saved · rev-{savedRevision}
+        </p>
+      ) : null}
+      {saveState === "refused" ? (
+        <p className="text-sm text-destructive" role="status">
+          The save was refused.
+        </p>
+      ) : null}
+      <InsertFromTemplate
+        workspaceId={workspaceId}
+        disabled={connectionReadOnly || status !== "connected"}
+      />
+      <DocConnectionLine status={status} readOnly={connectionReadOnly} />
+    </>
+  );
+
+  // The editor waits for the first sync: see DocSurface for why mounting it
+  // against an empty document leaves a block behind on every load.
+  if (!synced) {
+    return (
+      <div className="flex flex-col">
+        <div className="doc-bar flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/40 px-3 py-2">
+          <DocToolbar editor={null} readOnly={connectionReadOnly} />
+          <div className="doc-bar-side">{barSide}</div>
+        </div>
+        <div className="doc-editor flex-1" />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col">
-      <div className="doc-bar flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/40 px-3 py-2">
-        <DocToolbar editor={editor} readOnly={connectionReadOnly} />
-        <DocConnectionLine status={status} readOnly={connectionReadOnly} />
-      </div>
-      <div className="doc-editor flex-1">
-        <EditorContent editor={editor} />
-      </div>
-    </div>
+    <DocSurface ydoc={ydoc} readOnly={connectionReadOnly}>
+      {barSide}
+    </DocSurface>
   );
 }

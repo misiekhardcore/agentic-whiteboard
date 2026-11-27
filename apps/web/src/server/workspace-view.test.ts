@@ -52,6 +52,7 @@ describe("loadWorkspaceView", () => {
     const unreachable: RoomOwnerPort = {
       snapshot: () => Promise.reject(new RoomOwnerError("room-not-found", "No room")),
       apply: () => Promise.reject(new RoomOwnerError("apply-refused", "No room")),
+      save: () => Promise.reject(new RoomOwnerError("room-not-found", "No room")),
       revoke: () => Promise.resolve(),
     };
 

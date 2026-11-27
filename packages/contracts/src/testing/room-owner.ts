@@ -1,3 +1,5 @@
+import { actorReference, isDocProjection, planDocBatch } from "../doc-content";
+import type { DocProjection } from "../doc-content";
 import type { JsonValue } from "../json";
 import { RoomOwnerError } from "../room-owner";
 import type {
@@ -6,6 +8,7 @@ import type {
   ContentOp,
   RoomOwnerPort,
   RoomRef,
+  SaveResult,
   Snapshot,
 } from "../room-owner";
 
@@ -28,11 +31,41 @@ export type InMemoryRoomOwner = RoomOwnerPort;
 
 const roomKey = (room: RoomRef): string => `${room.kind}:${room.id}`;
 
-const isReplaceOp = (op: ContentOp): boolean => op.kind === "replace";
-
 function nextRevision(revision: string): string {
   const match = /^rev-(\d+)$/.exec(revision);
   return match === null ? `${revision}+1` : `rev-${Number(match[1]) + 1}`;
+}
+
+function projectionOf(content: JsonValue): DocProjection {
+  return isDocProjection(content) ? structuredClone(content) : { blocks: [] };
+}
+
+/**
+ * Applies the shared plan to a copy of the projection. The fake owns storage,
+ * not the rules for which batch is valid; that plan lives in `doc-content`.
+ */
+function projectOps(
+  content: DocProjection,
+  ops: readonly ContentOp[],
+  writtenBy: string,
+): DocProjection {
+  const draft = structuredClone(content);
+
+  for (const step of planDocBatch(draft, ops)) {
+    if (step.kind === "append") {
+      draft.blocks.push({ ...step.block, updatedBy: writtenBy });
+      continue;
+    }
+
+    const index = draft.blocks.findIndex((block) => block.id === step.blockId);
+    if (index === -1) {
+      throw new RoomOwnerError("invalid-ops", `Block ${step.blockId} does not exist`);
+    }
+
+    draft.blocks[index] = { ...step.block, updatedBy: writtenBy };
+  }
+
+  return draft;
 }
 
 /** Runs synchronous room logic and turns a thrown refusal into a rejection. */
@@ -101,22 +134,24 @@ export function createInMemoryRoomOwner(
           return { revision: stored.revision, applied: 0 };
         }
 
-        if (!input.ops.every(isReplaceOp)) {
-          throw new RoomOwnerError(
-            "invalid-ops",
-            "The batch contains an operation this room cannot apply",
-          );
-        }
+        const nextContent = projectOps(
+          projectionOf(stored.content),
+          input.ops,
+          actorReference(input.actor),
+        );
+        const revision = nextRevision(stored.revision);
 
-        for (const op of input.ops) {
-          stored.content = structuredClone(op.payload);
-        }
-        stored.revision = nextRevision(stored.revision);
+        stored.content = nextContent;
+        stored.revision = revision;
 
-        const result: ApplyResult = { revision: stored.revision, applied: input.ops.length };
+        const result: ApplyResult = { revision, applied: input.ops.length };
         stored.applied.set(input.idempotencyKey, result);
         return result;
       });
+    },
+
+    save(room: RoomRef): Promise<SaveResult> {
+      return settled(() => ({ revision: requireRoom(room).revision }));
     },
 
     revoke(room: RoomRef): Promise<void> {

@@ -68,6 +68,10 @@ is a defect.
 | canvas          | The workspace's shapes surface.                                                                                                                         | `lib/collab`    |
 | snapshot        | A read-only view of a live surface: workspace, surface, revision marker, content. Never raw Yjs bytes.                                                  | `lib/collab`    |
 | mutation        | One semantic intent such as adding a shape, applied in a single Yjs transaction. Never a whole-document replacement, so concurrent human edits survive. | `lib/collab`    |
+| block           | One top-level unit of a document, addressed by a stable identity that survives edits above and below it. Operations name a block id, never an offset. | `apps/collab`   |
+| operation key   | The request key — one string, which an agent composes from its run id and operation key (`runId_opKey`) and a person sends as a request id — recorded inside the document with the blocks it wrote. A replay applies nothing and returns the current revision. | `apps/collab`   |
+| revision        | The document's own content revision: advanced once per quiet period of content changes, and immediately on a save, stored with the Yjs state. Compare it; do not parse it as a row count. | `apps/collab`   |
+| save            | Writing the room's current Yjs state to its snapshot now, counting any change the revision debounce has not counted yet. The revision the save answers is already durable. | `apps/collab`   |
 
 ## Media
 

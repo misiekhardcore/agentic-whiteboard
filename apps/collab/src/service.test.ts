@@ -1,11 +1,12 @@
 import { HocuspocusProvider } from "@hocuspocus/provider";
-import { mintRoomToken } from "@v2/contracts";
-import type { DocSnapshotStore, LeaseClaim, RoomLeaseStore } from "@v2/db/doc-room";
+import { BLOCK_ID_PATTERN, mintRoomToken } from "@v2/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import * as Y from "yjs";
 
+import { createBlockElement, DOC_BLOCKS_FIELD, projectDocContent } from "./doc-blocks";
 import { createDocService } from "./service";
 import type { DocService } from "./service";
+import { memoryStores } from "./test-support/memory-stores";
 
 const secret = "doc-secret";
 const services: DocService[] = [];
@@ -16,54 +17,11 @@ afterEach(async () => {
   for (const service of services.splice(0)) await service.destroy();
 });
 
-function memoryStores(): {
-  snapshots: DocSnapshotStore;
-  leaseStore: RoomLeaseStore;
-  state: Map<string, Uint8Array>;
-  holders: Map<string, string>;
-} {
-  const state = new Map<string, Uint8Array>();
-  const revisions = new Map<string, number>();
-  const holders = new Map<string, string>();
-
-  return {
-    state,
-    holders,
-    snapshots: {
-      load(roomId) {
-        return Promise.resolve({
-          state: state.get(roomId) ?? null,
-          revision: revisions.get(roomId) ?? 0,
-        });
-      },
-      save(roomId, update) {
-        state.set(roomId, Uint8Array.from(update));
-        const revision = (revisions.get(roomId) ?? 0) + 1;
-        revisions.set(roomId, revision);
-        return Promise.resolve(revision);
-      },
-    },
-    leaseStore: {
-      acquire({ roomId, holder }): Promise<LeaseClaim> {
-        const current = holders.get(roomId);
-        if (current !== undefined && current !== holder) {
-          return Promise.resolve({ ok: false, holder: current });
-        }
-        holders.set(roomId, holder);
-        return Promise.resolve({ ok: true });
-      },
-      renew({ roomId, holder }) {
-        return Promise.resolve(holders.get(roomId) === holder);
-      },
-      release({ roomId, holder }) {
-        if (holders.get(roomId) === holder) holders.delete(roomId);
-        return Promise.resolve();
-      },
-    },
-  };
-}
-
-function serviceWith(stores: ReturnType<typeof memoryStores>, instanceId: string): DocService {
+function serviceWith(
+  stores: ReturnType<typeof memoryStores>,
+  instanceId: string,
+  options: { revisionDebounceMs?: number } = {},
+): DocService {
   const service = createDocService({
     snapshots: stores.snapshots,
     leaseStore: stores.leaseStore,
@@ -71,6 +29,7 @@ function serviceWith(stores: ReturnType<typeof memoryStores>, instanceId: string
     instanceId,
     debounceMs: 50,
     maxDebounceMs: 200,
+    revisionDebounceMs: options.revisionDebounceMs ?? 25,
     renewMs: 60_000,
     log: () => undefined,
   });
@@ -119,6 +78,68 @@ function textOf(document: Y.Doc): string {
     .join("");
 }
 
+function textOfElement(element: Y.XmlElement): string {
+  return element
+    .toArray()
+    .map((child) => {
+      if (child instanceof Y.XmlText) return String(child.toString());
+      if (child instanceof Y.XmlElement) return textOfElement(child);
+      return "";
+    })
+    .join("");
+}
+
+function xmlOf(document: Y.Doc): string {
+  return document
+    .getXmlFragment(DOC_BLOCKS_FIELD)
+    .toArray()
+    .map((node) => {
+      if (node instanceof Y.XmlText) return String(node.toString());
+      if (node instanceof Y.XmlElement) return textOfElement(node);
+      return "";
+    })
+    .join(" ");
+}
+
+function occurrences(haystack: string, needle: string): number {
+  return haystack.split(needle).length - 1;
+}
+
+async function revisionAt(base: string): Promise<number> {
+  const response = await fetch(`${base}/snapshot/doc-1`, {
+    headers: { authorization: `Bearer ${secret}` },
+  });
+  const body = (await response.json()) as { revision: number };
+  return body.revision;
+}
+
+async function untilContent(base: string, text: string): Promise<void> {
+  const deadline = Date.now() + 5_000;
+
+  while (Date.now() < deadline) {
+    const response = await fetch(`${base}/snapshot/doc-1`, {
+      headers: { authorization: `Bearer ${secret}` },
+    });
+    const body = (await response.json()) as { content: unknown };
+
+    if (JSON.stringify(body.content).includes(text)) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+
+  throw new Error(`The server never received "${text}".`);
+}
+
+async function untilRevision(base: string, expected: number): Promise<void> {
+  const deadline = Date.now() + 5_000;
+
+  while (Date.now() < deadline) {
+    if ((await revisionAt(base)) >= expected) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+
+  throw new Error(`The revision did not reach ${expected}; it is ${await revisionAt(base)}.`);
+}
+
 async function until(check: () => boolean, timeoutMs = 3_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
 
@@ -129,6 +150,19 @@ async function until(check: () => boolean, timeoutMs = 3_000): Promise<void> {
 
   throw new Error("condition was not met in time");
 }
+
+function applyBody(idempotencyKey: string, ops: unknown[]): string {
+  return JSON.stringify({
+    actor: { type: "user", userId: "user-1", accountId: "account-1" },
+    idempotencyKey,
+    ops,
+  });
+}
+
+const appendBlock = (id: string, text: string) => ({
+  kind: "append-block",
+  payload: { block: { id, kind: "paragraph", level: null, text } },
+});
 
 describe("the document room owner", () => {
   it("syncs two sessions and restores the stored snapshot in a fresh one", async () => {
@@ -159,6 +193,38 @@ describe("the document room owner", () => {
     expect(textOf(fresh.document)).toBe("hello from the first tab");
   });
 
+  it("assigns explicit block ids when an older snapshot loads", async () => {
+    const stores = memoryStores();
+    await stores.snapshots.ensure("doc-legacy");
+
+    const legacy = new Y.Doc();
+    const element = new Y.XmlElement("paragraph");
+    const text = new Y.XmlText();
+    text.insert(0, "Existing text");
+    element.insert(0, [text]);
+    legacy.getXmlFragment(DOC_BLOCKS_FIELD).push([element]);
+    stores.state.set("doc-legacy", Y.encodeStateAsUpdate(legacy));
+    legacy.destroy();
+
+    const service = serviceWith(stores, "instance-a");
+    const port = await service.listen(0);
+    const base = `http://127.0.0.1:${port}`;
+
+    const response = await fetch(`${base}/snapshot/doc-legacy`, {
+      headers: { authorization: `Bearer ${secret}` },
+    });
+    const body = (await response.json()) as { content: { blocks: { id: string }[] } };
+    const id = body.content.blocks[0]?.id;
+    expect(id).toMatch(BLOCK_ID_PATTERN);
+
+    const stored = await stores.snapshots.load("doc-legacy");
+    if (stored.state === null) throw new Error("expected a migrated snapshot");
+    const reloaded = new Y.Doc();
+    Y.applyUpdate(reloaded, stored.state);
+    expect(projectDocContent(reloaded).blocks[0]?.id).toBe(id);
+    reloaded.destroy();
+  });
+
   it("refuses a hand-crafted write from a read-only session", async () => {
     const stores = memoryStores();
     const service = serviceWith(stores, "instance-a");
@@ -185,6 +251,7 @@ describe("the document room owner", () => {
 
   it("serves health, guards its service doors and revokes a live session", async () => {
     const stores = memoryStores();
+    await stores.snapshots.ensure("doc-1");
     const service = serviceWith(stores, "instance-a");
     const port = await service.listen(0);
     const base = `http://127.0.0.1:${port}`;
@@ -195,11 +262,16 @@ describe("the document room owner", () => {
     await expect(health.json()).resolves.toMatchObject({ ok: true, service: "doc" });
 
     expect((await fetch(`${base}/snapshot/doc-1`)).status).toBe(401);
+    expect((await fetch(`${base}/save/doc-1`, { method: "POST" })).status).toBe(401);
     expect((await fetch(`${base}/revoke/doc-1`, { method: "POST" })).status).toBe(401);
 
     const snapshot = await fetch(`${base}/snapshot/doc-1`, { headers: authorization });
     expect(snapshot.status).toBe(200);
-    await expect(snapshot.json()).resolves.toMatchObject({ roomId: "doc-1", revision: 0 });
+    await expect(snapshot.json()).resolves.toMatchObject({
+      roomId: "doc-1",
+      revision: 0,
+      content: { blocks: [] },
+    });
 
     let closed = false;
     const client = connect(port, "doc-1", { onClose: () => (closed = true) });
@@ -212,6 +284,171 @@ describe("the document room owner", () => {
     expect(revoke.status).toBe(204);
 
     await until(() => closed);
+  });
+
+  it("applies a server write to every open editor once per request key", async () => {
+    const stores = memoryStores();
+    await stores.snapshots.ensure("doc-1");
+    const service = serviceWith(stores, "instance-a");
+    const port = await service.listen(0);
+    const base = `http://127.0.0.1:${port}`;
+    const headers = {
+      authorization: `Bearer ${secret}`,
+      "content-type": "application/json",
+    };
+
+    const first = connect(port, "doc-1");
+    const second = connect(port, "doc-1");
+    await until(() => first.provider.synced && second.provider.synced);
+
+    // A browser origin without the service credential cannot reach the door.
+    const browserAttempt = await fetch(`${base}/apply/doc-1`, {
+      method: "POST",
+      headers: { origin: "http://localhost:3000", "content-type": "application/json" },
+      body: applyBody("op-browser", [appendBlock("block-browser", "Must not land")]),
+    });
+    expect(browserAttempt.status).toBe(401);
+
+    const body = applyBody("op-1", [appendBlock("block-2", "Inserted from the server")]);
+    const applied = await fetch(`${base}/apply/doc-1`, { method: "POST", headers, body });
+    expect(applied.status).toBe(200);
+    await expect(applied.json()).resolves.toMatchObject({ applied: 1, revision: 1 });
+
+    await until(
+      () =>
+        xmlOf(first.document).includes("Inserted from the server") &&
+        xmlOf(second.document).includes("Inserted from the server"),
+    );
+
+    const replay = await fetch(`${base}/apply/doc-1`, { method: "POST", headers, body });
+    expect(replay.status).toBe(200);
+    await expect(replay.json()).resolves.toMatchObject({ applied: 0, revision: 1 });
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(occurrences(xmlOf(second.document), "Inserted from the server")).toBe(1);
+  });
+
+  it("applies neither operation when the second is invalid", async () => {
+    const stores = memoryStores();
+    await stores.snapshots.ensure("doc-1");
+    const service = serviceWith(stores, "instance-a");
+    const port = await service.listen(0);
+    const base = `http://127.0.0.1:${port}`;
+    const headers = {
+      authorization: `Bearer ${secret}`,
+      "content-type": "application/json",
+    };
+
+    const client = connect(port, "doc-1");
+    await until(() => client.provider.synced);
+
+    const body = applyBody("op-invalid", [
+      appendBlock("block-3", "Must not land"),
+      {
+        kind: "replace-block",
+        payload: {
+          blockId: "block-missing",
+          block: { id: "block-missing", kind: "paragraph", level: null, text: "No target" },
+        },
+      },
+    ]);
+
+    const response = await fetch(`${base}/apply/doc-1`, { method: "POST", headers, body });
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ code: "invalid-ops" });
+
+    const snapshot = await fetch(`${base}/snapshot/doc-1`, {
+      headers: { authorization: `Bearer ${secret}` },
+    });
+    await expect(snapshot.json()).resolves.toMatchObject({
+      revision: 0,
+      content: { blocks: [] },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(xmlOf(client.document)).not.toContain("Must not land");
+  });
+
+  it("counts one revision per quiet burst of typing", async () => {
+    const stores = memoryStores();
+    await stores.snapshots.ensure("doc-1");
+    const service = serviceWith(stores, "instance-a");
+    const port = await service.listen(0);
+    const base = `http://127.0.0.1:${port}`;
+
+    const client = connect(port, "doc-1");
+    await until(() => client.provider.synced);
+    expect(await revisionAt(base)).toBe(0);
+
+    const fragment = client.document.getXmlFragment(DOC_BLOCKS_FIELD);
+    fragment.push([
+      createBlockElement({ id: "block-a", kind: "paragraph", level: null, text: "One" }, null),
+    ]);
+    fragment.push([
+      createBlockElement({ id: "block-b", kind: "paragraph", level: null, text: "Two" }, null),
+    ]);
+
+    await untilRevision(base, 1);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await revisionAt(base)).toBe(1);
+
+    fragment.push([
+      createBlockElement({ id: "block-c", kind: "paragraph", level: null, text: "Three" }, null),
+    ]);
+
+    await untilRevision(base, 2);
+    expect(xmlOf(client.document)).toContain("Three");
+  });
+
+  it("saves a pending change immediately and counts it once", async () => {
+    const stores = memoryStores();
+    await stores.snapshots.ensure("doc-1");
+    const service = serviceWith(stores, "instance-a", { revisionDebounceMs: 1_000 });
+    const port = await service.listen(0);
+    const base = `http://127.0.0.1:${port}`;
+    const authorization = { authorization: `Bearer ${secret}` };
+
+    const client = connect(port, "doc-1");
+    await until(() => client.provider.synced);
+
+    client.document
+      .getXmlFragment(DOC_BLOCKS_FIELD)
+      .push([
+        createBlockElement(
+          { id: "block-saved", kind: "paragraph", level: null, text: "Saved text" },
+          null,
+        ),
+      ]);
+
+    await untilContent(base, "Saved text");
+
+    const response = await fetch(`${base}/save/doc-1`, { method: "POST", headers: authorization });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ revision: 1 });
+    expect(await revisionAt(base)).toBe(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(await revisionAt(base)).toBe(1);
+  });
+
+  it("saves without pending changes and reports the current revision", async () => {
+    const stores = memoryStores();
+    await stores.snapshots.ensure("doc-1");
+    const service = serviceWith(stores, "instance-a", { revisionDebounceMs: 1_000 });
+    const port = await service.listen(0);
+    const base = `http://127.0.0.1:${port}`;
+
+    const client = connect(port, "doc-1");
+    await until(() => client.provider.synced);
+
+    const response = await fetch(`${base}/save/doc-1`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${secret}` },
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ revision: 0 });
+    expect(await revisionAt(base)).toBe(0);
   });
 
   it("refuses a second instance and names the holder", async () => {

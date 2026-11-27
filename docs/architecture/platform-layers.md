@@ -187,7 +187,11 @@ Three enforcement points, and only three:
 
 1. `invoke` runs `authorize` for every capability call, human or agent.
 2. The room owner re-checks the actor's claim against the room at **apply** time,
-   because a run outlives a membership and a document outlives a tab.
+   because a run outlives a membership and a document outlives a tab. For a
+   socket that claim is the minted token; the service-authenticated apply door
+   trusts the actor the app already authorized (see
+   [doc-room-owner](doc-room-owner.md)), and the run token will be the first
+   write that carries its own claim.
 3. The socket's `onAuthenticate` for reads.
 
 `can()` is never called by the model, never reachable from the browser, and never

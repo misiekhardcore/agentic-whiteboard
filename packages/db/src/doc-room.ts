@@ -11,15 +11,21 @@ import { docRoom } from "./schema";
 export type DocRoomDatabase = NodePgDatabase<Record<string, never>>;
 
 export type DocSnapshot = {
+  /**
+   * Whether the room's row exists. A row with `state: null` is an empty
+   * document; no row at all is a room this owner does not hold.
+   */
+  exists: boolean;
   /** `null` until the room has written its first debounced snapshot. */
   state: Uint8Array | null;
-  revision: number;
 };
 
 export type DocSnapshotStore = {
   load(roomId: string): Promise<DocSnapshot>;
-  /** Returns the revision the write advanced the row to. */
-  save(roomId: string, state: Uint8Array): Promise<number>;
+  /** Provisions an empty room for a document that has not been opened yet. */
+  ensure(roomId: string): Promise<void>;
+  /** Stores the encoded Yjs state; the document itself owns the revision. */
+  save(roomId: string, state: Uint8Array): Promise<void>;
 };
 
 export type LeaseClaim =
@@ -45,40 +51,45 @@ export type DocRoomStores = {
  * The durable document copy. Only the room owner writes it: a snapshot is
  * encoded Yjs state, never a document body a query updates. The base64
  * round-trip keeps the value text across both drivers, so a test database and
- * Postgres store the same bytes.
+ * Postgres store the same bytes. The revision travels inside that state; this
+ * row deliberately keeps no second counter.
  */
 function createSnapshotStore(database: DocRoomDatabase): DocSnapshotStore {
   return {
     async load(roomId) {
-      const result = await database.execute<{ state: string | null; revision: number }>(sql`
-        select encode(${docRoom.yjsState}, 'base64') as "state", "revision"
+      const result = await database.execute<{ state: string | null }>(sql`
+        select encode(${docRoom.yjsState}, 'base64') as "state"
         from "doc_room"
         where "room_id" = ${roomId}
         limit 1
       `);
       const row = result.rows.at(0);
 
-      if (row === undefined) return { state: null, revision: 0 };
+      if (row === undefined) return { exists: false, state: null };
 
       return {
+        exists: true,
         state: row.state === null ? null : Uint8Array.from(Buffer.from(row.state, "base64")),
-        revision: row.revision,
       };
+    },
+
+    async ensure(roomId) {
+      await database.execute(sql`
+        insert into "doc_room" ("room_id")
+        values (${roomId})
+        on conflict ("room_id") do nothing
+      `);
     },
 
     async save(roomId, state) {
       const encoded = Buffer.from(state).toString("base64");
-      const result = await database.execute<{ revision: number }>(sql`
-        insert into "doc_room" ("room_id", "yjs_state", "revision")
-        values (${roomId}, decode(${encoded}, 'base64'), 1)
+      await database.execute(sql`
+        insert into "doc_room" ("room_id", "yjs_state")
+        values (${roomId}, decode(${encoded}, 'base64'))
         on conflict ("room_id") do update
           set "yjs_state" = excluded."yjs_state",
-              "revision" = "doc_room"."revision" + 1,
               "updated_at" = now()
-        returning "revision"
       `);
-
-      return result.rows.at(0)?.revision ?? 0;
     },
   };
 }
