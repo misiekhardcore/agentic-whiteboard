@@ -1,3 +1,3 @@
-import { createVitestConfig } from "./vitest/base";
+import { createVitestConfig } from "./vitest/base.mjs";
 
 export default createVitestConfig();

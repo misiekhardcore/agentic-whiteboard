@@ -5,7 +5,10 @@
   "exports": {
     "./tsconfig.base.json": "./tsconfig.base.json",
     "./eslint": "./eslint/base.mjs",
-    "./vitest": "./vitest/base.ts"
+    "./vitest": {
+      "types": "./vitest/base.d.mts",
+      "default": "./vitest/base.mjs"
+    }
   },
   "scripts": {
     "lint": "eslint .",

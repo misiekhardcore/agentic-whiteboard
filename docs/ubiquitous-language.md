@@ -23,10 +23,13 @@ is a defect.
 
 | Term             | Definition                                                                                                                                                 | Owner          |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| person           | A signed-in human, the row the schema calls `user`. The agent acts on a person's behalf but is never that person.                                          | `lib/identity` |
+| person           | A signed-in human, the row the schema calls `user`. The agent acts on a person's behalf but is never that person.                                          | `apps/web` |
+| session          | The row that makes a cookie authenticate. It names the person and their active organization; signing out deletes it, so a copied cookie is useless afterwards. The cookie is a lookup key, never a bearer credential. | `apps/web` |
+| actor            | Who a capability call acts as: a signed-in person in one account, or the agent on a person's behalf. It is resolved from the session on the server, never read from a body, query or header. | `packages/contracts` |
 | account          | The tenancy and paying scope a request acts in: an organization, or the person's own. Read from the session, never from a body, a form field or the model. | `apps/web` |
-| personal account | The account when no organization is active. Its id is the person's, and it holds the workspaces they created outside any organization.                     | `lib/identity` |
-| active account   | The account the session is acting as. Switching it changes the session only; no row moves between accounts.                                                | `lib/identity` |
+| personal account | The account when no organization is active. Its id is the person's, and it holds the workspaces they created outside any organization.                     | `apps/web` |
+| active account   | The account the session is acting as. Switching it changes the session only; no row moves between accounts.                                                | `apps/web` |
+| invitation       | A pending offer to one email address to join an organization with a role. Accepting is the invited person's own act and happens once; a spent or expired invitation is refused. | `apps/web` |
 
 ## Organizations
 

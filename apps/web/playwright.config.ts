@@ -27,6 +27,11 @@ const serviceEnv = {
   DOC_SERVICE_URL: `ws://127.0.0.1:${docPort}`,
   DOC_SERVICE_INTERNAL_URL: `http://127.0.0.1:${docPort}`,
   DOC_PORT: docPort,
+  // The e2e run signs up and signs in for real, so it needs the same auth
+  // settings a deployment does; the value is a throwaway local secret.
+  BETTER_AUTH_SECRET:
+    process.env.BETTER_AUTH_SECRET ?? "e2e-only-better-auth-secret-0123456789abcdef",
+  WEB_URL: baseURL,
 };
 
 export default defineConfig({
