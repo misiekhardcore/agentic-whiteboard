@@ -1,6 +1,7 @@
-import type { RoomRef } from "../src";
-import { describeRoomOwnerContract } from "../src/conformance";
-import { createInMemoryRoomOwner } from "../src/testing";
+import { describeRoomOwnerContract } from "../conformance";
+import type { RoomRef } from "../room-owner";
+
+import { createInMemoryRoomOwner } from "./room-owner";
 
 const room: RoomRef = { kind: "doc", id: "doc-1", accountId: "account-1" };
 

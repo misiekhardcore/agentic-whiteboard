@@ -2,8 +2,10 @@ import type { Actor } from "@v2/contracts";
 import { createInMemoryRoomOwner } from "@v2/contracts/testing";
 import { describe, expect, it } from "vitest";
 
-import { docConnection, invoke } from "../src";
-import type { CapabilityContext, WorkspaceRecord } from "../src";
+import type { CapabilityContext, WorkspaceRecord } from "../context";
+import { invoke } from "../invoke";
+
+import { docConnection } from "./doc-connection";
 
 const person: Actor = { type: "user", userId: "user-1", accountId: "account-1" };
 const outsider: Actor = { type: "user", userId: "user-2", accountId: "account-2" };

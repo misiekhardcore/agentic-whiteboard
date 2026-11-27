@@ -16,7 +16,9 @@ Read the relevant record before changing a boundary.
 2. **Model the domain.** Name the capability, its effect, its callers and the
    row its `authorize` step returns. A behaviour change is a capability change.
 3. **Implement test-first.** Red, green, refactor. The room owner's conformance
-   suite is the example: the fake passes it, and every real owner must too.
+   suite is the example: the fake passes it, and every real owner must too. A
+   test lives beside the file it tests (`can.ts` / `can.test.ts`), never in a
+   separate `test/` directory.
 4. **Verify.** Run `pnpm verify` and report what passed, failed or could not run.
 
 ## Invariants

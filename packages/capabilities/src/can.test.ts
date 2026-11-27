@@ -1,7 +1,7 @@
 import type { Actor } from "@v2/contracts";
 import { describe, expect, it } from "vitest";
 
-import { can } from "../src";
+import { can } from "./can";
 
 const person = (accountId: string): Actor => ({
   type: "user",

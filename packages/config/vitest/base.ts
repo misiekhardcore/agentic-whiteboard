@@ -8,7 +8,7 @@ export function createVitestConfig(options: { include?: string[] } = {}) {
   return defineConfig({
     test: {
       environment: "node",
-      include: options.include ?? ["src/**/*.test.ts", "test/**/*.test.ts"],
+      include: options.include ?? ["src/**/*.test.ts"],
       passWithNoTests: false,
     },
   });

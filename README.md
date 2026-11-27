@@ -52,7 +52,7 @@ Content only ever moves through a room owner. Metadata lives in Postgres.
 `packages/capabilities` imports no framework, no database client and no app;
 `packages/db` is the only package allowed a database client and DDL, and only
 `apps/collab` imports the document body store. The dependency rules are enforced
-by `packages/config/test/workspace-boundaries.test.ts`, not by review.
+by `packages/config/workspace-boundaries.test.ts`, not by review.
 
 ## Running it
 

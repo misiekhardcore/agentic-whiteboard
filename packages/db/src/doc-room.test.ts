@@ -5,8 +5,8 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { docRoomStores } from "../src/doc-room";
-import type { DocRoomDatabase } from "../src/doc-room";
+import { docRoomStores } from "./doc-room";
+import type { DocRoomDatabase } from "./doc-room";
 
 const clients: PGlite[] = [];
 

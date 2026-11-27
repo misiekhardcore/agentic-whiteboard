@@ -43,6 +43,7 @@ probe.
 | Types | Types are not one per file. A folder keeps its vocabulary in one module (`types.ts`, or the concept's own file such as `catalog.ts`), and a type that a single rule owns lives in that rule's file. |
 | Constants | Several constants share one file. They go where they belong semantically: with the function that reads them, or in the folder's `constants.ts` when several modules read them. || Barrels | Only `index.ts` re-exports a folder, and it names every export (`export { a, b } from "./module"`, `export type { T } from "./types"`) - never `export *`, so a folder's public surface is readable in one file and a removed export breaks the build. Only `index.ts` re-exports a folder at all. A `thing.ts` left beside `thing/` purely to keep the old import path alive is deleted: the lint zones, the client-safe allowlists and `architecture.test.ts` point at `thing/**` and the callers import the folder path. A sibling imports the concrete module, never its own barrel. |
 | New domains | A helper with no context of its own and several consumers goes to `lib/shared`. A new context is created only when it owns its own language and invariants. |
+| Tests | A test sits beside the file it tests (`can.ts` / `can.test.ts`, `src/server/doc-session.test.ts`), not in a separate `test/` directory. The shared Vitest preset includes `src/**/*.test.ts`, so a test outside `src/` is never collected. |
 
 ### Size
 
