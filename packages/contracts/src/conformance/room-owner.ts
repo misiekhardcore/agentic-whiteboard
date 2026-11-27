@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Actor } from "../actor";
+import { isDocProjection } from "../doc-content";
 import type { JsonValue } from "../json";
 import { RoomOwnerError } from "../room-owner";
 import type { ContentOp, RoomOwnerErrorCode, RoomOwnerPort, RoomRef } from "../room-owner";
@@ -99,6 +100,40 @@ export function describeRoomOwnerContract(
       await expect(fixture.owner.snapshot(fixture.room)).resolves.toMatchObject({
         content: fixture.appliedContent,
         revision: first.revision,
+      });
+    });
+
+    it("applies nothing when a batch writes one block twice", async () => {
+      const fixture = createFixture();
+      const before = await fixture.owner.snapshot(fixture.room);
+      if (!isDocProjection(fixture.seedContent)) {
+        throw new Error("The fixture must seed a document projection");
+      }
+
+      const blockId = fixture.seedContent.blocks[0]?.id;
+      if (blockId === undefined) throw new Error("The fixture must seed a block");
+
+      const replace = (text: string): ContentOp => ({
+        kind: "replace-block",
+        payload: {
+          blockId,
+          block: { id: blockId, kind: "paragraph", level: null, text },
+        },
+      });
+
+      await expectRefusal(
+        fixture.owner.apply({
+          room: fixture.room,
+          actor: fixture.actor,
+          idempotencyKey: "op-double-replace",
+          ops: [replace("First write"), replace("Second write")],
+        }),
+        "invalid-ops",
+      );
+
+      await expect(fixture.owner.snapshot(fixture.room)).resolves.toMatchObject({
+        content: before.content,
+        revision: before.revision,
       });
     });
 

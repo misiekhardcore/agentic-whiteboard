@@ -1,4 +1,5 @@
 import type { Actor } from "./actor";
+import { RoomOwnerError } from "./room-owner";
 import type { ContentOp } from "./room-owner";
 
 /**
@@ -38,6 +39,11 @@ export type ReplaceBlockOp = {
 };
 
 export type DocContentOp = AppendBlockOp | ReplaceBlockOp;
+
+/** A validated batch step; each owner resolves it against its own storage. */
+export type DocPlanStep =
+  | { kind: "append"; block: DocBlockWrite }
+  | { kind: "replace"; blockId: string; block: DocBlockWrite };
 
 /** An identity a URL, a comment anchor or an operation may carry. */
 export const BLOCK_ID_PATTERN = /^[A-Za-z0-9_-]{1,120}$/;
@@ -122,6 +128,54 @@ export function readDocContentOp(value: ContentOp): DocContentOp | null {
   }
 
   return null;
+}
+
+/**
+ * Plans a batch against the projection before either owner applies it. Every
+ * operation is validated here, so a bad second operation writes neither it nor
+ * the first. A batch can append new blocks or replace blocks that already
+ * existed; replacing a block the same batch appends is refused, because the
+ * real owner cannot address a block that is not in the fragment yet.
+ */
+export function planDocBatch(projection: DocProjection, ops: readonly ContentOp[]): DocPlanStep[] {
+  const steps: DocPlanStep[] = [];
+  const existingIds = new Set(projection.blocks.map((block) => block.id));
+  const knownIds = new Set(existingIds);
+  const replacedIds = new Set<string>();
+
+  for (const op of ops) {
+    const parsed = readDocContentOp(op);
+    if (parsed === null) {
+      throw new RoomOwnerError(
+        "invalid-ops",
+        "The batch contains an operation this room cannot apply",
+      );
+    }
+
+    if (parsed.kind === "append-block") {
+      const { block } = parsed.payload;
+      if (knownIds.has(block.id)) {
+        throw new RoomOwnerError("invalid-ops", `Block ${block.id} already exists`);
+      }
+
+      knownIds.add(block.id);
+      steps.push({ kind: "append", block });
+      continue;
+    }
+
+    const { blockId, block } = parsed.payload;
+    if (!existingIds.has(blockId)) {
+      throw new RoomOwnerError("invalid-ops", `Block ${blockId} does not exist`);
+    }
+    if (replacedIds.has(blockId)) {
+      throw new RoomOwnerError("invalid-ops", `Block ${blockId} is written twice`);
+    }
+
+    replacedIds.add(blockId);
+    steps.push({ kind: "replace", blockId, block });
+  }
+
+  return steps;
 }
 
 function isDocBlock(value: unknown): value is DocBlock {

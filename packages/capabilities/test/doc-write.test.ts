@@ -205,4 +205,52 @@ describe("doc.replace", () => {
       updatedBy: "user:user-1",
     });
   });
+
+  it("refuses an archived workspace before the room is asked to write", async () => {
+    let applied = false;
+    const guarded: RoomOwnerPort = {
+      snapshot: () => Promise.reject(new RoomOwnerError("room-not-found", "No room")),
+      apply: () => {
+        applied = true;
+        return Promise.reject(new RoomOwnerError("apply-refused", "Must not run"));
+      },
+      revoke: () => Promise.resolve(),
+    };
+
+    const result = await invoke(
+      docReplace,
+      context(person, guarded, { ...workspace, archived: true }),
+      {
+        workspaceId: "ws-1",
+        idempotencyKey: "tpl-2",
+        blockId: seedBlock.id,
+        block: template,
+      },
+    );
+
+    expect(result).toMatchObject({ ok: false, code: "read-only" });
+    expect(applied).toBe(false);
+  });
+
+  it("refuses someone who cannot write the document before anything is applied", async () => {
+    let applied = false;
+    const guarded: RoomOwnerPort = {
+      snapshot: () => Promise.reject(new RoomOwnerError("room-not-found", "No room")),
+      apply: () => {
+        applied = true;
+        return Promise.reject(new RoomOwnerError("apply-refused", "Must not run"));
+      },
+      revoke: () => Promise.resolve(),
+    };
+
+    const result = await invoke(docReplace, context(outsider, guarded), {
+      workspaceId: "ws-1",
+      idempotencyKey: "tpl-2",
+      blockId: seedBlock.id,
+      block: template,
+    });
+
+    expect(result).toMatchObject({ ok: false, code: "not-found" });
+    expect(applied).toBe(false);
+  });
 });

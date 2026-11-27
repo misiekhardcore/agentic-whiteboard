@@ -1,9 +1,9 @@
 import { HocuspocusProvider } from "@hocuspocus/provider";
-import { mintRoomToken } from "@v2/contracts";
+import { BLOCK_ID_PATTERN, mintRoomToken } from "@v2/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import * as Y from "yjs";
 
-import { DOC_BLOCKS_FIELD } from "./doc-blocks";
+import { DOC_BLOCKS_FIELD, projectDocContent } from "./doc-blocks";
 import { createDocService } from "./service";
 import type { DocService } from "./service";
 import { memoryStores } from "./test-support/memory-stores";
@@ -151,6 +151,38 @@ describe("the document room owner", () => {
     await until(() => fresh.provider.synced);
 
     expect(textOf(fresh.document)).toBe("hello from the first tab");
+  });
+
+  it("assigns explicit block ids when an older snapshot loads", async () => {
+    const stores = memoryStores();
+    await stores.snapshots.ensure("doc-legacy");
+
+    const legacy = new Y.Doc();
+    const element = new Y.XmlElement("paragraph");
+    const text = new Y.XmlText();
+    text.insert(0, "Existing text");
+    element.insert(0, [text]);
+    legacy.getXmlFragment(DOC_BLOCKS_FIELD).push([element]);
+    stores.state.set("doc-legacy", Y.encodeStateAsUpdate(legacy));
+    legacy.destroy();
+
+    const service = serviceWith(stores, "instance-a");
+    const port = await service.listen(0);
+    const base = `http://127.0.0.1:${port}`;
+
+    const response = await fetch(`${base}/snapshot/doc-legacy`, {
+      headers: { authorization: `Bearer ${secret}` },
+    });
+    const body = (await response.json()) as { content: { blocks: { id: string }[] } };
+    const id = body.content.blocks[0]?.id;
+    expect(id).toMatch(BLOCK_ID_PATTERN);
+
+    const stored = await stores.snapshots.load("doc-legacy");
+    if (stored.state === null) throw new Error("expected a migrated snapshot");
+    const reloaded = new Y.Doc();
+    Y.applyUpdate(reloaded, stored.state);
+    expect(projectDocContent(reloaded).blocks[0]?.id).toBe(id);
+    reloaded.destroy();
   });
 
   it("refuses a hand-crafted write from a read-only session", async () => {

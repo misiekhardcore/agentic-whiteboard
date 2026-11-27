@@ -1,11 +1,15 @@
 import { z } from "zod";
 
-import { can, workspaceReadOnly } from "../can";
 import type { WorkspaceRecord } from "../context";
 import { defineCapability } from "../define";
-import { refusal, success } from "../result";
 
-import { blockIdSchema, blockWriteSchema, idempotencyKeySchema, roomRefusal } from "./doc-write";
+import {
+  authorizeDocWrite,
+  blockIdSchema,
+  blockWriteSchema,
+  idempotencyKeySchema,
+  writeDoc,
+} from "./doc-write";
 
 /**
  * Replaces one block by identity. The block keeps its id and position, so a
@@ -33,16 +37,8 @@ export const docReplace = defineCapability<
     block: blockWriteSchema,
   }),
   output: z.object({ revision: z.string(), applied: z.number().int(), blockId: z.string() }),
-  authorize: async (context, input) => {
-    const workspace = await context.workspaces.findById(input.workspaceId);
-    if (workspace === null) return null;
-    return can(context.actor, "workspace.read", workspace) ? workspace : null;
-  },
-  run: async (context, input, workspace) => {
-    if (workspaceReadOnly(workspace)) {
-      return refusal("read-only", "This workspace is archived and the document refuses writes.");
-    }
-
+  authorize: (context, input) => authorizeDocWrite(context, input.workspaceId),
+  run: (context, input, workspace) => {
     const block = {
       id: input.blockId,
       kind: input.block.kind,
@@ -50,17 +46,11 @@ export const docReplace = defineCapability<
       text: input.block.text,
     };
 
-    try {
-      const result = await context.rooms.apply({
-        room: { kind: "doc", id: workspace.docRoomId, accountId: workspace.accountId },
-        actor: context.actor,
-        idempotencyKey: input.idempotencyKey,
-        ops: [{ kind: "replace-block", payload: { blockId: input.blockId, block } }],
-      });
-
-      return success({ revision: result.revision, applied: result.applied, blockId: block.id });
-    } catch (error) {
-      return roomRefusal(error);
-    }
+    return writeDoc(context, workspace, {
+      idempotencyKey: input.idempotencyKey,
+      blockId: block.id,
+      block,
+      op: { kind: "replace-block", payload: { blockId: input.blockId, block } },
+    });
   },
 });

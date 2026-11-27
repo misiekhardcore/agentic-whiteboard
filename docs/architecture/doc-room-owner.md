@@ -22,7 +22,7 @@ surface copies its token and read-only rule rather than inventing a second one.
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Engine       | Tiptap/ProseMirror in the browser, Yjs and Hocuspocus in `apps/collab`                                                                                                                  | The editor model and the CRDT have one authoritative implementation; the document service never re-encodes content into a second model.                                                                      |
 | Authority    | One Hocuspocus room per document, in a separate long-running process                                                                                                                    | Concurrent edits need one owner that orders them. Two processes holding the same room would let two browsers overwrite each other.                                                                          |
-| Durability   | `doc_room.yjs_state` is the row a room loads; every change is written back after a debounce and flushed before unload                                                                   | The live document cannot be rebuilt from a row on every edit, but the row must be good enough to restart a room and to survive both tabs closing.                                                            |
+| Durability   | `doc_room.yjs_state` is the row a room loads; every change is written back after a debounce and flushed before unload                                                                   | The live document cannot be rebuilt from a row on every edit, but the row must be good enough to restart a room and to survive both tabs closing. The row stores bytes only; it keeps no second revision. |
 | Snapshot     | The stored value is the encoded Yjs update, not a JSON or HTML projection                                                                                                               | Re-encoding a document as JSON loses collaborative history and duplicates content on the next connection.                                                                                                   |
 | Token        | The app mints `{ aud: "doc", sub, roomId, accountId, permission, readOnly, iat, exp }`, signed HS256, valid for one minute                                                             | A browser cannot set headers on a WebSocket handshake, a standing key in a URL is a leak, and the room claim is what keeps a token for one document from joining another.                                   |
 | Audience     | The token names `doc`; the room verifies that audience and compares `roomId` with the document being joined                                                                             | A valid canvas token, or a document token minted for another room, is refused before any content is read.                                                                                                   |
@@ -35,9 +35,9 @@ surface copies its token and read-only rule rather than inventing a second one.
 | Island       | The editor is the only client-only part of the workspace page                                                                                                                           | The engine touches the DOM and ships a stylesheet; the workspace header and footer must render without it.                                                                                                  |
 | Database     | `packages/db` owns `doc_room` and `doc_room_lease`; only `apps/collab` imports the document store                                                       | One package writes a document body, and the boundary is a test rather than a review comment.                                                                                                                |
 | Apply        | `POST /apply/:roomId` accepts `{ actor, idempotencyKey, ops }` behind the service credential and applies a block batch inside one Yjs transaction     | A server must be able to write without impersonating a socket, and the capability layer must never speak Yjs.                                                                                               |
-| Identity     | Operations name a block id; server-written blocks carry it as an attribute, and a block a person created derives its identity from the Yjs item        | Comment anchors and replays need the same property: an edit above a block cannot change what the operation or anchor means.                                                                                 |
+| Identity     | Every block carries an explicit `blockId`. The editor assigns one when a person creates a block; the room assigns ids once on load for a document that predates the attribute | Comment anchors and replays need the same property: an edit above a block cannot change what the operation or anchor means. Reading a private Yjs item would make that identity an implementation detail. |
 | Idempotency  | The request key is stored in the document's `appliedOps` map in the same transaction as the operations                                                | Yjs operations are not idempotent; a retried append would duplicate without a key recorded beside the content.                                                                                              |
-| Revision     | The document's `meta.revision` advances once per applied batch and travels with the Yjs state                                                         | A replay returns the current revision, not the revision the first attempt happened to see.                                                                                                                   |
+| Revision     | The document's `meta.revision` is the only revision: it advances once per applied batch and travels with the Yjs state                                | A replay returns the current revision, not the revision the first attempt happened to see. A debounced save does not advance it, so there is no second counter to drift.                                      |
 | Revocation   | `revoke` records a durable `meta.revoked` flag before it closes live sessions                                                                          | The conformance suite's revoked room must keep refusing writes across an unload and a restart, not only for the sockets that were open.                                                                      |
 
 ## Shape
@@ -67,9 +67,9 @@ content outside the room it is the one owner of.
 
 A capability never imports Yjs. It sends `{ actor, idempotencyKey, ops }` to
 `POST /apply/:roomId`, where `ops` is a batch of `append-block` and
-`replace-block` operations naming block identities. The room owner validates
-the whole batch before it opens a transaction, so a second invalid operation
-leaves the first unapplied. Inside the transaction it writes the blocks and
+`replace-block` operations naming block identities. The shared plan in
+`packages/contracts` validates the whole batch before the room owner opens a
+transaction, so a second invalid operation leaves the first unapplied. Inside the transaction it writes the blocks and
 records both the new revision (`meta.revision`) and the request key
 (`appliedOps`) in the document itself. A replay therefore applies zero
 operations and returns the current revision. The resulting Yjs update is
@@ -90,7 +90,8 @@ and deletes it.
   storing, token verification, the lease, the apply door, block identity and
   idempotency, and the revoke door.
 - `packages/contracts` owns the token shape, the block vocabulary and its
-  verification, because the app and the room owner must agree on them.
+  verification, and the pure batch plan both room owners apply, because the app
+  and the room owner must agree on them.
 - `packages/capabilities` owns authorization, the lifecycle answer
   (`workspace.readOnly`) and the three document capabilities; the app turns
   them into claims and never re-decides them per route.
@@ -116,6 +117,9 @@ and deletes it.
   saved Yjs state means it is still there in a fresh browser session.
 - A replayed request returns the current revision with `applied: 0`; it does not
   write a second block and it does not return a stale revision.
+- A snapshot save does not invent a revision. The only revision is the one
+  inside the Yjs state, so a restart cannot expose a different number than the
+  one the last apply returned.
 - An invalid batch writes nothing, because every operation is validated before
   the room opens its transaction.
 

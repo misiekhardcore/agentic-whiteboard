@@ -6,7 +6,13 @@ import type { Actor, ContentOp, JsonValue } from "@v2/contracts";
 import type { DocSnapshotStore, RoomLeaseStore } from "@v2/db/doc-room";
 import * as Y from "yjs";
 
-import { applyDocOps, projectDocContent, revisionOf, revokeDoc } from "./doc-blocks";
+import {
+  applyDocOps,
+  ensureBlockIds,
+  projectDocContent,
+  revisionOf,
+  revokeDoc,
+} from "./doc-blocks";
 import { createRoomLeases } from "./lease";
 import type { RoomLeases } from "./lease";
 import { authorizeServiceRequest } from "./service-secret";
@@ -195,7 +201,19 @@ export function createDocService({
       try {
         const snapshot = await snapshots.load(documentName);
         if (!snapshot.exists) await snapshots.ensure(documentName);
-        return snapshot.state;
+        if (snapshot.state === null) return snapshot.state;
+
+        const document = new Y.Doc();
+        try {
+          Y.applyUpdate(document, snapshot.state);
+          const migrated = ensureBlockIds(document);
+          const state = migrated ? Y.encodeStateAsUpdate(document) : snapshot.state;
+
+          if (migrated) await snapshots.save(documentName, state);
+          return state;
+        } finally {
+          document.destroy();
+        }
       } catch (error) {
         await leases.release(documentName);
         throw error;
@@ -203,8 +221,8 @@ export function createDocService({
     },
 
     async onStoreDocument({ documentName, document }) {
-      const revision = await snapshots.save(documentName, Y.encodeStateAsUpdate(document));
-      log(`stored ${documentName} at revision ${revision}`);
+      await snapshots.save(documentName, Y.encodeStateAsUpdate(document));
+      log(`stored ${documentName} at revision ${revisionOf(document)}`);
     },
 
     async afterUnloadDocument({ documentName }) {

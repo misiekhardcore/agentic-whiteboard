@@ -1,5 +1,14 @@
-import { actorReference, readDocContentOp, RoomOwnerError } from "@v2/contracts";
-import type { Actor, ContentOp, DocBlock, DocBlockWrite, DocProjection } from "@v2/contracts";
+import { randomUUID } from "node:crypto";
+
+import { actorReference, planDocBatch, RoomOwnerError } from "@v2/contracts";
+import type {
+  Actor,
+  ContentOp,
+  DocBlock,
+  DocBlockWrite,
+  DocPlanStep,
+  DocProjection,
+} from "@v2/contracts";
 import * as Y from "yjs";
 
 /** The Yjs XML fragment Tiptap edits. */
@@ -15,10 +24,6 @@ const META_REVISION = "revision";
 const META_REVOKED = "revoked";
 
 type ApplyOutcome = { revision: number; applied: number };
-
-type PlanStep =
-  | { kind: "append"; block: DocBlockWrite }
-  | { kind: "replace"; target: Y.XmlElement; block: DocBlockWrite };
 
 /** The room's content revision, stored in the document so it survives unload. */
 export function revisionOf(doc: Y.Doc): number {
@@ -62,24 +67,22 @@ function headingLevelOf(element: Y.XmlElement): number | null {
   return Number.isInteger(level) && level >= 1 && level <= 6 ? level : null;
 }
 
-/**
- * A block identity is the explicit id the server wrote, or — for a block a
- * person created in the editor — the Yjs item that holds it. Both survive
- * edits above and below the block; neither is an offset.
- */
-function blockIdOf(element: Y.XmlElement, index: number): string {
+/** The explicit identity every block carries; it is never an offset. */
+function blockIdOf(element: Y.XmlElement): string | null {
   const explicit: unknown = element.getAttribute("blockId");
-  if (typeof explicit === "string" && explicit.length > 0) return explicit;
-
-  const item = element._item;
-  return item === null ? `yjs-preliminary-${index}` : `yjs-${item.id.client}-${item.id.clock}`;
+  return typeof explicit === "string" && explicit.length > 0 ? explicit : null;
 }
 
-function blockOf(element: Y.XmlElement, index: number): DocBlock {
+function blockOf(element: Y.XmlElement): DocBlock {
+  const id = blockIdOf(element);
+  if (id === null) {
+    throw new Error("A document block has no blockId; assign one before projecting the document.");
+  }
+
   const updatedBy: unknown = element.getAttribute("updatedBy");
 
   return {
-    id: blockIdOf(element, index),
+    id,
     kind: element.nodeName,
     level: element.nodeName === "heading" ? headingLevelOf(element) : null,
     text: textOf(element),
@@ -91,19 +94,40 @@ function blockOf(element: Y.XmlElement, index: number): DocBlock {
 export function projectBlocks(fragment: Y.XmlFragment): DocBlock[] {
   return fragment
     .toArray()
-    .flatMap((node, index) => (node instanceof Y.XmlElement ? [blockOf(node, index)] : []));
+    .flatMap((node) => (node instanceof Y.XmlElement ? [blockOf(node)] : []));
 }
 
 export function projectDocContent(doc: Y.Doc): DocProjection {
   return { blocks: projectBlocks(doc.getXmlFragment(DOC_BLOCKS_FIELD)) };
 }
 
-function findBlockElement(fragment: Y.XmlFragment, blockId: string): Y.XmlElement | null {
-  const elements = fragment.toArray();
+/**
+ * Gives every block that predates the explicit attribute one stable id. This
+ * runs once when a room loads, before anyone projects or edits the document,
+ * and the caller persists the migrated state.
+ */
+export function ensureBlockIds(doc: Y.Doc): boolean {
+  const fragment = doc.getXmlFragment(DOC_BLOCKS_FIELD);
+  const missing = fragment
+    .toArray()
+    .some((node) => node instanceof Y.XmlElement && blockIdOf(node) === null);
 
-  for (const [index, node] of elements.entries()) {
-    if (!(node instanceof Y.XmlElement)) continue;
-    if (blockIdOf(node, index) === blockId) return node;
+  if (!missing) return false;
+
+  doc.transact(() => {
+    for (const node of fragment.toArray()) {
+      if (node instanceof Y.XmlElement && blockIdOf(node) === null) {
+        node.setAttribute("blockId", `block_${randomUUID()}`);
+      }
+    }
+  }, "assign-block-ids");
+
+  return true;
+}
+
+function findBlockElement(fragment: Y.XmlFragment, blockId: string): Y.XmlElement | null {
+  for (const node of fragment.toArray()) {
+    if (node instanceof Y.XmlElement && blockIdOf(node) === blockId) return node;
   }
 
   return null;
@@ -123,56 +147,17 @@ export function createBlockElement(block: DocBlockWrite, writtenBy: string | nul
   return element;
 }
 
-/**
- * Validates every operation before any is applied. A batch whose second
- * operation is invalid writes neither operation.
- */
-function planDocOps(fragment: Y.XmlFragment, ops: readonly ContentOp[]): PlanStep[] {
-  const steps: PlanStep[] = [];
-  const blockIds = new Set(projectBlocks(fragment).map((block) => block.id));
-  const replaced = new Set<Y.XmlElement>();
-
-  for (const op of ops) {
-    const parsed = readDocContentOp(op);
-    if (parsed === null) {
-      throw new RoomOwnerError(
-        "invalid-ops",
-        "The batch contains an operation this room cannot apply",
-      );
-    }
-
-    if (parsed.kind === "append-block") {
-      if (blockIds.has(parsed.payload.block.id)) {
-        throw new RoomOwnerError("invalid-ops", `Block ${parsed.payload.block.id} already exists`);
-      }
-
-      blockIds.add(parsed.payload.block.id);
-      steps.push({ kind: "append", block: parsed.payload.block });
-      continue;
-    }
-
-    const target = findBlockElement(fragment, parsed.payload.blockId);
-    if (target === null) {
-      throw new RoomOwnerError("invalid-ops", `Block ${parsed.payload.blockId} does not exist`);
-    }
-    if (replaced.has(target)) {
-      throw new RoomOwnerError("invalid-ops", `Block ${parsed.payload.blockId} is written twice`);
-    }
-
-    replaced.add(target);
-    steps.push({ kind: "replace", target, block: parsed.payload.block });
-  }
-
-  return steps;
-}
-
-function applyStep(fragment: Y.XmlFragment, step: PlanStep, writtenBy: string): void {
+function applyStep(fragment: Y.XmlFragment, step: DocPlanStep, writtenBy: string): void {
   if (step.kind === "append") {
     fragment.push([createBlockElement(step.block, writtenBy)]);
     return;
   }
 
-  const { target, block } = step;
+  const { blockId, block } = step;
+  const target = findBlockElement(fragment, blockId);
+  if (target === null) {
+    throw new RoomOwnerError("invalid-ops", `Block ${blockId} disappeared while applying`);
+  }
 
   if (target.nodeName === block.kind) {
     target.delete(0, target.length);
@@ -191,7 +176,7 @@ function applyStep(fragment: Y.XmlFragment, step: PlanStep, writtenBy: string): 
   // rename an XmlElement in place.
   const index = fragment.toArray().indexOf(target);
   if (index === -1) {
-    throw new RoomOwnerError("invalid-ops", `Block ${block.id} disappeared while applying`);
+    throw new RoomOwnerError("invalid-ops", `Block ${blockId} disappeared while applying`);
   }
 
   fragment.delete(index, 1);
@@ -221,7 +206,7 @@ export function applyDocOps(
   }
 
   const fragment = doc.getXmlFragment(DOC_BLOCKS_FIELD);
-  const plan = planDocOps(fragment, input.ops);
+  const plan = planDocBatch(projectDocContent(doc), input.ops);
   const writtenBy = actorReference(input.actor);
   let revision = revisionOf(doc);
 

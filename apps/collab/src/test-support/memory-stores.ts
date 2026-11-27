@@ -4,7 +4,6 @@ export type MemoryStores = {
   snapshots: DocSnapshotStore;
   leaseStore: RoomLeaseStore;
   state: Map<string, Uint8Array>;
-  revisions: Map<string, number>;
   rooms: Set<string>;
   holders: Map<string, string>;
 };
@@ -12,26 +11,23 @@ export type MemoryStores = {
 /** The document service's stores without a database, for tests. */
 export function memoryStores(): MemoryStores {
   const state = new Map<string, Uint8Array>();
-  const revisions = new Map<string, number>();
   const rooms = new Set<string>();
   const holders = new Map<string, string>();
 
   return {
     state,
-    revisions,
     rooms,
     holders,
 
     snapshots: {
       load(roomId) {
         if (!rooms.has(roomId)) {
-          return Promise.resolve({ exists: false, state: null, revision: 0 });
+          return Promise.resolve({ exists: false, state: null });
         }
 
         return Promise.resolve({
           exists: true,
           state: state.get(roomId) ?? null,
-          revision: revisions.get(roomId) ?? 0,
         });
       },
 
@@ -43,9 +39,7 @@ export function memoryStores(): MemoryStores {
       save(roomId, update) {
         rooms.add(roomId);
         state.set(roomId, Uint8Array.from(update));
-        const revision = (revisions.get(roomId) ?? 0) + 1;
-        revisions.set(roomId, revision);
-        return Promise.resolve(revision);
+        return Promise.resolve();
       },
     },
 

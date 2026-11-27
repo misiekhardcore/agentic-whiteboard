@@ -19,6 +19,7 @@ export {
   isActor,
   isDocProjection,
   normalizeDocBlockWrite,
+  planDocBatch,
   readDocContentOp,
 } from "./doc-content";
 export type {
@@ -27,6 +28,7 @@ export type {
   DocBlockKind,
   DocBlockWrite,
   DocContentOp,
+  DocPlanStep,
   DocProjection,
   ReplaceBlockOp,
 } from "./doc-content";

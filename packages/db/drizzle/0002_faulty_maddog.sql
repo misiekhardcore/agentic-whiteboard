@@ -1,0 +1,1 @@
+ALTER TABLE "doc_room" DROP COLUMN "revision";

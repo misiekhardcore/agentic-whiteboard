@@ -1,4 +1,4 @@
-import { actorReference, isDocProjection, readDocContentOp } from "../doc-content";
+import { actorReference, isDocProjection, planDocBatch } from "../doc-content";
 import type { DocProjection } from "../doc-content";
 import type { JsonValue } from "../json";
 import { RoomOwnerError } from "../room-owner";
@@ -40,9 +40,8 @@ function projectionOf(content: JsonValue): DocProjection {
 }
 
 /**
- * Plans a batch against a copy of the projection. Every operation is validated
- * before anything reaches the room, so an invalid second operation applies
- * neither it nor the first.
+ * Applies the shared plan to a copy of the projection. The fake owns storage,
+ * not the rules for which batch is valid; that plan lives in `doc-content`.
  */
 function projectOps(
   content: DocProjection,
@@ -51,30 +50,18 @@ function projectOps(
 ): DocProjection {
   const draft = structuredClone(content);
 
-  for (const op of ops) {
-    const parsed = readDocContentOp(op);
-    if (parsed === null) {
-      throw new RoomOwnerError(
-        "invalid-ops",
-        "The batch contains an operation this room cannot apply",
-      );
-    }
-
-    if (parsed.kind === "append-block") {
-      if (draft.blocks.some((block) => block.id === parsed.payload.block.id)) {
-        throw new RoomOwnerError("invalid-ops", `Block ${parsed.payload.block.id} already exists`);
-      }
-
-      draft.blocks.push({ ...parsed.payload.block, updatedBy: writtenBy });
+  for (const step of planDocBatch(draft, ops)) {
+    if (step.kind === "append") {
+      draft.blocks.push({ ...step.block, updatedBy: writtenBy });
       continue;
     }
 
-    const index = draft.blocks.findIndex((block) => block.id === parsed.payload.blockId);
+    const index = draft.blocks.findIndex((block) => block.id === step.blockId);
     if (index === -1) {
-      throw new RoomOwnerError("invalid-ops", `Block ${parsed.payload.blockId} does not exist`);
+      throw new RoomOwnerError("invalid-ops", `Block ${step.blockId} does not exist`);
     }
 
-    draft.blocks[index] = { ...parsed.payload.block, updatedBy: writtenBy };
+    draft.blocks[index] = { ...step.block, updatedBy: writtenBy };
   }
 
   return draft;

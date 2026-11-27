@@ -1,11 +1,15 @@
 import { z } from "zod";
 
-import { can, workspaceReadOnly } from "../can";
 import type { WorkspaceRecord } from "../context";
 import { defineCapability } from "../define";
-import { refusal, success } from "../result";
 
-import { blockIdFor, blockWriteSchema, idempotencyKeySchema, roomRefusal } from "./doc-write";
+import {
+  authorizeDocWrite,
+  blockIdFor,
+  blockWriteSchema,
+  idempotencyKeySchema,
+  writeDoc,
+} from "./doc-write";
 
 /**
  * Appends one block at the end of the document. The same request key inserts
@@ -31,16 +35,8 @@ export const docAppend = defineCapability<
     block: blockWriteSchema,
   }),
   output: z.object({ revision: z.string(), applied: z.number().int(), blockId: z.string() }),
-  authorize: async (context, input) => {
-    const workspace = await context.workspaces.findById(input.workspaceId);
-    if (workspace === null) return null;
-    return can(context.actor, "workspace.read", workspace) ? workspace : null;
-  },
-  run: async (context, input, workspace) => {
-    if (workspaceReadOnly(workspace)) {
-      return refusal("read-only", "This workspace is archived and the document refuses writes.");
-    }
-
+  authorize: (context, input) => authorizeDocWrite(context, input.workspaceId),
+  run: (context, input, workspace) => {
     const block = {
       id: blockIdFor(input.idempotencyKey),
       kind: input.block.kind,
@@ -48,17 +44,11 @@ export const docAppend = defineCapability<
       text: input.block.text,
     };
 
-    try {
-      const result = await context.rooms.apply({
-        room: { kind: "doc", id: workspace.docRoomId, accountId: workspace.accountId },
-        actor: context.actor,
-        idempotencyKey: input.idempotencyKey,
-        ops: [{ kind: "append-block", payload: { block } }],
-      });
-
-      return success({ revision: result.revision, applied: result.applied, blockId: block.id });
-    } catch (error) {
-      return roomRefusal(error);
-    }
+    return writeDoc(context, workspace, {
+      idempotencyKey: input.idempotencyKey,
+      blockId: block.id,
+      block,
+      op: { kind: "append-block", payload: { block } },
+    });
   },
 });

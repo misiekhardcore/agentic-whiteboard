@@ -30,25 +30,25 @@ describe("the document room store", () => {
   it("starts missing, then empty once the room is provisioned", async () => {
     const { snapshots } = await stores();
 
-    expect(await snapshots.load("doc-1")).toEqual({ exists: false, state: null, revision: 0 });
+    expect(await snapshots.load("doc-1")).toEqual({ exists: false, state: null });
 
     await snapshots.ensure("doc-1");
-    expect(await snapshots.load("doc-1")).toEqual({ exists: true, state: null, revision: 0 });
+    expect(await snapshots.load("doc-1")).toEqual({ exists: true, state: null });
   });
 
-  it("advances the revision on every saved snapshot", async () => {
+  it("stores the encoded state without a second revision", async () => {
     const { snapshots } = await stores();
 
     await snapshots.ensure("doc-1");
 
-    const first = await snapshots.save("doc-1", Uint8Array.from([1, 2, 3]));
-    expect(first).toBe(1);
+    expect(await snapshots.save("doc-1", Uint8Array.from([1, 2, 3]))).toBeUndefined();
 
     const stored = await snapshots.load("doc-1");
-    expect(stored).toMatchObject({ exists: true, revision: 1 });
+    expect(stored).toMatchObject({ exists: true });
     expect(Array.from(stored.state ?? [])).toEqual([1, 2, 3]);
 
-    expect(await snapshots.save("doc-1", Uint8Array.from([4, 5]))).toBe(2);
+    await snapshots.save("doc-1", Uint8Array.from([4, 5]));
+    expect(Array.from((await snapshots.load("doc-1")).state ?? [])).toEqual([4, 5]);
   });
 
   it("keeps rooms apart", async () => {
@@ -57,7 +57,7 @@ describe("the document room store", () => {
     await snapshots.ensure("doc-1");
     await snapshots.save("doc-1", Uint8Array.from([1]));
 
-    expect(await snapshots.load("doc-2")).toEqual({ exists: false, state: null, revision: 0 });
+    expect(await snapshots.load("doc-2")).toEqual({ exists: false, state: null });
   });
 });
 

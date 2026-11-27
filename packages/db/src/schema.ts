@@ -1,4 +1,4 @@
-import { customType, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { customType, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 /** Raw Yjs updates and other binary projections. */
 const bytea = customType<{ data: Buffer; notNull: false; default: false }>({
@@ -26,13 +26,13 @@ export const workspace = pgTable(
 
 /**
  * The durable copy of a document room: the Yjs state a room loads when it
- * opens and the revision its debounced writes advance. Only the document room
- * owner writes this table; nothing else may update a document body.
+ * opens. Only the document room owner writes this table; nothing else may
+ * update a document body. The content revision lives inside the Yjs state, not
+ * in a second column that could disagree with it.
  */
 export const docRoom = pgTable("doc_room", {
   roomId: text("room_id").primaryKey(),
   yjsState: bytea("yjs_state"),
-  revision: integer("revision").notNull().default(0),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
