@@ -14,7 +14,7 @@
     "test:e2e": "pnpm db:setup && pnpm --filter @v2/web test:e2e",
     "build": "pnpm -r build",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
-    "dev": "pnpm db:migrate && pnpm db:seed && pnpm -r --parallel --filter=@v2/web --filter=@v2/agent --filter=@v2/collab dev",
+    "dev": "pnpm -r --parallel --filter=@v2/web --filter=@v2/agent --filter=@v2/collab dev",
     "start": "pnpm db:migrate && pnpm -r --parallel --filter=@v2/web --filter=@v2/agent --filter=@v2/collab start",
     "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose down -v",

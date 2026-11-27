@@ -63,14 +63,17 @@ pnpm install
 cp .env.example .env   # the document service secret must match on both sides
 pnpm db:up             # Postgres on :54322
 pnpm db:setup          # apply the migrations, then seed the demo workspaces
-pnpm dev               # migrate again, then start the web app, agent and document service
+pnpm dev               # start the web app, agent and document service
 ```
+
+`pnpm dev` starts the three processes only; it does not touch the database. Run
+`pnpm db:setup` first, and again after a schema change.
 
 Open <http://localhost:3000> — it redirects to the seeded workspace. The editor
 connects to the document service on `:3003`; the agent's health is at
 <http://localhost:3002/health>.
 
-`pnpm start` runs the built apps and the migration job, without the seed.
+`pnpm start` runs the migration job, then the built apps, without the seed.
 
 ## Gates
 

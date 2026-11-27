@@ -50,7 +50,7 @@ pnpm test          # Vitest in every package
 pnpm build         # Next build and the agent bundle
 pnpm db:up         # Postgres via compose (:54322)
 pnpm db:setup      # migrate + seed the demo workspace
-pnpm dev           # migrate + seed, then web and agent
+pnpm dev           # web, agent and document service (run db:setup first)
 ```
 
 ## Definition of done
