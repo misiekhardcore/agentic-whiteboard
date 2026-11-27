@@ -1,4 +1,5 @@
-import { MediaConfigurationError } from "./MediaConfigurationError";
+import { environmentReader } from "@/lib/shared/env";
+
 import type { MediaConfig, MediaEnvironment } from "./types";
 
 const DEFAULT_BUCKET = "media";
@@ -13,23 +14,15 @@ const DEFAULT_BUCKET = "media";
  * still needs a real bucket.
  */
 export function resolveMediaConfig(env: MediaEnvironment = process.env): MediaConfig | null {
-  const storageUrl = (env.MEDIA_STORAGE_URL?.trim() || env.SUPABASE_URL?.trim())?.replace(
-    /\/+$/,
-    "",
-  );
-  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const read = environmentReader(env);
+  const storageUrl = read.origin("MEDIA_STORAGE_URL") ?? read.origin("SUPABASE_URL");
+  const serviceRoleKey = read.value("SUPABASE_SERVICE_ROLE_KEY");
 
   if (!storageUrl || !serviceRoleKey) return null;
-
-  if (!storageUrl.startsWith("http://") && !storageUrl.startsWith("https://")) {
-    throw new MediaConfigurationError(
-      `MEDIA_STORAGE_URL (or SUPABASE_URL) must be the storage API's http(s) origin, received "${storageUrl}".`,
-    );
-  }
 
   return {
     storageUrl,
     serviceRoleKey,
-    bucket: env.MEDIA_BUCKET?.trim() || DEFAULT_BUCKET,
+    bucket: read.value("MEDIA_BUCKET") ?? DEFAULT_BUCKET,
   };
 }

@@ -92,6 +92,18 @@ const KERNEL_ALLOWED = [
 ];
 
 /**
+ * The canvas service is a second process. It shares the wire contract, the token
+ * and the credential rule with the app, never the app's client for the service:
+ * importing that hides the process seam and loads settings the service has not
+ * got.
+ */
+const CANVAS_SERVICE = join(ROOT, "canvas-service");
+const SERVICE_SHARED = [
+  /^@\/lib\/shared\/env$/,
+  /^@\/lib\/canvas\/(contracts|credential|tokens)(\/|$)/,
+];
+
+/**
  * A workspace's content surfaces are read in the workspace context, which is the
  * only place that knows the account scope and the archive flag. A surface is
  * reachable exactly when its workspace is, so reading its table anywhere else
@@ -135,6 +147,22 @@ describe("module boundaries", () => {
       if (WORKSPACE_CONTEXT.test(label)) return [];
 
       return surfaceTablesImportedBy(file).map((table) => `${label} reads ${table}`);
+    });
+
+    expect(external).toEqual([]);
+  });
+
+  it("lets the canvas service import its contract, never the app's client", () => {
+    const files = sourceFiles(CANVAS_SERVICE);
+
+    expect(files.length).toBeGreaterThan(0);
+
+    const external = files.flatMap((file) => {
+      const label = relative(ROOT, file);
+      return importsOf(file)
+        .filter((specifier) => specifier.startsWith("@/"))
+        .filter((specifier) => !SERVICE_SHARED.some((pattern) => pattern.test(specifier)))
+        .map((specifier) => `${label} imports ${specifier}`);
     });
 
     expect(external).toEqual([]);

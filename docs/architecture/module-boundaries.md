@@ -106,6 +106,7 @@ lib/
                     allowance, orphans, live, conversations, branches, turn),
                     capabilities and actions, tools
   collab/           Yjs/realtime contracts and topic names
+  canvas/           connection tokens, snapshot contract, service client, service credential
   media/            stored files: upload validation, access rule, object-store adapter, services
   notifications/    outbound email
   db/               pool, schema, migrations input
@@ -143,13 +144,16 @@ lib/capabilities (kernel)        other contexts' published functions
 
 ## Deferred
 
-- The content surfaces' mutation family. The workspace context reads their
-  tables ([content-surfaces](content-surfaces.md)); their `create`/`update`/
-  `delete` capabilities land with the editor and the Hocuspocus gateway
+- The document's mutation family. The workspace context reads the content
+  surfaces' tables ([content-surfaces](content-surfaces.md)); `create`/`update`/
+  `delete` land with the document editor and the Hocuspocus gateway
   ([ai-collaboration](ai-collaboration.md)).
-- Media objects outlive their rows only by accident: a file is reachable through
-  its row and nothing sweeps the bucket, so removing a row leaves its object
-  ([media-store](media-store.md)).
+- The canvas service is a second process, not a folder in the app
+  ([canvas-surface](canvas-surface.md)); the architecture test's boundary is the
+  app side, `lib/canvas`.
+- Media objects outlive their rows only by accident: deleting a workspace
+  cascades its media rows, and sweeping the unreferenced objects in the bucket
+  is deferred ([media-store](media-store.md)).
 - An event bus or outbox. The first genuine cross-context side effect beyond a
   direct call gets its own record.
 - Per-workspace RBAC. `workspace/access.ts` is the one place it will narrow.

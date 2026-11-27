@@ -49,6 +49,7 @@ is a defect.
 | column           | One status on the board. Fixed and always shown, so an empty stage is information rather than absence.                                                                                                        | `lib/workspace` |
 | position         | A workspace's place inside its column, ascending. Only a move writes it, and a value means something only relative to its neighbours.                                                                         | `lib/workspace` |
 | workspace access | A workspace and the person's relationship to it: personal or organization, the organization, and their role there.                                                                                            | `lib/workspace` |
+| write decision   | What a person may write in a workspace they can reach: the permission the workspace gives them and whether the write is refused because the workspace is archived. Every writer asks this one question.       | `lib/workspace` |
 | archive          | The reversible removal: hides a workspace from the dashboard, frees its plan slot, and keeps its content and history for a restore.                                                                           | `lib/workspace` |
 | restore          | Clearing the archive, undoing the person's own archive. The agent may restore.                                                                                                                                | `lib/workspace` |
 | delete           | Permanent removal of an archived workspace and everything under it. Only an archived workspace can be deleted, so one request cannot erase live work.                                                         | `lib/workspace` |
@@ -61,21 +62,27 @@ is a defect.
 
 ## Content surfaces
 
-| Term            | Definition                                                                                                                                              | Owner           |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| content surface | One of a workspace's two content containers, `doc` or `canvas`. At most one of each, and neither has a name, status or description of its own.          | `lib/workspace` |
-| document        | The workspace's text surface. Its Yjs state is authoritative and the stored content is that state's projection.                                         | `lib/collab`    |
-| canvas          | The workspace's shapes surface.                                                                                                                         | `lib/collab`    |
-| snapshot        | A read-only view of a live surface: workspace, surface, revision marker, content. Never raw Yjs bytes.                                                  | `lib/collab`    |
-| mutation        | One semantic intent such as adding a shape, applied in a single Yjs transaction. Never a whole-document replacement, so concurrent human edits survive. | `lib/collab`    |
+| Term               | Definition                                                                                                                                                                     | Owner            |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- |
+| content surface    | One of a workspace's two content containers, `doc` or `canvas`. At most one of each, and neither has a name, status or description of its own.                                 | `lib/workspace`  |
+| document           | The workspace's text surface. Its Yjs state is authoritative and the stored content is that state's projection.                                                                | `lib/collab`     |
+| canvas             | The workspace's shapes surface: its own room, joined with a short-lived token.                                                                                                 | `lib/canvas`     |
+| snapshot           | A read-only view of a live surface: workspace, surface, revision marker, content. Never raw Yjs bytes.                                                                         | `lib/collab`     |
+| mutation           | One semantic intent such as adding a shape, applied in a single Yjs transaction. Never a whole-document replacement, so concurrent human edits survive.                        | `lib/collab`     |
+| canvas revision    | The integer on the canvas row, used only as the optimistic check on a snapshot write. It is not a version of the document.                                                     | `lib/workspace`  |
+| stale edit         | A snapshot write naming a revision the row has already moved past. It is refused, and the room re-sends its state on the revision the app reported.                            | `lib/canvas`     |
+| room               | The canvas service's owner of one canvas: the live document and its only writer. Evicted when its last session leaves; the row stays the durable copy.                         | `canvas-service` |
+| working store      | One canvas's SQLite file inside the canvas service, holding its room between visits. Disposable: the row seeds it, and a lost file costs only the edits since the last write.  | `canvas-service` |
+| service credential | The one secret the app and the canvas service compare on every call between them, in either direction. Never reaches a browser, and neither process may weaken the comparison. | `lib/canvas`     |
 
 ## Media
 
-| Term          | Definition                                                                                                                                                                               | Owner       |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| media         | A stored file: its row in Postgres plus its bytes in object storage. Scoped to the account it was uploaded into, which is what decides who may read it; only its uploader may delete it. | `lib/media` |
-| media account | The organization a media row belongs to, taken from the board the file was uploaded from. A null account is the uploader's own file.                                                     | `lib/media` |
-| storage key   | The name a media object is stored under in the bucket. Never shown to a browser; a reader asks the app for the file by its media id instead.                                             | `lib/media` |
+| Term          | Definition                                                                                                                                                                                                             | Owner       |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| media         | A stored file: its row in Postgres plus its bytes in object storage. Scoped to the account it was uploaded into, which is what decides who may read it; only its uploader may delete it.                               | `lib/media` |
+| media account | The organization a media row belongs to, taken from the board the file was uploaded from. A null account is the uploader's own file.                                                                                   | `lib/media` |
+| storage key   | The name a media object is stored under in the bucket. Never shown to a browser; a reader asks the app for the file by its media id instead.                                                                           | `lib/media` |
+| media store   | The deployment's object storage and the credential the app writes it with. A deployment configured without one has no store, which every media route reports instead of failing on a request it could not have served. | `lib/media` |
 
 ## Billing and plans
 

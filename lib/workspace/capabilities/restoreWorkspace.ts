@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { revokeCanvasSessions } from "@/lib/canvas/service";
 import { defineCapability } from "@/lib/capabilities/define";
 import { CHANGE_KEYS, workspaceChangeKey } from "@/lib/shared/changes";
 
@@ -26,6 +27,11 @@ export const restoreWorkspace = defineCapability({
   authorize: async (ctx, input) => authorizeWorkspace(ctx.actor, input.workspaceId, "edit"),
   handler: async (ctx, _input, access, { signal }) => {
     const result = await restoreWorkspaceWith(access, workspaceRequesterFor(ctx), { signal });
+
+    // The reverse of archiving: a board still open from before the restore
+    // holds a read-only session and would stay one until the page is reloaded.
+    if (result.ok) await revokeCanvasSessions({ workspaceId: access.workspace.id });
+
     return linked(result);
   },
 });

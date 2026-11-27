@@ -1,3 +1,4 @@
+import type { WorkspacePermission } from "@/lib/collab/contracts";
 import type { workspaces } from "@/lib/db/schema";
 
 /**
@@ -22,4 +23,13 @@ export type WorkspaceAccess = {
   kind: "personal" | "organization";
   organizationId: string | null;
   role: string;
+};
+
+/**
+ * What a write to an accessible workspace may do: the permission it carries and
+ * whether it is refused for everyone, because the workspace is archived.
+ */
+export type WorkspaceWriteDecision = {
+  permission: WorkspacePermission;
+  readOnly: boolean;
 };

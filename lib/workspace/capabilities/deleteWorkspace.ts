@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { forgetCanvasRoom } from "@/lib/canvas/service";
 import { defineCapability } from "@/lib/capabilities/define";
 import { CHANGE_KEYS, workspaceChangeKey } from "@/lib/shared/changes";
 
@@ -27,6 +28,11 @@ export const deleteWorkspace = defineCapability({
   authorize: async (ctx, input) => authorizeWorkspace(ctx.actor, input.workspaceId, "edit"),
   handler: async (_ctx, _input, access, { signal }) => {
     const result = await deleteWorkspaceWith(access, { signal });
+
+    // The row is gone, so the room's SQLite store has nothing left to reopen.
+    // A missed call is the service's startup sweep's problem, not the delete's.
+    if (result.ok) await forgetCanvasRoom({ workspaceId: access.workspace.id });
+
     return linked(result, "Archive the workspace first, then delete it permanently.");
   },
 });

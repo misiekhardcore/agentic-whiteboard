@@ -1,10 +1,7 @@
 import { getSessionAccount } from "@/lib/identity/account";
-import { resolveMediaConfig } from "@/lib/media/config";
 import { mediaUploadRefusal } from "@/lib/media/rules";
-import { createMedia } from "@/lib/media/service";
-import { createSupabaseMediaStorage } from "@/lib/media/storage";
-import { getWorkspaceForUser, workspacePermission } from "@/lib/workspace/access";
-import { workspaceReadOnly } from "@/lib/workspace/rules";
+import { createMedia, mediaStore } from "@/lib/media/service";
+import { getWorkspaceForUser, workspaceWriteDecision } from "@/lib/workspace/access";
 
 /**
  * Stores one file on behalf of the board it was dropped on. The workspace is
@@ -40,10 +37,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "That workspace could not be found." }, { status: 404 });
   }
 
-  const readOnly = workspaceReadOnly({
-    permission: workspacePermission(access),
-    archived: access.workspace.archivedAt !== null,
-  });
+  const { readOnly } = workspaceWriteDecision(access);
   if (readOnly) {
     return Response.json(
       { error: "This workspace is read-only, so its files cannot change." },
@@ -51,9 +45,9 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const config = resolveMediaConfig();
-  if (!config) {
-    return Response.json({ error: "This deployment does not store media." }, { status: 503 });
+  const store = mediaStore();
+  if (!store.ok) {
+    return Response.json({ error: store.error }, { status: 503 });
   }
 
   const refusal = mediaUploadRefusal({ contentType: file.type, byteSize: file.size });
@@ -62,7 +56,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const created = await createMedia({
-    storage: createSupabaseMediaStorage(config),
+    storage: store.storage,
     uploadedByUserId: account.session.user.id,
     organizationId: access.workspace.orgId,
     contentType: file.type,

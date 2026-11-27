@@ -2,6 +2,9 @@
 # Realtime, Studio and the Envoy API gateway. Auth, Edge Functions, Supavisor
 # and Logflare were removed; Realtime carries the app's broadcast change events.
 #
+# The canvas sync service rides along, so local development needs one `db:up`
+# and `pnpm dev` rather than a second terminal for `pnpm canvas:dev`.
+#
 # Usage
 #   Start:            docker compose up -d --wait
 #   Stop:             docker compose down
@@ -352,6 +355,54 @@ services:
         "log_min_messages=fatal" # prevents Realtime polling queries from appearing in logs
       ]
 
+  # The canvas sync service: one authoritative room per canvas, served to the
+  # browser on :4100 and writing snapshots through the app.
+  #
+  # It runs from the repository checkout rather than a copied image, because it
+  # imports the app's canvas modules. `pnpm install` must have run on the host.
+  # The app itself stays on the host (`pnpm dev`), which is why the service
+  # reaches it through host.docker.internal instead of a compose service name.
+  canvas:
+    container_name: workspaice-canvas
+    image: node:22-bookworm-slim
+    working_dir: /app
+    command: ["./node_modules/.bin/tsx", "canvas-service/main.ts"]
+    # The app is a host process, not a service in this network.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # The published port the browser dials from NEXT_PUBLIC_CANVAS_SERVICE_URL.
+      CANVAS_SERVICE_PORT: "4100"
+      CANVAS_APP_INTERNAL_URL: http://host.docker.internal:3000
+      # Each canvas's SQLite working store, on a named volume: the checkout is
+      # bind-mounted, and database files do not belong in it.
+      CANVAS_ROOMS_DIR: /app/.rooms
+    # The same files the app reads, so the shared secret is not duplicated here.
+    # Later files win; both are optional so a fresh checkout still starts the
+    # other services and fails only this one with a named missing setting.
+    env_file:
+      - path: ../.env
+        required: false
+      - path: ../.env.local
+        required: false
+    ports:
+      - 127.0.0.1:4100:4100/tcp
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4100/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    volumes:
+      - ../:/app:z
+      - canvas-rooms:/app/.rooms
+
   # Optional local SMTP catcher for app email (Better Auth). Not started by
   # default: `docker compose --profile mail up -d` -> SMTP on :2500, UI on :9002.
   mail:
@@ -366,3 +417,4 @@ services:
 volumes:
   db-config:
   storage-data:
+  canvas-rooms:

@@ -11,6 +11,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { CanvasSection } from "@/components/Canvas/CanvasSection";
 import { RefreshOnChanges } from "@/components/Changes";
 import { ConfirmAction } from "@/components/ConfirmAction/ConfirmAction";
 import { getSessionAccount } from "@/lib/identity/account";
@@ -40,8 +41,8 @@ export const instant = false;
  * personal workspace, a member of the organization for a shared one. Anything else
  * is a 404, so the route never confirms that an id exists.
  *
- * The editor is not built yet; this page is the gate the editor will render
- * behind, not a workspace surface of its own.
+ * The canvas is the workspace's place: it takes the room the page leaves, and the
+ * archive switch stays below it so the work can be put away without hiding it.
  */
 export default async function WorkspacePage({ params }: PageProps<"/workspaces/[id]">) {
   const { id } = await params;
@@ -55,92 +56,78 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
   const { workspace } = access;
 
   return (
-    <div className="flex w-full justify-center">
+    <div className="flex h-full min-h-0 w-full flex-col gap-4">
       <RefreshOnChanges keys={[workspaceChangeKey(workspace.id), CHANGE_KEYS.workspaces]} />
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <Link
-            href={routes.dashboard}
-            className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-          >
-            ← Back to dashboard
-          </Link>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-display text-h2 font-semibold">{workspace.name}</h1>
-            <Badge variant="outline">{WORKSPACE_STATUS_LABELS[workspace.status]}</Badge>
-            {workspace.archivedAt && <Badge variant="secondary">Archived</Badge>}
-          </div>
-          {workspace.description && (
-            <p className="text-sm text-muted-foreground">{workspace.description}</p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Last updated {formatDay(workspace.updatedAt)}
-            {access.kind === "organization" ? " · Shared with your team" : ""}
-          </p>
-          <Button asChild variant="link" size="sm" className="self-start px-0">
-            <Link href={routes.workspaceActivity(workspace.id)}>View activity</Link>
-          </Button>
+      <div className="flex shrink-0 flex-col gap-2">
+        <Link
+          href={routes.dashboard}
+          className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+        >
+          ← Back to dashboard
+        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="font-display text-h2 font-semibold">{workspace.name}</h1>
+          <Badge variant="outline">{WORKSPACE_STATUS_LABELS[workspace.status]}</Badge>
+          {workspace.archivedAt && <Badge variant="secondary">Archived</Badge>}
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>The workspace editor is on its way</CardTitle>
-            <CardDescription>
-              This workspace is ready. Documents, the canvas and the agent will open here once
-              collaboration lands.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline" size="sm">
-              <Link href={routes.dashboard}>Manage your workspaces</Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Manage this workspace</CardTitle>
-            <CardDescription>
-              {workspace.archivedAt
-                ? "This workspace is archived: it is out of the dashboard and the plan meter. Restore it, or delete it for good."
-                : "Archive the workspace to hide it from the dashboard and free its plan slot; its contents are kept and it can be restored from the archive."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap items-center gap-2">
-            {workspace.archivedAt ? (
-              <>
-                <form action={restoreWorkspaceAction}>
-                  <input type="hidden" name="workspaceId" value={workspace.id} />
-                  <Button type="submit" variant="outline" size="sm">
-                    Restore
-                  </Button>
-                </form>
-                <ConfirmAction
-                  action={deleteWorkspaceAction}
-                  fields={{ workspaceId: workspace.id }}
-                  title={`Delete ${workspace.name} permanently?`}
-                  description="The workspace and its documents, canvas and agent history are removed for good. This cannot be undone."
-                  confirmLabel="Delete workspace"
-                  pendingLabel="Deleting…"
-                  triggerLabel="Delete"
-                />
-              </>
-            ) : (
-              <ConfirmAction
-                action={archiveWorkspaceAction}
-                fields={{ workspaceId: workspace.id }}
-                title={`Archive ${workspace.name}?`}
-                description="The workspace leaves the dashboard and stops counting against your plan. Its documents, canvas and agent history are kept, and you can restore it at any time."
-                confirmLabel="Archive workspace"
-                pendingLabel="Archiving…"
-                triggerLabel="Archive"
-                triggerVariant="outline"
-                confirmVariant="default"
-              />
-            )}
-          </CardContent>
-        </Card>
+        {workspace.description && (
+          <p className="text-sm text-muted-foreground">{workspace.description}</p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Last updated {formatDay(workspace.updatedAt)}
+          {access.kind === "organization" ? " · Shared with your team" : ""}
+          {workspace.archivedAt ? " · The canvas is read-only while archived" : ""}
+        </p>
+        <Button asChild variant="link" size="sm" className="self-start px-0">
+          <Link href={routes.workspaceActivity(workspace.id)}>View activity</Link>
+        </Button>
       </div>
+
+      <CanvasSection workspaceId={workspace.id} />
+
+      <Card className="shrink-0">
+        <CardHeader>
+          <CardTitle>Manage this workspace</CardTitle>
+          <CardDescription>
+            {workspace.archivedAt
+              ? "This workspace is archived: it is out of the dashboard and the plan meter. Restore it, or delete it for good."
+              : "Archive the workspace to hide it from the dashboard and free its plan slot; its canvas is kept and it can be restored from the archive."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-2">
+          {workspace.archivedAt ? (
+            <>
+              <form action={restoreWorkspaceAction}>
+                <input type="hidden" name="workspaceId" value={workspace.id} />
+                <Button type="submit" variant="outline" size="sm">
+                  Restore
+                </Button>
+              </form>
+              <ConfirmAction
+                action={deleteWorkspaceAction}
+                fields={{ workspaceId: workspace.id }}
+                title={`Delete ${workspace.name} permanently?`}
+                description="The workspace and its documents, canvas and agent history are removed for good. This cannot be undone."
+                confirmLabel="Delete workspace"
+                pendingLabel="Deleting…"
+                triggerLabel="Delete"
+              />
+            </>
+          ) : (
+            <ConfirmAction
+              action={archiveWorkspaceAction}
+              fields={{ workspaceId: workspace.id }}
+              title={`Archive ${workspace.name}?`}
+              description="The workspace leaves the dashboard and stops counting against your plan. Its canvas and agent history are kept, and you can restore it at any time."
+              confirmLabel="Archive workspace"
+              pendingLabel="Archiving…"
+              triggerLabel="Archive"
+              triggerVariant="outline"
+              confirmVariant="default"
+            />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

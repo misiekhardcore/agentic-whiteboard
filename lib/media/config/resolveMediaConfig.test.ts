@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MediaConfigurationError } from "./MediaConfigurationError";
+import { ConfigurationError } from "@/lib/shared/env";
+
 import { resolveMediaConfig } from "./resolveMediaConfig";
 
 afterEach(() => {
@@ -45,6 +46,6 @@ describe("the media store's configuration", () => {
         SUPABASE_URL: "ws://localhost:8000",
         SUPABASE_SERVICE_ROLE_KEY: "secret",
       }),
-    ).toThrow(MediaConfigurationError);
+    ).toThrow(ConfigurationError);
   });
 });

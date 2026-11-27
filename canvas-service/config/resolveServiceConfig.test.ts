@@ -1,0 +1,56 @@
+import { describe, expect, it } from "vitest";
+
+import { ConfigurationError } from "@/lib/shared/env";
+
+import { resolveServiceConfig } from "./resolveServiceConfig";
+
+const unset = {
+  CANVAS_SERVICE_PORT: undefined,
+  CANVAS_SERVICE_SECRET: undefined,
+  CANVAS_APP_INTERNAL_URL: undefined,
+  CANVAS_ROOMS_DIR: undefined,
+};
+
+describe("the canvas service configuration", () => {
+  it("resolves the port, the shared secret, the app origin and the rooms directory", () => {
+    expect(
+      resolveServiceConfig({
+        CANVAS_SERVICE_PORT: "4200",
+        CANVAS_SERVICE_SECRET: "canvas-secret",
+        CANVAS_APP_INTERNAL_URL: "http://localhost:3100/",
+        CANVAS_ROOMS_DIR: "/data/rooms",
+      }),
+    ).toEqual({
+      port: 4200,
+      serviceSecret: "canvas-secret",
+      appUrl: "http://localhost:3100",
+      roomsDirectory: "/data/rooms",
+    });
+  });
+
+  it("defaults the port, the app origin and a checkout-local rooms directory", () => {
+    expect(resolveServiceConfig({ ...unset, CANVAS_SERVICE_SECRET: "canvas-secret" })).toEqual({
+      port: 4100,
+      serviceSecret: "canvas-secret",
+      appUrl: "http://localhost:3000",
+      roomsDirectory: ".rooms",
+    });
+  });
+
+  it("refuses to start without a secret", () => {
+    expect(() => resolveServiceConfig(unset)).toThrow(ConfigurationError);
+  });
+
+  it("refuses a port or an app address that cannot be used", () => {
+    expect(() =>
+      resolveServiceConfig({ ...unset, CANVAS_SERVICE_SECRET: "s", CANVAS_SERVICE_PORT: "eighty" }),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      resolveServiceConfig({
+        ...unset,
+        CANVAS_SERVICE_SECRET: "s",
+        CANVAS_APP_INTERNAL_URL: "localhost",
+      }),
+    ).toThrow(ConfigurationError);
+  });
+});

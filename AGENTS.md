@@ -115,6 +115,13 @@ Write the failing test before the production code, for every behaviour change.
 - **DRY, without pre-emptive abstraction.** A business rule exists once. Two
   independent call sites is not yet a reason to abstract; three copies of a rule
   is a defect. Prefer clear, local code over a premature generic helper.
+- **Shape for reuse.** A decision about a domain object takes the object its
+  caller already holds - `workspaceWriteDecision(access)`, not the fields the
+  caller would derive. The store a route writes through is resolved once
+  (`mediaStore`), so no handler builds an adapter or repeats its refusal.
+  Environment reading and its `ConfigurationError` live once in `lib/shared`; a
+  context keeps only its fields and its policy. A folder holding one module has
+  no barrel. See [module-layout](docs/architecture/module-layout.md).
 - **Files stay small and named for the domain.** Target 150 lines per module
   (200 for a rule or service) and one exported React component per file. Split a
   module when it grows two responsibilities; do not create a `utils.ts` dumping
@@ -135,9 +142,10 @@ Write the failing test before the production code, for every behaviour change.
 | `lib/identity/`      | Actor, session → active account, roles, better-auth adapter, pre-auth actions.                                  |
 | `lib/organizations/` | Membership, slug rule, invitations, organization settings and their capabilities.                               |
 | `lib/workspace/`     | The reference context: status/contracts/forms, rules, access, queries, surfaces, recent, capabilities, actions. |
-| `lib/ai/`            | Providers, runtime (agent + instructions), thread (rules, store, allowance, turn, composer), tools adapter.     |     | `lib/billing/` | Plans, entitlements, usage rules (pure), subscriptions, checkout, Stripe adapter. |
+| `lib/ai/`            | Providers, runtime (agent + instructions), thread (rules, store, allowance, turn, composer), tools adapter.     |
+| `lib/billing/`       | Plans, entitlements, usage rules (pure), subscriptions, checkout, Stripe adapter.                               |
 | `lib/media/`         | Stored files: upload rules, who may read a media row, the storage adapter, the create/read services.            |
-| `lib/shared/`        | Routes, form-data reading and date formatting — the only genuinely shared primitives.                           |
+| `lib/shared/`        | Env reading, routes, form-data reading and date formatting — the only genuinely shared primitives.              |
 | `components/`        | Shared client UI grouped by area; `components/ui` are shadcn-style primitives.                                  |
 | `lib/db/`            | Drizzle schema, connection, column helpers.                                                                     |
 | `drizzle/`           | Generated migrations — never hand-edit applied files.                                                           |
@@ -159,7 +167,8 @@ pnpm tsc                # Typecheck without emitting
 pnpm test               # Vitest unit suite
 pnpm test:ai            # Live model check (needs AI_LIVE=1 + a reachable provider)
 pnpm build              # Production build
-pnpm db:up              # Local Supabase/Postgres + migrations prerequisites
+pnpm db:up              # Local Supabase stack + the canvas sync service
+pnpm canvas:dev         # The canvas sync service alone, without Docker
 pnpm db:generate        # Generate a Drizzle migration after schema changes
 pnpm db:migrate         # Apply migrations
 pnpm test:e2e           # Playwright on :3100 with the scripted provider; needs a DB, and `pnpm dev` stopped

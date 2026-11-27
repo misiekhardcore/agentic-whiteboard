@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import { config as loadEnv } from "dotenv";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // The tests read the same environment the app does, so a local run needs no
 // extra setup beyond `.env.local`. Variables already set (CI) win.
@@ -23,6 +25,17 @@ const broadcastSinkUrl = `http://127.0.0.1:${broadcastSinkPort}`;
 // stack's broadcast endpoint while uploads still land in a bucket.
 const mediaBucketPort = process.env.MEDIA_STORAGE_PORT ?? "3313";
 const mediaBucketUrl = `http://127.0.0.1:${mediaBucketPort}`;
+// The canvas is a second process. The suite starts its own on a port the dev
+// service does not use, with its own secret, so neither `pnpm canvas:dev` nor
+// the compose service started by `pnpm db:up` answers these specs. A dedicated
+// variable matters because `.env.local` sets CANVAS_SERVICE_PORT for the app.
+const canvasServicePort = process.env.E2E_CANVAS_SERVICE_PORT ?? "4101";
+const canvasServiceUrl = `ws://127.0.0.1:${canvasServicePort}`;
+const canvasServiceSecret =
+  process.env.CANVAS_SERVICE_SECRET ?? "e2e-canvas-service-secret-0123456789abcdef";
+// Each run gets its own rooms directory, so a spec never reopens a canvas the
+// developer's compose volume or an earlier run wrote.
+const canvasRoomsDirectory = join(tmpdir(), "workspaice-canvas-e2e", String(process.pid));
 
 // The main suite records what the app publishes in a sink, so it can assert the
 // publication without a stack. `REALTIME_E2E=1` runs the other half instead: the
@@ -30,6 +43,10 @@ const mediaBucketUrl = `http://127.0.0.1:${mediaBucketPort}`;
 // change over an actual socket runs, because the sink-backed specs assert on the
 // sink.
 const realtime = Boolean(process.env.REALTIME_E2E);
+// What a real stack provides and this machine does not: the change broadcast
+// transport and media storage. The canvas service is not one of them; it is the
+// app's own second process, so the suite starts it in either mode.
+const standIns = !realtime;
 // Capturing the manifest screenshots signs in and drives the dashboard, so it is
 // opt-in: `pnpm test:e2e:brand`, never part of the ordinary suite.
 const brandScreenshots = Boolean(process.env.BRAND_SCREENSHOTS);
@@ -72,9 +89,8 @@ export default defineConfig({
   webServer: skipWebServer
     ? undefined
     : [
-        ...(realtime
-          ? []
-          : [
+        ...(standIns
+          ? [
               {
                 // Records what the app publishes for the change channels, so a
                 // spec can assert a capability's keys left the server without
@@ -85,10 +101,26 @@ export default defineConfig({
                 reuseExistingServer: true,
                 timeout: 30_000,
               },
-            ]),
-        ...(realtime
-          ? []
-          : [
+            ]
+          : []),
+        {
+          // One authoritative room per canvas, in its own process: the canvas
+          // cannot open without it, and a spec proving the drawing survives
+          // needs the real sync path. Both modes start it here, with this run's
+          // port and secret, so no spec inherits the developer's compose service.
+          command: "pnpm canvas:dev",
+          env: {
+            CANVAS_SERVICE_PORT: canvasServicePort,
+            CANVAS_SERVICE_SECRET: canvasServiceSecret,
+            CANVAS_APP_INTERNAL_URL: baseURL,
+            CANVAS_ROOMS_DIR: canvasRoomsDirectory,
+          },
+          url: `http://127.0.0.1:${canvasServicePort}/health`,
+          reuseExistingServer: false,
+          timeout: 60_000,
+        },
+        ...(standIns
+          ? [
               {
                 // An in-memory stand-in for the stack's storage service, so a
                 // spec proves upload, read and delete through the app without
@@ -99,7 +131,8 @@ export default defineConfig({
                 reuseExistingServer: true,
                 timeout: 30_000,
               },
-            ]),
+            ]
+          : []),
         {
           // The app has one provider path: HTTP chat completions. The suite
           // points it at a scripted endpoint instead of shipping a fake model.
@@ -136,17 +169,22 @@ export default defineConfig({
             // Realtime container being up. `SUPABASE_URL` is read only for
             // this; the browser's stack address is NEXT_PUBLIC_SUPABASE_URL.
             // A realtime run inherits the stack it was configured with.
-            ...(realtime
-              ? {}
-              : {
+            ...(standIns
+              ? {
                   SUPABASE_URL: broadcastSinkUrl,
                   SUPABASE_SERVICE_ROLE_KEY: "scripted-service-role",
                   MEDIA_STORAGE_URL: mediaBucketUrl,
-                }),
+                }
+              : {}),
             // The approval specs need signed requests; a fixed test value is
             // enough because the scripted endpoint never leaves the machine.
             AI_TOOL_APPROVAL_SECRET:
               process.env.AI_TOOL_APPROVAL_SECRET ?? "e2e-tool-approval-secret-0123456789abcdef",
+            // The canvas service the app mints connection tokens for, and the
+            // secret that service authenticates with. Both modes: the service
+            // is started above by this suite, not by the stack.
+            NEXT_PUBLIC_CANVAS_SERVICE_URL: canvasServiceUrl,
+            CANVAS_SERVICE_SECRET: canvasServiceSecret,
           },
           url: baseURL,
           // Never reuse: a server someone already has open runs whatever

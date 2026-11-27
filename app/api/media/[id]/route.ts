@@ -1,8 +1,6 @@
 import { getSessionAccount } from "@/lib/identity/account";
-import { resolveMediaConfig } from "@/lib/media/config";
 import { mediaDeletable, mediaReadable } from "@/lib/media/rules";
-import { deleteMedia, findMediaById } from "@/lib/media/service";
-import { createSupabaseMediaStorage } from "@/lib/media/storage";
+import { deleteMedia, findMediaById, mediaStore } from "@/lib/media/service";
 
 /**
  * Serves a stored file to someone allowed to see it, through the app rather
@@ -38,12 +36,12 @@ export async function GET(
     return Response.json({ error: "That file could not be found." }, { status: 404 });
   }
 
-  const config = resolveMediaConfig();
-  if (!config) {
-    return Response.json({ error: "This deployment does not store media." }, { status: 503 });
+  const store = mediaStore();
+  if (!store.ok) {
+    return Response.json({ error: store.error }, { status: 503 });
   }
 
-  const stored = await createSupabaseMediaStorage(config).get(row.storageKey);
+  const stored = await store.storage.get(row.storageKey);
   if (!stored) {
     return Response.json({ error: "That file could not be found." }, { status: 404 });
   }
@@ -83,12 +81,12 @@ export async function DELETE(
     return Response.json({ error: "That file could not be found." }, { status: 404 });
   }
 
-  const config = resolveMediaConfig();
-  if (!config) {
-    return Response.json({ error: "This deployment does not store media." }, { status: 503 });
+  const store = mediaStore();
+  if (!store.ok) {
+    return Response.json({ error: store.error }, { status: 503 });
   }
 
-  await deleteMedia({ storage: createSupabaseMediaStorage(config), file: row });
+  await deleteMedia({ storage: store.storage, file: row });
 
   return new Response(null, { status: 204 });
 }
