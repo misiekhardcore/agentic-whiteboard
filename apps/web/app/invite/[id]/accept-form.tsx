@@ -2,6 +2,7 @@
 
 import { Alert, AlertDescription } from "@konopskidev/ui/components/alert";
 import { Button } from "@konopskidev/ui/components/button";
+import { Spinner } from "@konopskidev/ui/components/spinner";
 import { useActionState } from "react";
 
 import { acceptInvitationAction } from "./actions";
@@ -23,6 +24,7 @@ export function AcceptInvitationForm({ invitationId }: { invitationId: string })
         </Alert>
       ) : null}
       <Button type="submit" disabled={pending} className="w-full">
+        {pending ? <Spinner /> : null}
         {pending ? "Joining…" : "Accept invitation"}
       </Button>
     </form>

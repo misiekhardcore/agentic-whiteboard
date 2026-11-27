@@ -13,7 +13,9 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
   if (await requireActor()) redirect(routes.home);
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-muted px-4 py-16">
+    // A short window (or a browser password manager) would otherwise clip a
+    // form taller than the viewport, so the auth shell scrolls itself.
+    <main className="flex min-h-svh items-center justify-center overflow-y-auto bg-muted px-4 py-16">
       <div className="w-full max-w-sm">{children}</div>
     </main>
   );

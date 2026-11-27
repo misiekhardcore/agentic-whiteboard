@@ -1,13 +1,10 @@
-import { Button } from "@konopskidev/ui/components/button";
+import { FieldSeparator } from "@konopskidev/ui/components/field";
 
 import { startOAuthAction } from "../actions";
 
-import { enabledProviders } from "@/src/server/identity/providerSignIn";
+import { ProviderButton } from "./provider-button";
 
-const LABELS = {
-  github: "Continue with GitHub",
-  google: "Continue with Google",
-} as const;
+import { enabledProviders } from "@/src/server/identity/providerSignIn";
 
 /**
  * Only the providers this deployment holds credentials for. A button is a form
@@ -19,17 +16,17 @@ export function SocialSignIn({ redirectTo }: { redirectTo?: string }) {
   if (providers.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2">
-      {providers.map((provider) => (
-        <form key={provider} action={startOAuthAction}>
-          <input type="hidden" name="provider" value={provider} />
-          <input type="hidden" name="redirectTo" value={redirectTo ?? ""} />
-          <Button type="submit" variant="outline" className="w-full">
-            {LABELS[provider]}
-          </Button>
-        </form>
-      ))}
-      <p className="text-center text-xs text-muted-foreground">or</p>
-    </div>
+    <>
+      <div className="flex flex-col gap-3">
+        {providers.map((provider) => (
+          <form key={provider} action={startOAuthAction}>
+            <input type="hidden" name="provider" value={provider} />
+            <input type="hidden" name="redirectTo" value={redirectTo ?? ""} />
+            <ProviderButton provider={provider} />
+          </form>
+        ))}
+      </div>
+      <FieldSeparator>or</FieldSeparator>
+    </>
   );
 }

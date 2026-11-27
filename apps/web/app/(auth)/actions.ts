@@ -87,7 +87,8 @@ export async function resetPasswordAction(
   const result = await resetPassword({ token, password });
   if (!result.ok) return { error: result.error };
 
-  redirect(signInPath());
+  // The sign-in page shows the confirmation; the reset itself has no session.
+  redirect(`${signInPath()}?reset=1`);
 }
 
 /** Sends the browser to the provider, or back to sign-in with one sentence. */
