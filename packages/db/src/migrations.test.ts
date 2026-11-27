@@ -6,8 +6,8 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { afterEach, expect, it } from "vitest";
 
-import { DEMO_WORKSPACE } from "../src/demo";
-import { workspace } from "../src/schema";
+import { DEMO_WORKSPACE } from "./demo";
+import { workspace } from "./schema";
 
 const clients: PGlite[] = [];
 

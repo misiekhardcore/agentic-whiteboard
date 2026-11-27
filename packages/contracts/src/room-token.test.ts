@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { mintRoomToken, ROOM_TOKEN_TTL_SECONDS, verifyRoomToken } from "../src";
+import { mintRoomToken, ROOM_TOKEN_TTL_SECONDS, verifyRoomToken } from "./room-token";
 
 const secret = "test-secret";
 const mintedAt = Date.UTC(2026, 10, 26, 12, 0, 0);

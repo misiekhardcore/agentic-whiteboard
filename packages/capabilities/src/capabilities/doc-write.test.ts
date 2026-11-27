@@ -3,8 +3,8 @@ import { isDocProjection, RoomOwnerError } from "@v2/contracts";
 import { createInMemoryRoomOwner } from "@v2/contracts/testing";
 import { describe, expect, it } from "vitest";
 
-import { docAppend, docReplace, invoke } from "../src";
-import type { CapabilityContext, WorkspaceRecord } from "../src";
+import { docAppend, docReplace, invoke } from "../index";
+import type { CapabilityContext, WorkspaceRecord } from "../index";
 
 const person: Actor = { type: "user", userId: "user-1", accountId: "account-1" };
 const outsider: Actor = { type: "user", userId: "user-2", accountId: "account-2" };
