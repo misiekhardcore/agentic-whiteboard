@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@konopskidev/ui/components/button";
 import { useState } from "react";
 
 type InsertState =
@@ -65,10 +66,11 @@ export function InsertFromTemplate({
   }
 
   return (
-    <div className="template-insert">
-      <button
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
         type="button"
-        className="template-button"
+        variant="outline"
+        size="sm"
         data-testid="insert-from-template"
         disabled={buttonDisabled}
         title="Sends the same request key every time, so a retry adds no second block."
@@ -77,10 +79,10 @@ export function InsertFromTemplate({
         }}
       >
         {sending ? "Inserting…" : "Insert from template"}
-      </button>
+      </Button>
 
       {state.status === "done" ? (
-        <p className={state.applied === 0 ? "template-note replay" : "template-note"} role="status">
+        <p className="text-sm text-muted-foreground" role="status">
           {state.applied === 0
             ? `Already applied — one block · ${state.revision}`
             : `Inserted a block · ${state.revision}`}
@@ -88,7 +90,7 @@ export function InsertFromTemplate({
       ) : null}
 
       {state.status === "error" ? (
-        <p className="template-note error" role="status">
+        <p className="text-sm text-destructive" role="status">
           {state.message}
         </p>
       ) : null}

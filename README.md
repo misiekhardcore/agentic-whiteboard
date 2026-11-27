@@ -106,8 +106,9 @@ pnpm test:e2e
 ```
 
 The specs cover two tabs syncing, a reload keeping the text, an archived
-workspace staying read-only, and a failed token request leaving the rest of the
-workspace usable. CI runs the same command against its own Postgres.
+workspace staying read-only, a failed token request leaving the rest of the
+workspace usable, and a server insert landing once, replaying, and surviving a
+reload. CI runs the same command against its own Postgres.
 
 ## What is temporary in this slice
 
