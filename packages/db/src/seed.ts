@@ -1,6 +1,16 @@
+import { fileURLToPath } from "node:url";
+
 import { createDatabase } from "./database";
 import { DEMO_WORKSPACES } from "./demo";
 import { workspace } from "./schema";
+
+// See `migrate.ts`: the seed runs from the same root command and needs the
+// repository's `.env` when the shell has not exported the settings.
+try {
+  process.loadEnvFile(fileURLToPath(new URL("../../../.env", import.meta.url)));
+} catch {
+  // A deployment that injects its environment has no file to load.
+}
 
 const url = process.env.DATABASE_URL;
 
