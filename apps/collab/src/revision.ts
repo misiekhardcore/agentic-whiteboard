@@ -1,7 +1,13 @@
 import { DOC_REVISION_FIELD } from "@v2/contracts";
 import type * as Y from "yjs";
 
-import { DOC_META, isRevisionOrigin, revisionOf, REVISION_ORIGIN } from "./doc-blocks";
+import {
+  DOC_BLOCKS_FIELD,
+  DOC_META,
+  isRevisionOrigin,
+  revisionOf,
+  REVISION_ORIGIN,
+} from "./doc-blocks";
 
 /**
  * How long the room waits after the last content change before it counts that
@@ -10,10 +16,10 @@ import { DOC_META, isRevisionOrigin, revisionOf, REVISION_ORIGIN } from "./doc-b
 export const DEFAULT_REVISION_DEBOUNCE_MS = 1_000;
 
 type Tracked = {
-  document: Y.Doc;
+  fragment: Y.XmlFragment;
   dirty: boolean;
   timer: ReturnType<typeof setTimeout> | null;
-  observer: (update: Uint8Array, origin: unknown) => void;
+  observer: (events: Y.YEvent<Y.AbstractType<unknown>>[], transaction: Y.Transaction) => void;
 };
 
 export type RevisionTracker = {
@@ -63,12 +69,16 @@ export function createRevisionTracker({
     watch(roomId, document) {
       if (tracked.has(roomId)) return;
 
+      // Only the block fragment is content. The meta map carries the revision
+      // itself, and a connection's sync of state the room already holds is not
+      // an edit, so neither can count.
+      const fragment = document.getXmlFragment(DOC_BLOCKS_FIELD);
       const entry: Tracked = {
-        document,
+        fragment,
         dirty: false,
         timer: null,
-        observer: (_update, origin) => {
-          if (isRevisionOrigin(origin)) return;
+        observer: (_events, transaction) => {
+          if (isRevisionOrigin(transaction.origin)) return;
 
           entry.dirty = true;
           clear(entry);
@@ -84,7 +94,7 @@ export function createRevisionTracker({
       };
 
       tracked.set(roomId, entry);
-      document.on("update", entry.observer);
+      fragment.observeDeep(entry.observer);
     },
 
     flush(roomId, document) {
@@ -109,7 +119,7 @@ export function createRevisionTracker({
       if (entry === undefined) return;
 
       clear(entry);
-      entry.document.off("update", entry.observer);
+      entry.fragment.unobserveDeep(entry.observer);
       tracked.delete(roomId);
     },
 

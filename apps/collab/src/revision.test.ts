@@ -2,7 +2,7 @@ import { DOC_META_FIELD, DOC_REVISION_FIELD } from "@v2/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import * as Y from "yjs";
 
-import { revisionOf } from "./doc-blocks";
+import { DOC_BLOCKS_FIELD, revisionOf } from "./doc-blocks";
 import { createRevisionTracker } from "./revision";
 import type { RevisionTracker } from "./revision";
 
@@ -23,7 +23,9 @@ function wait(ms: number): Promise<void> {
 }
 
 function typeInto(document: Y.Doc, text: string): void {
-  document.getText("body").insert(0, text);
+  const element = new Y.XmlElement("paragraph");
+  element.insert(0, [new Y.XmlText(text)]);
+  document.getXmlFragment(DOC_BLOCKS_FIELD).push([element]);
 }
 
 describe("the revision tracker", () => {
@@ -53,7 +55,9 @@ describe("the revision tracker", () => {
       document.getMap(DOC_META_FIELD).set(DOC_REVISION_FIELD, 7);
     }, "revision");
     document.transact(() => {
-      document.getText("body").insert(0, "from the server");
+      const element = new Y.XmlElement("paragraph");
+      element.insert(0, [new Y.XmlText("from the server")]);
+      document.getXmlFragment(DOC_BLOCKS_FIELD).push([element]);
     }, "apply:user:user-1");
     document.transact(() => {
       document.getMap("meta").set("revoked", true);
@@ -81,6 +85,19 @@ describe("the revision tracker", () => {
     tracker.watch("doc-1", document);
 
     expect(tracker.flush("doc-1", document)).toBe(0);
+  });
+
+  it("does not count a write that leaves the blocks untouched", async () => {
+    const document = new Y.Doc();
+    const tracker = trackerWith();
+    tracker.watch("doc-1", document);
+
+    document.transact(() => {
+      document.getMap(DOC_META_FIELD).set("lastSeen", 1);
+    }, "connection");
+
+    await wait(50);
+    expect(revisionOf(document)).toBe(0);
   });
 
   it("stops counting a room it forgot", async () => {

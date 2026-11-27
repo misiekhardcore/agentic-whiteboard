@@ -48,3 +48,21 @@ test("typing bumps the revision live and Ctrl+S saves it", async ({ page }) => {
 
   await expect(revisionBadge(page)).toContainText(`revision ${savedRevision}`);
 });
+
+test("a reload keeps the revision and the blocks it shows", async ({ page }) => {
+  await page.goto("/w/ws_demo");
+  await expect(page.locator(".doc-status")).toHaveText("Live", { timeout: 30_000 });
+  await expect(editor(page)).toBeVisible();
+
+  const before = await revisionBadge(page).innerText();
+  const blocks = await editor(page).locator(":scope > *").count();
+
+  // Loading the page must not write to the room: the editor waits for the
+  // sync, so its empty starting paragraph never becomes a block or a revision.
+  await page.reload();
+  await expect(page.locator(".doc-status")).toHaveText("Live", { timeout: 30_000 });
+  await expect(editor(page)).toBeVisible();
+
+  await expect(revisionBadge(page)).toHaveText(before);
+  expect(await editor(page).locator(":scope > *").count()).toBe(blocks);
+});
