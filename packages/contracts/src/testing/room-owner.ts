@@ -8,6 +8,7 @@ import type {
   ContentOp,
   RoomOwnerPort,
   RoomRef,
+  SaveResult,
   Snapshot,
 } from "../room-owner";
 
@@ -147,6 +148,10 @@ export function createInMemoryRoomOwner(
         stored.applied.set(input.idempotencyKey, result);
         return result;
       });
+    },
+
+    save(room: RoomRef): Promise<SaveResult> {
+      return settled(() => ({ revision: requireRoom(room).revision }));
     },
 
     revoke(room: RoomRef): Promise<void> {

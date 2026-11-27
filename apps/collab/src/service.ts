@@ -15,6 +15,8 @@ import {
 } from "./doc-blocks";
 import { createRoomLeases } from "./lease";
 import type { RoomLeases } from "./lease";
+import { createRevisionTracker, DEFAULT_REVISION_DEBOUNCE_MS } from "./revision";
+import type { RevisionTracker } from "./revision";
 import { authorizeServiceRequest } from "./service-secret";
 import { authorizeDocConnection, connectionIsReadOnly } from "./token-gate";
 
@@ -34,6 +36,7 @@ export type DocService = {
 const HEALTH_PATH = "/health";
 const SNAPSHOT_PATH = /^\/snapshot\/([A-Za-z0-9_-]{1,128})$/;
 const APPLY_PATH = /^\/apply\/([A-Za-z0-9_-]{1,128})$/;
+const SAVE_PATH = /^\/save\/([A-Za-z0-9_-]{1,128})$/;
 const REVOKE_PATH = /^\/revoke\/([A-Za-z0-9_-]{1,128})$/;
 const DEFAULT_RENEW_MS = 10_000;
 const MAX_BODY_BYTES = 256 * 1024;
@@ -132,6 +135,7 @@ export function createDocService({
   maxDebounceMs = 5_000,
   leaseSeconds = 30,
   renewMs = DEFAULT_RENEW_MS,
+  revisionDebounceMs = DEFAULT_REVISION_DEBOUNCE_MS,
 }: {
   snapshots: DocSnapshotStore;
   leaseStore: RoomLeaseStore;
@@ -142,6 +146,7 @@ export function createDocService({
   maxDebounceMs?: number;
   leaseSeconds?: number;
   renewMs?: number;
+  revisionDebounceMs?: number;
 }): DocService {
   const leases = createRoomLeases({
     store: leaseStore,
@@ -149,6 +154,9 @@ export function createDocService({
     ttlSeconds: leaseSeconds,
     log,
   });
+  // A revision counts a quiet burst of content changes, so typing is versioned
+  // without turning every keystroke into a revision.
+  const revisions = createRevisionTracker({ debounceMs: revisionDebounceMs });
 
   const server = new Server<DocContext>({
     port: 0,
@@ -161,7 +169,7 @@ export function createDocService({
       // Hocuspocus stops its own response when a hook rejects without a value.
       // That is the documented way to own the request.
       return new Promise<void>((resolve, reject) => {
-        void handleRequest({ request, response, instance, snapshots, secret, log }).then(
+        void handleRequest({ request, response, instance, snapshots, secret, log, revisions }).then(
           // Hocuspocus stops its default response only when the hook rejects
           // without a reason, which is its documented custom-route mechanism.
           // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
@@ -225,11 +233,21 @@ export function createDocService({
       log(`stored ${documentName} at revision ${revisionOf(document)}`);
     },
 
+    // Registered after the stored state has been applied, so loading a room is
+    // not itself a content change. The hook contract is a promise; registering
+    // the tracker is synchronous.
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async afterLoadDocument({ documentName, document }) {
+      revisions.watch(documentName, document);
+    },
+
     async afterUnloadDocument({ documentName }) {
+      revisions.forget(documentName);
       await leases.release(documentName);
     },
 
     async onDestroy() {
+      revisions.dispose();
       await leases.releaseAll();
     },
   });
@@ -270,6 +288,7 @@ async function handleRequest({
   snapshots,
   secret,
   log,
+  revisions,
 }: {
   request: IncomingMessage;
   response: ServerResponse;
@@ -277,6 +296,7 @@ async function handleRequest({
   snapshots: DocSnapshotStore;
   secret: string;
   log: (message: string) => void;
+  revisions: RevisionTracker;
 }): Promise<void> {
   const path = request.url ?? "/";
 
@@ -361,9 +381,41 @@ async function handleRequest({
       const outcome = box.outcome;
       if (outcome === undefined) throw new Error("The apply transaction did not produce a result.");
 
+      // The batch counted the document's current state, including any typing the
+      // revision debounce has not counted yet; a replay counted nothing.
+      if (outcome.applied > 0) revisions.markClean(applyRoomId);
+
       await snapshots.save(applyRoomId, Y.encodeStateAsUpdate(room.document));
       log(`applied ${outcome.applied} operation(s) to ${applyRoomId}`);
       sendJson(response, 200, outcome);
+    });
+    return;
+  }
+
+  const saveMatch = request.method === "POST" ? SAVE_PATH.exec(path) : null;
+  const saveRoomId = saveMatch?.[1];
+  if (saveRoomId !== undefined) {
+    if (!isServiceRequest(request, secret)) {
+      sendJson(response, 401, { error: "Not the document app." });
+      return;
+    }
+
+    const stored = await snapshots.load(saveRoomId);
+    if (!stored.exists) {
+      sendJson(response, 404, {
+        error: "That document room does not exist.",
+        code: "room-not-found",
+      });
+      return;
+    }
+
+    await withRoom(instance, saveRoomId, response, async (room) => {
+      // A person's save counts the quiet burst immediately instead of waiting
+      // for the debounce, then writes the snapshot before it answers.
+      const revision = revisions.flush(saveRoomId, room.document);
+      await snapshots.save(saveRoomId, Y.encodeStateAsUpdate(room.document));
+      log(`saved ${saveRoomId} at revision ${revision}`);
+      sendJson(response, 200, { revision });
     });
     return;
   }

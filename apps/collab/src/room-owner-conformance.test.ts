@@ -117,6 +117,17 @@ function serviceOwner(): RoomOwnerPort {
       return { revision: `rev-${body.revision}`, applied: body.applied };
     },
 
+    async save(reference: RoomRef): Promise<{ revision: string }> {
+      const response = await fetch(`${base}/save/${reference.id}`, {
+        method: "POST",
+        headers: { authorization },
+      });
+      if (!response.ok) throw await errorFor(response);
+
+      const body = (await response.json()) as { revision: number };
+      return { revision: `rev-${body.revision}` };
+    },
+
     async revoke(reference: RoomRef): Promise<void> {
       const response = await fetch(`${base}/revoke/${reference.id}`, {
         method: "POST",

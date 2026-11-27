@@ -119,6 +119,7 @@ describe("doc.read", () => {
     const unavailable: RoomOwnerPort = {
       snapshot: () => Promise.reject(new RoomOwnerError("room-not-found", "No room")),
       apply: () => Promise.reject(new RoomOwnerError("apply-refused", "No room")),
+      save: () => Promise.resolve({ revision: "rev-1" }),
       revoke: () => Promise.resolve(),
     };
 

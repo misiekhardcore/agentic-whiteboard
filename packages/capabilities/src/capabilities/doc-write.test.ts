@@ -124,6 +124,7 @@ describe("doc.append", () => {
         applied = true;
         return Promise.reject(new RoomOwnerError("apply-refused", "Must not run"));
       },
+      save: () => Promise.resolve({ revision: "rev-1" }),
       revoke: () => Promise.resolve(),
     };
 
@@ -145,6 +146,7 @@ describe("doc.append", () => {
         applied = true;
         return Promise.reject(new RoomOwnerError("apply-refused", "Must not run"));
       },
+      save: () => Promise.resolve({ revision: "rev-1" }),
       revoke: () => Promise.resolve(),
     };
 
@@ -260,6 +262,7 @@ describe("doc.replace", () => {
         applied = true;
         return Promise.reject(new RoomOwnerError("apply-refused", "Must not run"));
       },
+      save: () => Promise.resolve({ revision: "rev-1" }),
       revoke: () => Promise.resolve(),
     };
 
@@ -286,6 +289,7 @@ describe("doc.replace", () => {
         applied = true;
         return Promise.reject(new RoomOwnerError("apply-refused", "Must not run"));
       },
+      save: () => Promise.resolve({ revision: "rev-1" }),
       revoke: () => Promise.resolve(),
     };
 

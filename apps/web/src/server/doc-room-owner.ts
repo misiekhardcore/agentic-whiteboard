@@ -5,6 +5,7 @@ import type {
   RoomOwnerErrorCode,
   RoomOwnerPort,
   RoomRef,
+  SaveResult,
   Snapshot,
 } from "@v2/contracts";
 
@@ -15,7 +16,7 @@ type ApplyBody = { revision?: unknown; applied?: unknown };
 
 function roomUrl(
   service: DocService,
-  door: "snapshot" | "apply" | "revoke",
+  door: "snapshot" | "apply" | "save" | "revoke",
   room: RoomRef,
 ): string {
   return `${service.httpUrl}/${door}/${encodeURIComponent(room.id)}`;
@@ -102,6 +103,27 @@ export function createDocRoomOwner(service: DocService | null): RoomOwnerPort {
       }
 
       return { revision: `rev-${body.revision}`, applied: body.applied };
+    },
+
+    async save(room: RoomRef): Promise<SaveResult> {
+      if (service === null) {
+        throw new RoomOwnerError("room-not-found", "The document service is not configured.");
+      }
+
+      const response = await fetch(roomUrl(service, "save", room), {
+        method: "POST",
+        headers: { authorization: `Bearer ${service.secret}` },
+        cache: "no-store",
+      });
+
+      if (!response.ok) throw await errorFrom(response, "apply-refused");
+
+      const body = (await response.json()) as { revision?: unknown };
+      if (typeof body.revision !== "number") {
+        throw new Error("The document service returned no revision.");
+      }
+
+      return { revision: `rev-${body.revision}` };
     },
 
     async revoke(room: RoomRef): Promise<void> {

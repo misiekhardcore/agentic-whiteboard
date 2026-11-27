@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
 
-import { actorReference, planDocBatch, RoomOwnerError } from "@v2/contracts";
+import {
+  actorReference,
+  DOC_META_FIELD,
+  DOC_REVISION_FIELD,
+  planDocBatch,
+  RoomOwnerError,
+} from "@v2/contracts";
 import type {
   Actor,
   ContentOp,
@@ -18,10 +24,26 @@ export const DOC_BLOCKS_FIELD = "default";
 export const DOC_APPLIED_OPS = "appliedOps";
 
 /** Room-level values: the content revision and whether the room was revoked. */
-export const DOC_META = "meta";
+export const DOC_META = DOC_META_FIELD;
 
-const META_REVISION = "revision";
+/** The origin of the room's own revision write; it must not count as a change. */
+export const REVISION_ORIGIN = "revision";
+
+const META_REVISION = DOC_REVISION_FIELD;
 const META_REVOKED = "revoked";
+
+/**
+ * Transactions the room makes that are not a content change: its own revision
+ * write, the durable revoke, the one-time block-id migration, and an apply that
+ * counts its batch itself.
+ */
+export function isRevisionOrigin(origin: unknown): boolean {
+  if (origin === REVISION_ORIGIN || origin === "revoke" || origin === "assign-block-ids") {
+    return true;
+  }
+
+  return typeof origin === "string" && origin.startsWith("apply:");
+}
 
 type ApplyOutcome = { revision: number; applied: number };
 

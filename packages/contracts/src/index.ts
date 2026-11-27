@@ -15,6 +15,8 @@ export type { Change } from "./changes";
 export {
   actorReference,
   BLOCK_ID_PATTERN,
+  DOC_META_FIELD,
+  DOC_REVISION_FIELD,
   IDEMPOTENCY_KEY_PATTERN,
   isActor,
   isDocProjection,
@@ -42,6 +44,7 @@ export type {
   RoomOwnerErrorCode,
   RoomOwnerPort,
   RoomRef,
+  SaveResult,
   Snapshot,
 } from "./room-owner";
 export { mintRoomToken, ROOM_TOKEN_TTL_SECONDS, verifyRoomToken } from "./room-token";

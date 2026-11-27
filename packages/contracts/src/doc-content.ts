@@ -3,6 +3,14 @@ import { RoomOwnerError } from "./room-owner";
 import type { ContentOp } from "./room-owner";
 
 /**
+ * Room-level values every document owner stores inside the document itself, so
+ * they travel with the content they describe. The browser reads the revision
+ * from here to show it live, which is why the names live in contracts.
+ */
+export const DOC_META_FIELD = "meta";
+export const DOC_REVISION_FIELD = "revision";
+
+/**
  * The block vocabulary. A block has an identity that survives edits; document
  * operations name that identity and never an offset, because the same anchors
  * also have to survive a person typing above them.

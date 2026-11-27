@@ -37,6 +37,14 @@ batch, records the key inside the document in the same transaction as the
 blocks, broadcasts the update and saves the snapshot. A retry returns the
 current revision with zero operations applied.
 
+Typing advances the document's revision once the room has been quiet for a
+moment, and the badge in the editor bar follows it over the same socket, so no
+reload and no second delivery channel are needed. `Ctrl+S` (or `Cmd+S`) saves
+immediately through the `doc.save` capability: the room counts the pending burst
+and writes the snapshot before it answers, so the revision it returns is the one
+already stored. The revision is part of the Yjs state, so the `doc_room`
+snapshot is the only place it is persisted.
+
 A deployment without the document service is supported: the workspace header,
 the agent status and the rest of the page render, and only the document area
 reports itself as unavailable.

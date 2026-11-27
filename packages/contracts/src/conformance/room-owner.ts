@@ -103,6 +103,33 @@ export function describeRoomOwnerContract(
       });
     });
 
+    it("saves the current revision without changing the content", async () => {
+      const fixture = createFixture();
+      const before = await fixture.owner.snapshot(fixture.room);
+
+      const saved = await fixture.owner.save(fixture.room);
+
+      expect(saved.revision).toBe(before.revision);
+      await expect(fixture.owner.snapshot(fixture.room)).resolves.toMatchObject({
+        content: before.content,
+        revision: before.revision,
+      });
+    });
+
+    it("saves the revision an apply produced when it saves next", async () => {
+      const fixture = createFixture();
+      const applied = await fixture.owner.apply({
+        room: fixture.room,
+        actor: fixture.actor,
+        idempotencyKey: "op-save",
+        ops: fixture.applyOps,
+      });
+
+      await expect(fixture.owner.save(fixture.room)).resolves.toEqual({
+        revision: applied.revision,
+      });
+    });
+
     it("applies nothing when a batch writes one block twice", async () => {
       const fixture = createFixture();
       const before = await fixture.owner.snapshot(fixture.room);

@@ -4,6 +4,7 @@ export { docAppend } from "./capabilities/doc-append";
 export { docConnection } from "./capabilities/doc-connection";
 export { docRead } from "./capabilities/doc-read";
 export { docReplace } from "./capabilities/doc-replace";
+export { docSave } from "./capabilities/doc-save";
 export { readWorkspace } from "./capabilities/read-workspace";
 export type { CapabilityContext, WorkspaceReader, WorkspaceRecord } from "./context";
 export { defineCapability } from "./define";

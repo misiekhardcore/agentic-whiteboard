@@ -87,6 +87,19 @@ describe("createDocRoomOwner", () => {
     });
   });
 
+  it("saves through the service credential and maps the revision", async () => {
+    const { calls } = stubFetch(() => Response.json({ revision: 6 }));
+
+    const saved = await createDocRoomOwner(service).save(room);
+
+    expect(saved).toEqual({ revision: "rev-6" });
+    expect(calls[0]?.url).toBe("http://127.0.0.1:3003/save/doc-1");
+    expect(calls[0]?.init?.method).toBe("POST");
+    expect((calls[0]?.init?.headers as Record<string, string>).authorization).toBe(
+      "Bearer doc-secret",
+    );
+  });
+
   it("reports an invalid batch as invalid-ops", async () => {
     stubFetch(() => Response.json({ error: "bad batch", code: "invalid-ops" }, { status: 400 }));
 

@@ -38,7 +38,8 @@ surface copies its token and read-only rule rather than inventing a second one.
 | Apply trust  | The apply door authenticates the app with the service secret and validates the actor's shape; membership is answered once, by the capability's `authorize`, not again in the room | The room owns content, not accounts: it cannot read a membership, so a second check would be a second policy that can disagree with the first. Revisit when a run token exists and the write can carry the run's signed claim. |
 | Identity     | Every block carries an explicit `blockId`. The editor assigns one when a person creates a block; the room assigns ids once on load for a document that predates the attribute | Comment anchors and replays need the same property: an edit above a block cannot change what the operation or anchor means. Reading a private Yjs item would make that identity an implementation detail. |
 | Idempotency  | The request key is stored in the document's `appliedOps` map in the same transaction as the operations                                                | Yjs operations are not idempotent; a retried append would duplicate without a key recorded beside the content.                                                                                              |
-| Revision     | The document's `meta.revision` is the only revision: it advances once per applied batch and travels with the Yjs state                                | A replay returns the current revision, not the revision the first attempt happened to see. A debounced save does not advance it, so there is no second counter to drift.                                      |
+| Revision     | The document's `meta.revision` is the only revision: it advances once per quiet period of content changes and immediately on a save, and travels with the Yjs state | One number covers whatever changed the content, a person's typing or an apply. Counting a debounce window instead of a keystroke keeps it meaningful, and no second counter can drift from the state it describes. |
+| Save         | `POST /save/:roomId` counts a pending burst now and writes the snapshot before it answers; Ctrl+S invokes it through the `doc.save` capability | A person expects their keystrokes on disk when they ask, not when the next debounce fires, and the revision the door returns is already durable.                                                              |
 | Revocation   | `revoke` records a durable `meta.revoked` flag before it closes live sessions                                                                          | The conformance suite's revoked room must keep refusing writes across an unload and a restart, not only for the sockets that were open.                                                                      |
 
 ## Shape
@@ -54,14 +55,16 @@ browser                      app (Next)                         document service
   │                             │◄── GET /snapshot/:id (secret) ─────┤ load doc_room.yjs_state
   │                             ├── POST /apply/:id (secret) ────────►│ validate, transact, record key
   │                             │                                    ├─ broadcast + save snapshot
+  │                             ├── POST /save/:id (secret) ─────────►│ count the burst, store now
   │                             ├── POST /revoke/:id (secret) ───────►│ record revoked, close sessions
   │                             │                                    └─ debounced save of yjs_state
 ```
 
-The service has five doors: a public health read, an authenticated snapshot read
+The service has six doors: a public health read, an authenticated snapshot read
 for the app's revision, an authenticated apply for a server-side block batch, an
-authenticated revoke for a workspace that became read-only, and the WebSocket
-upgrades browsers join a document through. It serves no pages, and it holds no
+authenticated save for a person's Ctrl+S, an authenticated revoke for a
+workspace that became read-only, and the WebSocket upgrades browsers join a
+document through. It serves no pages, and it holds no
 content outside the room it is the one owner of.
 
 ## Server-side apply
@@ -126,6 +129,11 @@ and deletes it.
 - A snapshot save does not invent a revision. The only revision is the one
   inside the Yjs state, so a restart cannot expose a different number than the
   one the last apply returned.
+- Typing advances the revision once the room has been quiet for the debounce
+  window, and every open editor shows the new number over the socket it already
+  holds; the page needs no reload and no second delivery channel.
+- Ctrl+S counts a pending burst and writes the snapshot before it answers, so
+  the revision the interface shows is the one already stored.
 - An invalid batch writes nothing, because every operation is validated before
   the room opens its transaction.
 

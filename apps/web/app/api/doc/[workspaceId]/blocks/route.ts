@@ -1,20 +1,8 @@
 import { demoActor, getDependencies } from "@/src/server/dependencies";
 import { insertTemplateBlock } from "@/src/server/doc-write";
+import { statusOf } from "@/src/server/refusal-status";
 
 const NO_STORE = { "cache-control": "no-store" };
-
-function statusOf(code: string): number {
-  switch (code) {
-    case "not-found":
-      return 404;
-    case "read-only":
-      return 409;
-    case "unavailable":
-      return 503;
-    default:
-      return 400;
-  }
-}
 
 /**
  * The temporary control's door. It accepts only a request key: the block comes

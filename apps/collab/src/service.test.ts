@@ -3,7 +3,7 @@ import { BLOCK_ID_PATTERN, mintRoomToken } from "@v2/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import * as Y from "yjs";
 
-import { DOC_BLOCKS_FIELD, projectDocContent } from "./doc-blocks";
+import { createBlockElement, DOC_BLOCKS_FIELD, projectDocContent } from "./doc-blocks";
 import { createDocService } from "./service";
 import type { DocService } from "./service";
 import { memoryStores } from "./test-support/memory-stores";
@@ -17,7 +17,11 @@ afterEach(async () => {
   for (const service of services.splice(0)) await service.destroy();
 });
 
-function serviceWith(stores: ReturnType<typeof memoryStores>, instanceId: string): DocService {
+function serviceWith(
+  stores: ReturnType<typeof memoryStores>,
+  instanceId: string,
+  options: { revisionDebounceMs?: number } = {},
+): DocService {
   const service = createDocService({
     snapshots: stores.snapshots,
     leaseStore: stores.leaseStore,
@@ -25,6 +29,7 @@ function serviceWith(stores: ReturnType<typeof memoryStores>, instanceId: string
     instanceId,
     debounceMs: 50,
     maxDebounceMs: 200,
+    revisionDebounceMs: options.revisionDebounceMs ?? 25,
     renewMs: 60_000,
     log: () => undefined,
   });
@@ -98,6 +103,41 @@ function xmlOf(document: Y.Doc): string {
 
 function occurrences(haystack: string, needle: string): number {
   return haystack.split(needle).length - 1;
+}
+
+async function revisionAt(base: string): Promise<number> {
+  const response = await fetch(`${base}/snapshot/doc-1`, {
+    headers: { authorization: `Bearer ${secret}` },
+  });
+  const body = (await response.json()) as { revision: number };
+  return body.revision;
+}
+
+async function untilContent(base: string, text: string): Promise<void> {
+  const deadline = Date.now() + 5_000;
+
+  while (Date.now() < deadline) {
+    const response = await fetch(`${base}/snapshot/doc-1`, {
+      headers: { authorization: `Bearer ${secret}` },
+    });
+    const body = (await response.json()) as { content: unknown };
+
+    if (JSON.stringify(body.content).includes(text)) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+
+  throw new Error(`The server never received "${text}".`);
+}
+
+async function untilRevision(base: string, expected: number): Promise<void> {
+  const deadline = Date.now() + 5_000;
+
+  while (Date.now() < deadline) {
+    if ((await revisionAt(base)) >= expected) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+
+  throw new Error(`The revision did not reach ${expected}; it is ${await revisionAt(base)}.`);
 }
 
 async function until(check: () => boolean, timeoutMs = 3_000): Promise<void> {
@@ -222,6 +262,7 @@ describe("the document room owner", () => {
     await expect(health.json()).resolves.toMatchObject({ ok: true, service: "doc" });
 
     expect((await fetch(`${base}/snapshot/doc-1`)).status).toBe(401);
+    expect((await fetch(`${base}/save/doc-1`, { method: "POST" })).status).toBe(401);
     expect((await fetch(`${base}/revoke/doc-1`, { method: "POST" })).status).toBe(401);
 
     const snapshot = await fetch(`${base}/snapshot/doc-1`, { headers: authorization });
@@ -326,6 +367,88 @@ describe("the document room owner", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(xmlOf(client.document)).not.toContain("Must not land");
+  });
+
+  it("counts one revision per quiet burst of typing", async () => {
+    const stores = memoryStores();
+    await stores.snapshots.ensure("doc-1");
+    const service = serviceWith(stores, "instance-a");
+    const port = await service.listen(0);
+    const base = `http://127.0.0.1:${port}`;
+
+    const client = connect(port, "doc-1");
+    await until(() => client.provider.synced);
+    expect(await revisionAt(base)).toBe(0);
+
+    const fragment = client.document.getXmlFragment(DOC_BLOCKS_FIELD);
+    fragment.push([
+      createBlockElement({ id: "block-a", kind: "paragraph", level: null, text: "One" }, null),
+    ]);
+    fragment.push([
+      createBlockElement({ id: "block-b", kind: "paragraph", level: null, text: "Two" }, null),
+    ]);
+
+    await untilRevision(base, 1);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await revisionAt(base)).toBe(1);
+
+    fragment.push([
+      createBlockElement({ id: "block-c", kind: "paragraph", level: null, text: "Three" }, null),
+    ]);
+
+    await untilRevision(base, 2);
+    expect(xmlOf(client.document)).toContain("Three");
+  });
+
+  it("saves a pending change immediately and counts it once", async () => {
+    const stores = memoryStores();
+    await stores.snapshots.ensure("doc-1");
+    const service = serviceWith(stores, "instance-a", { revisionDebounceMs: 1_000 });
+    const port = await service.listen(0);
+    const base = `http://127.0.0.1:${port}`;
+    const authorization = { authorization: `Bearer ${secret}` };
+
+    const client = connect(port, "doc-1");
+    await until(() => client.provider.synced);
+
+    client.document
+      .getXmlFragment(DOC_BLOCKS_FIELD)
+      .push([
+        createBlockElement(
+          { id: "block-saved", kind: "paragraph", level: null, text: "Saved text" },
+          null,
+        ),
+      ]);
+
+    await untilContent(base, "Saved text");
+
+    const response = await fetch(`${base}/save/doc-1`, { method: "POST", headers: authorization });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ revision: 1 });
+    expect(await revisionAt(base)).toBe(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(await revisionAt(base)).toBe(1);
+  });
+
+  it("saves without pending changes and reports the current revision", async () => {
+    const stores = memoryStores();
+    await stores.snapshots.ensure("doc-1");
+    const service = serviceWith(stores, "instance-a", { revisionDebounceMs: 1_000 });
+    const port = await service.listen(0);
+    const base = `http://127.0.0.1:${port}`;
+
+    const client = connect(port, "doc-1");
+    await until(() => client.provider.synced);
+
+    const response = await fetch(`${base}/save/doc-1`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${secret}` },
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ revision: 0 });
+    expect(await revisionAt(base)).toBe(0);
   });
 
   it("refuses a second instance and names the holder", async () => {
