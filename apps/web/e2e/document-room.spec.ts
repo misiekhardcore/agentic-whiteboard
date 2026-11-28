@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
+import { enterDemoWorkspace, joinDemoAccount, setActiveDemoAccount, signUp } from "./support";
+
 const modifier = process.platform === "darwin" ? "Meta" : "Control";
 
 async function openDocument(page: Page, workspaceId: string) {
@@ -14,6 +16,10 @@ async function openDocument(page: Page, workspaceId: string) {
 
 test("two tabs edit the same document and a reload restores it", async ({ context }) => {
   const first = await context.newPage();
+  const person = await signUp(first);
+  await joinDemoAccount(person.email);
+  await setActiveDemoAccount(first);
+
   const editor = await openDocument(first, "ws_demo");
   await expect(editor).toHaveAttribute("contenteditable", "true");
 
@@ -41,9 +47,12 @@ test("two tabs edit the same document and a reload restores it", async ({ contex
 });
 
 test("an archived workspace is read-only in the editor and toolbar", async ({ page }) => {
+  await enterDemoWorkspace(page);
   await page.goto("/w/ws_demo_archived");
 
-  await expect(page.getByRole("alert")).toContainText("This workspace is archived");
+  await expect(
+    page.getByRole("alert").filter({ hasText: "This workspace is archived" }),
+  ).toContainText("This workspace is archived");
   await expect(page.locator(".doc-status")).toHaveText("Read-only — this workspace is archived");
 
   const toolbar = page.getByRole("toolbar", { name: "Formatting" });
@@ -62,6 +71,7 @@ test("an archived workspace is read-only in the editor and toolbar", async ({ pa
 });
 
 test("a failed token request leaves the rest of the workspace usable", async ({ page }) => {
+  await enterDemoWorkspace(page);
   await page.route("**/api/doc/**/token", (route) =>
     route.fulfill({
       status: 503,

@@ -3,13 +3,16 @@ import { Badge } from "@konopskidev/ui/components/badge";
 import { Card } from "@konopskidev/ui/components/card";
 import { DEMO_ARCHIVED_WORKSPACE, DEMO_WORKSPACE } from "@v2/db/demo";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { DocEditor } from "./_components/DocEditor";
 import { DocNotice } from "./_components/DocNotice";
 
+import { routes, signInPath } from "@/src/routes";
 import { readAgentHealth } from "@/src/server/agent-health";
-import { demoActor, getDependencies } from "@/src/server/dependencies";
+import { getDependencies } from "@/src/server/dependencies";
 import { probeDocService, resolveDocService } from "@/src/server/doc-service";
+import { requireActor } from "@/src/server/identity/actor";
 import { loadWorkspaceView } from "@/src/server/workspace-view";
 import type { WorkspaceView } from "@/src/server/workspace-view";
 
@@ -19,9 +22,15 @@ type ViewState = WorkspaceView | { state: "unavailable"; message: string };
 
 export default async function WorkspacePage(props: PageProps<"/w/[workspaceId]">) {
   const { workspaceId } = await props.params;
+
+  const session = await requireActor();
+  // The layout answers this too; the page keeps the guarantee if it is ever
+  // rendered on its own, and remembers the exact route for afterwards.
+  if (session === null) redirect(signInPath(routes.workspace(workspaceId)));
+
   const docService = resolveDocService();
 
-  const viewPromise = loadWorkspaceView(workspaceId, demoActor, getDependencies()).catch(
+  const viewPromise = loadWorkspaceView(workspaceId, session.actor, getDependencies()).catch(
     (): ViewState => ({ state: "unavailable", message: "The workspace could not be read." }),
   );
 
@@ -76,7 +85,7 @@ export default async function WorkspacePage(props: PageProps<"/w/[workspaceId]">
               <p className="text-sm text-muted-foreground">
                 Read-only path:{" "}
                 <Link
-                  href={`/w/${DEMO_ARCHIVED_WORKSPACE.id}`}
+                  href={routes.workspace(DEMO_ARCHIVED_WORKSPACE.id)}
                   className="font-medium text-foreground underline underline-offset-4"
                 >
                   open an archived workspace

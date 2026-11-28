@@ -3,9 +3,16 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./env": {
+      "types": "./env/load.d.mts",
+      "default": "./env/load.mjs"
+    },
     "./tsconfig.base.json": "./tsconfig.base.json",
     "./eslint": "./eslint/base.mjs",
-    "./vitest": "./vitest/base.ts"
+    "./vitest": {
+      "types": "./vitest/base.d.mts",
+      "default": "./vitest/base.mjs"
+    }
   },
   "scripts": {
     "lint": "eslint .",

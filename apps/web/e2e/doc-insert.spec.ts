@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { BrowserContext, Page } from "@playwright/test";
 
+import { joinDemoAccount, setActiveDemoAccount, signUp } from "./support";
+
 const WORKSPACE_PATH = "/w/ws_demo";
 const BLOCK_TEXT = "Inserted from template";
 
@@ -16,6 +18,10 @@ function insertedBlocks(page: Page) {
 
 async function openEditor(context: BrowserContext): Promise<Page> {
   const page = await context.newPage();
+  const person = await signUp(page);
+  await joinDemoAccount(person.email);
+  await setActiveDemoAccount(page);
+
   await page.goto(WORKSPACE_PATH);
   await expect(page.locator(".doc-status")).toHaveText("Live", { timeout: 30_000 });
   await expect(editor(page)).toBeVisible();

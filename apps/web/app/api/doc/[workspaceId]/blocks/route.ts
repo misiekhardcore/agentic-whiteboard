@@ -1,5 +1,6 @@
-import { demoActor, getDependencies } from "@/src/server/dependencies";
+import { getDependencies } from "@/src/server/dependencies";
 import { insertTemplateBlock } from "@/src/server/doc-write";
+import { requireActor } from "@/src/server/identity/actor";
 import { statusOf } from "@/src/server/refusal-status";
 
 const NO_STORE = { "cache-control": "no-store" };
@@ -14,6 +15,11 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ workspaceId: string }> },
 ): Promise<Response> {
+  const session = await requireActor();
+  if (session === null) {
+    return Response.json({ error: "Sign in to change this document." }, { status: 401 });
+  }
+
   const { workspaceId } = await params;
 
   let body: unknown;
@@ -38,7 +44,7 @@ export async function POST(
   const result = await insertTemplateBlock({
     workspaceId,
     idempotencyKey,
-    context: { actor: demoActor, ...getDependencies() },
+    context: { actor: session.actor, ...getDependencies() },
   });
 
   if (!result.ok) {

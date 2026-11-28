@@ -3,5 +3,5 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["eslint", "vitest", "test", "vitest.config.mts"]
+  "include": ["env", "eslint", "vitest", "test", "vitest.config.mts"]
 }

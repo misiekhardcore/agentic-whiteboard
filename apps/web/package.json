@@ -21,6 +21,8 @@
     "@v2/capabilities": "workspace:*",
     "@v2/contracts": "workspace:*",
     "@v2/db": "workspace:*",
+    "better-auth": "^1.7.28",
+    "lucide-react": "^1.81.0",
     "next": "16.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1",

@@ -1,25 +1,18 @@
-import type { UserActor } from "@v2/contracts";
 import { createWorkspaceStore } from "@v2/db";
 import type { WorkspaceStore } from "@v2/db";
-import { DEMO_WORKSPACE } from "@v2/db/demo";
 
 import { createDocRoomOwner } from "./doc-room-owner";
 import { resolveDocService } from "./doc-service";
 import type { AppDependencies } from "./workspace-view";
 
-/**
- * Temporary wiring until the accounts slice: the skeleton has no session yet,
- * so it reads the seeded demo workspace in the seeded demo account.
- */
-export const demoActor: UserActor = {
-  type: "user",
-  userId: "user_demo",
-  accountId: DEMO_WORKSPACE.accountId,
-};
-
 let store: WorkspaceStore | null = null;
 let cached: AppDependencies | null = null;
 
+/**
+ * The ports a capability context needs. The actor is not here: it comes from
+ * the request's session through `requireActor`, so a caller cannot choose the
+ * tenant a capability acts in.
+ */
 export function getDependencies(): AppDependencies {
   if (cached !== null) return cached;
 

@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
+import { enterDemoWorkspace } from "./support";
+
 function editor(page: Page) {
   return page.locator(".ProseMirror");
 }
@@ -15,6 +17,7 @@ function numberOf(text: string, pattern: RegExp): number | null {
 }
 
 test("typing bumps the revision live and Ctrl+S saves it", async ({ page }) => {
+  await enterDemoWorkspace(page);
   await page.goto("/w/ws_demo");
   await expect(page.locator(".doc-status")).toHaveText("Live", { timeout: 30_000 });
 
@@ -50,6 +53,7 @@ test("typing bumps the revision live and Ctrl+S saves it", async ({ page }) => {
 });
 
 test("a reload keeps the revision and the blocks it shows", async ({ page }) => {
+  await enterDemoWorkspace(page);
   await page.goto("/w/ws_demo");
   await expect(page.locator(".doc-status")).toHaveText("Live", { timeout: 30_000 });
   await expect(editor(page)).toBeVisible();

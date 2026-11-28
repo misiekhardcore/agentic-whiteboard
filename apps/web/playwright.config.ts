@@ -1,14 +1,11 @@
 import { fileURLToPath } from "node:url";
 
 import { defineConfig, devices } from "@playwright/test";
+import { loadEnvironment } from "@v2/config/env";
 
-// Match the app: the root `.env` supplies local values, but variables already
-// set (CI, or a one-off `DATABASE_URL=... pnpm test:e2e`) win.
-try {
-  process.loadEnvFile(fileURLToPath(new URL("../../.env", import.meta.url)));
-} catch {
-  // `.env` is optional; CI provides the same variables directly.
-}
+// Match the app: the root environment files supply local values, but variables
+// already set (CI, or a one-off `DATABASE_URL=... pnpm test:e2e`) win.
+loadEnvironment(fileURLToPath(new URL("../../", import.meta.url)));
 
 const webPort = process.env.E2E_WEB_PORT ?? "3100";
 const docPort = process.env.E2E_DOC_PORT ?? "3103";
@@ -27,6 +24,11 @@ const serviceEnv = {
   DOC_SERVICE_URL: `ws://127.0.0.1:${docPort}`,
   DOC_SERVICE_INTERNAL_URL: `http://127.0.0.1:${docPort}`,
   DOC_PORT: docPort,
+  // The e2e run signs up and signs in for real, so it needs the same auth
+  // settings a deployment does; the value is a throwaway local secret.
+  BETTER_AUTH_SECRET:
+    process.env.BETTER_AUTH_SECRET ?? "e2e-only-better-auth-secret-0123456789abcdef",
+  WEB_URL: baseURL,
 };
 
 export default defineConfig({
