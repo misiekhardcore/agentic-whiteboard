@@ -77,6 +77,8 @@ Requirements: Node 22+, pnpm 12, and Docker for the local Postgres.
 ```bash
 pnpm install
 cp .env.example .env   # the document service secret must match on both sides
+# `.env.local` and `.env.<NODE_ENV>` (plus their `.local` variants) are read too,
+# overriding `.env`; variables the environment already exports always win.
 pnpm db:up             # Postgres on :54322
 pnpm db:setup          # apply the migrations, then seed the demo workspaces
 pnpm dev               # start the web app, agent and document service

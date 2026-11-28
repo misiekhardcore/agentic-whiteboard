@@ -1,18 +1,15 @@
 import { fileURLToPath } from "node:url";
 
+import { loadEnvironment } from "@v2/config/env";
 import { createDocRoom } from "@v2/db/doc-room";
 
 import { resolveDocServiceConfig } from "./config";
 import { createDocService } from "./service";
 
-// The process reads the repository's `.env` itself: nothing in this service
-// imports the Next app or its configuration loader. The path is the same from
-// `src/` and from the bundled `dist/` entry point.
-try {
-  process.loadEnvFile(fileURLToPath(new URL("../../../.env", import.meta.url)));
-} catch {
-  // An environment that exports its settings has no file to load.
-}
+// The process reads the repository's environment files itself: nothing in this
+// service imports the Next app or its configuration loader. The path is the
+// same from `src/` and from the bundled `dist/` entry point.
+loadEnvironment(fileURLToPath(new URL("../../../", import.meta.url)));
 
 const config = resolveDocServiceConfig();
 const log = (message: string) => console.warn(`[doc] ${message}`);

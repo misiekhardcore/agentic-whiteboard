@@ -1,16 +1,14 @@
 import { fileURLToPath } from "node:url";
 
+import { loadEnvironment } from "@v2/config/env";
 import type { NextConfig } from "next";
 
-// The repository keeps one `.env` at its root, while Next loads env files from
-// this app's directory. Loading the root file here makes the README's
-// `cp .env.example .env` true for both `next build` and `next dev`; values the
-// environment already exports still win.
-try {
-  process.loadEnvFile(fileURLToPath(new URL("../../.env", import.meta.url)));
-} catch {
-  // A deployment that injects its environment has no file to load.
-}
+// The repository keeps its environment files at its root, while Next loads
+// them from this app's directory. Loading the root ones here keeps `next build`
+// and `next dev` on the same `.env`, `.env.<NODE_ENV>`, `.env.local` and
+// `.env.<NODE_ENV>.local` layering; values the environment already exports
+// still win.
+loadEnvironment(fileURLToPath(new URL("../../", import.meta.url)));
 
 const allowedDevOrigins = process.env.ALLOWED_DEV_ORIGINS?.split(",")
   .map((origin) => origin.trim())
