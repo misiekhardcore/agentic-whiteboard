@@ -2,7 +2,7 @@ import { schema } from "@v2/db";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { organization } from "better-auth/plugins";
+import { jwt, organization } from "better-auth/plugins";
 
 import { database } from "../database";
 
@@ -70,6 +70,24 @@ export const auth = betterAuth({
           subject: `Join ${organization.name}`,
           url: `${appOrigin()}/invite/${id}`,
         });
+      },
+    }),
+    // Ed25519 only. The public half is served as a JWKS at
+    // `/api/auth/jwks`; `@v2/identity` verifies what it signs. The payload names
+    // the person and the account and never a role, so a token that outlives a
+    // role change cannot carry the old one.
+    jwt({
+      jwks: { keyPairConfig: { alg: "EdDSA", crv: "Ed25519" } },
+      jwt: {
+        issuer: appOrigin(),
+        audience: appOrigin(),
+        definePayload: ({ user, session }) => {
+          const activeOrganizationId: unknown = session.activeOrganizationId;
+
+          return {
+            accountId: typeof activeOrganizationId === "string" ? activeOrganizationId : user.id,
+          };
+        },
       },
     }),
     // Must stay last: it writes the session cookie from a Server Action.

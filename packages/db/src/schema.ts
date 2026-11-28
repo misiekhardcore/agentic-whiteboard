@@ -175,7 +175,24 @@ export const docRoomLease = pgTable(
   (table) => [index("doc_room_lease_expires_at_idx").on(table.expiresAt)],
 );
 
+/**
+ * The key set better-auth's `jwt` plugin signs identity tokens with. The private
+ * half never leaves the auth database and is stored encrypted with the auth
+ * secret; the public half is what `/api/auth/jwks` publishes, and what every
+ * verifier — `@v2/identity` — reads. Ed25519 only.
+ */
+export const jwks = pgTable("jwks", {
+  id: text("id").primaryKey(),
+  publicKey: text("public_key").notNull(),
+  privateKey: text("private_key").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  alg: text("alg"),
+  crv: text("crv"),
+});
+
 export type WorkspaceRow = typeof workspace.$inferSelect;
 export type NewWorkspaceRow = typeof workspace.$inferInsert;
 export type MemberRow = typeof member.$inferSelect;
 export type InvitationRow = typeof invitation.$inferSelect;
+export type JwksRow = typeof jwks.$inferSelect;

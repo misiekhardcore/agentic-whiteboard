@@ -119,6 +119,27 @@ Mail is an adapter: `sendIdentityMail` prints in development and refuses to log
 a reset token in production without a transport. Wiring SMTP replaces that
 function and nothing else.
 
+## The identity token
+
+A session belongs to the web app; the room owner and the agent service have no
+session store. They verify an **identity token** instead: better-auth's `jwt`
+plugin signs an Ed25519 JWT at `/api/auth/token`, publishes the public half as a
+JWKS at `/api/auth/jwks`, and keeps the private half encrypted in the `jwks`
+table with the auth secret.
+
+The payload is the person (`sub`), the account (`accountId`, the active
+organization or the person's own id) and one expiry — 15 minutes by default.
+There is deliberately **no role**: a role belongs to a membership row and can
+change while a token is still valid, so a token that carried one would keep
+granting it. A verifier that finds a `role` claim ignores it.
+
+`packages/identity` is the verifier, and it is pure: it imports only the
+contracts and `jose`, holds no session store, database handle or framework, and
+answers `null` for an expired, foreign or malformed token rather than throwing.
+Its purity test walks the package source and its dependency list, so the
+boundary is a failing test rather than a convention. `issuer` and `audience`
+are checked when configured, with the deployment's own origin.
+
 ## Not in this slice
 
 - The account switcher, member management and per-role navigation. This slice

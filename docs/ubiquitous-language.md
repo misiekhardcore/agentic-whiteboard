@@ -30,6 +30,7 @@ is a defect.
 | personal account | The account when no organization is active. Its id is the person's, and it holds the workspaces they created outside any organization.                     | `apps/web` |
 | active account   | The account the session is acting as. Switching it changes the session only; no row moves between accounts.                                                | `apps/web` |
 | invitation       | A pending offer to one email address to join an organization with a role. Accepting is the invited person's own act and happens once; a spent or expired invitation is refused. | `apps/web` |
+| identity token | A short-lived Ed25519-signed JWT minted by the auth service that names the person and the account they act in — never a role. `@v2/identity` verifies it against the published JWKS and turns it into the same `actor` a session produces, so a process without a session store can authorize a call. | `packages/identity` |
 
 ## Organizations
 
